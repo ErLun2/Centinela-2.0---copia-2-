@@ -6,7 +6,6 @@ import { getAuth, createUserWithEmailAndPassword, signOut as signOutAuth } from 
 // ========================
 // CONFIGURACIÓN API (RENDER)
 // ========================
-// IMPORTANTE: Cambiar esta URL por la de Render una vez desplegado
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const apiRequest = async (endpoint, method = 'GET', body = null) => {
@@ -31,6 +30,28 @@ const getLocal = (key) => JSON.parse(localStorage.getItem(key) || '[]');
 const setLocal = (key, data) => localStorage.setItem(key, JSON.stringify(data));
 
 // ========================
+// MOTOR DE SUSCRIPCIÓN "LITE" (SMART POLLING)
+// ========================
+// Esta función simula un "real-time" eficiente consultando solo novedades cada 30 segundos.
+const subscribeToResource = (endpoint, callback, interval = 30000) => {
+    let lastId = 0;
+    const poll = async () => {
+        const url = lastId > 0 ? `${endpoint}?lastId=${lastId}` : endpoint;
+        const data = await apiRequest(url);
+        if (data && data.length > 0) {
+            // Si es la primera carga o no hay ID previo, guardamos el ID más alto
+            const currentMaxId = Math.max(...data.map(i => i.id || 0));
+            if (currentMaxId > lastId) lastId = currentMaxId;
+            callback(data);
+        }
+    };
+
+    poll(); // Carga inicial inmediata
+    const timer = setInterval(poll, interval);
+    return () => clearInterval(timer); // Retorna función para des-suscribirse
+};
+
+// ========================
 // EMPRESAS
 // ========================
 export const crearEmpresa = async (empresaId, data) => {
@@ -46,6 +67,8 @@ export const obtenerEmpresas = async () => {
   return data || getLocal('centinela_companies');
 };
 
+export const subscribeToCompanies = (cb) => subscribeToResource('/empresas', cb, 30000);
+
 export const actualizarEmpresa = async (id, data) => {
   await apiRequest('/empresas', 'POST', { ...data, id });
 };
@@ -55,10 +78,7 @@ export const actualizarEmpresa = async (id, data) => {
 // ========================
 export const obtenerPlanes = async () => {
     const data = await apiRequest('/planes');
-    if (data) return data;
-    // Fallback dinámico si la API falla
-    const { PLANES } = await import("./planes");
-    return Object.values(PLANES);
+    return data || [];
 };
 
 export const guardarPlan = async (plan) => {
@@ -90,15 +110,13 @@ export const obtenerEventos = async (companyId = null) => {
     return await apiRequest(endpoint);
 };
 
+export const subscribeToAllEventsGroup = (cb) => subscribeToResource('/eventos', cb, 30000);
+
 // ========================
 // USUARIOS (SaaS)
 // ========================
 export const crearUsuarioSaaS = async (datos, adminEmpresaId) => {
-    // 1. Crear en Firebase (Auth) si está disponible
     let uid = `user_${Date.now()}`;
-    // Aquí podrías mantener la lógica de Firebase Auth si lo deseas
-    
-    // 2. Guardar en MySQL
     await apiRequest('/usuarios', 'POST', { ...datos, id: uid, companyId: adminEmpresaId });
     return uid;
 };
@@ -106,6 +124,8 @@ export const crearUsuarioSaaS = async (datos, adminEmpresaId) => {
 export const obtenerUsuariosEmpresa = async (empresaId) => {
     return await apiRequest(`/usuarios?companyId=${empresaId}`);
 };
+
+export const subscribeToAllUsers = (cb) => subscribeToResource('/usuarios', cb, 35000); // Un poco más lento para priorizar eventos
 
 // ========================
 // TICKETS DE SOPORTE
@@ -121,21 +141,27 @@ export const obtenerTickets = async () => {
     return await apiRequest('/tickets');
 };
 
+export const subscribeToTickets = (cb) => subscribeToResource('/tickets', cb, 40000);
+
 // ========================
 // FACTURACIÓN
 // ========================
 export const registrarPago = async (data) => {
-    await apiRequest('/payments/webhook', 'POST', { data }); // Simulación o endpoint directo
+    await apiRequest('/payments/webhook', 'POST', { data });
 };
 
-export const obtenerHistorialPagos = async (empresaId = null) => {
-    // Por implementar en MySQL historial_pagos
-    return [];
-};
+export const subscribeToAllPayments = (cb) => subscribeToResource('/payments', cb, 60000);
 
-// Mantenemos los mocks de diagnóstico por ahora (no requieren DB pesada)
+// ========================
+// MOCKS Y DIAGNÓSTICO
+// ========================
 export const obtenerDiagnosticoUsuario = async (userId) => {
     return { id: userId, status: 'activo', lastLogin: new Date().toISOString(), rol: 'ADMIN' };
 };
+export const obtenerDiagnosticoDispositivo = async (userId) => ({ status: 'ok', brand: 'Android', version: '13' });
+export const obtenerDiagnosticoGPS = async (userId) => ({ accuracy: '5m', status: 'connected' });
+export const obtenerLogsSistema = async (id) => [];
+export const ejecutarDiagnosticoAutomatico = async (u, t) => ({ summary: 'Sincronización OK' });
+export const ejecutarAccionSoporte = async (a, u, t) => ({ success: true, message: 'Acción ejecutada' });
 
 export const logAction = async (u, a, e, d = {}) => { console.log(`[API-LOG] ${u} -> ${a}`); };

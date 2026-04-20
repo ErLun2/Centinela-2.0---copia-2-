@@ -5,15 +5,18 @@ services:
     env: node
     plan: free # Puedes cambiarlo a 'starter' para evitar que se "duerma"
     region: ohio
-    buildCommand: cd server && npm install
-    startCommand: cd server && npm start
+    buildCommand: "cd server && npm install"
+    # OPTIMIZACIÓN LITE: Limitamos RAM a 256MB y forzamos optimización de tamaño
+    startCommand: "cd server && node --max-old-space-size=256 --optimize-for-size index.js"
     envVars:
       - key: NODE_VERSION
         value: 20
+      - key: NODE_ENV
+        value: production
       - key: PORT
         value: 10000
       - key: DB_HOST
-        sync: false # Lo completarás en la UI de Render
+        sync: false
       - key: DB_USER
         sync: false
       - key: DB_PASS

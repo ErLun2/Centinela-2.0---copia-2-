@@ -7,12 +7,15 @@ import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 
+import compression from 'compression';
+
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
+app.use(compression()); // Optimización Lite: Comprime respuestas
 app.use(cors());
 app.use(bodyParser.json());
 
@@ -98,8 +101,15 @@ app.delete('/api/planes/:id', async (req, res) => {
 
 // 2. EMPRESAS
 app.get('/api/empresas', async (req, res) => {
+    const { lastId } = req.query;
     try {
-        const [rows] = await pool.query('SELECT * FROM empresas');
+        let sql = 'SELECT * FROM empresas';
+        let params = [];
+        if (lastId) {
+            sql += ' WHERE id > ?';
+            params.push(lastId);
+        }
+        const [rows] = await pool.query(sql, params);
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -180,15 +190,19 @@ app.post('/api/usuarios', async (req, res) => {
 
 // 4. EVENTOS (Bitácora)
 app.get('/api/eventos', async (req, res) => {
-    const { companyId } = req.query;
+    const { companyId, lastId } = req.query;
     try {
-        let sql = 'SELECT * FROM eventos';
+        let sql = 'SELECT * FROM eventos WHERE 1=1';
         let params = [];
         if (companyId) {
-            sql += ' WHERE companyId = ?';
+            sql += ' AND companyId = ?';
             params.push(companyId);
         }
-        sql += ' ORDER BY fecha DESC, hora DESC LIMIT 500';
+        if (lastId) {
+            sql += ' AND id > ?';
+            params.push(lastId);
+        }
+        sql += ' ORDER BY id DESC LIMIT 500';
         const [rows] = await pool.query(sql, params);
         res.json(rows);
     } catch (err) {
@@ -259,5 +273,12 @@ app.post('/api/config/:key', async (req, res) => {
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`🚀 Centinela Backend running at http://localhost:${PORT}`);
+    console.log(`🚀 Centinela Backend - Modo LITE Activo - http://localhost:${PORT}`);
+});
+
+// Autosustentabilidad: Cierre limpio de conexiones
+process.on('SIGTERM', async () => {
+    console.log('Cerrando pool de MySQL...');
+    await pool.end();
+    process.exit(0);
 });
