@@ -1,0 +1,32 @@
+{
+  "name": "centinela-saas",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "host": "vite --host --port 5271",
+    "build": "vite build",
+    "preview": "vite preview",
+    "server": "node server/index.js"
+  },
+  "dependencies": {
+    "@yudiel/react-qr-scanner": "^2.5.1",
+    "firebase": "^12.10.0",
+    "jsqr": "^1.4.0",
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.363.0",
+    "qrcode.react": "^4.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-leaflet": "^4.2.1",
+    "react-router-dom": "^6.22.3",
+    "recharts": "^3.8.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22",
+    "@vitejs/plugin-react": "^4.2.1",
+    "vite": "^5.2.2"
+  }
+}

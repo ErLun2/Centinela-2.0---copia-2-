@@ -1,0 +1,307 @@
+:root {
+  --primary: #00d2ff;
+  --secondary: #3b82f6;
+  --accent: #8b5cf6;
+  --error: #ef4444;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --primary-glow: rgba(0, 210, 255, 0.4);
+  --bg-dark: #070c1a;
+  --bg-card: rgba(15, 23, 42, 0.6);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: 'Outfit', 'Inter', sans-serif;
+}
+
+body {
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  overflow-x: hidden;
+  min-height: 100vh;
+}
+
+/* Glassmorphism effects */
+/* Tactical Glassmorphism */
+.glass {
+  background: var(--bg-card);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--border);
+  box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.6);
+  border-radius: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.glass::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -50%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
+  transform: skewX(-25deg);
+  pointer-events: none;
+}
+
+.glass-glow {
+  box-shadow: 0 0 20px rgba(0, 210, 255, 0.15), inset 0 0 10px rgba(0, 210, 255, 0.05);
+}
+
+/* Logo Emblem Cropping */
+.logo-emblem {
+  object-fit: cover;
+  object-position: top;
+  clip-path: inset(0 0 25% 0); /* Hides the bottom 25% where 'CENTINELA' text is */
+  transform: scale(1.3); /* Makes it look bigger as requested */
+  transition: transform 0.3s ease;
+}
+
+.logo-emblem:hover {
+  transform: scale(1.4);
+}
+
+/* Logo New Effect (Isotipo) */
+.logo-isotipo {
+  filter: drop-shadow(0 0 15px rgba(0, 168, 255, 0.6));
+  position: relative;
+  z-index: 1;
+}
+
+.firefly-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.firefly-container::before,
+.firefly-container::after {
+  content: '';
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  background: radial-gradient(circle, rgba(0, 168, 255, 0.2) 0%, transparent 70%);
+  animation: pulse-glow 3s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes pulse-glow {
+  0% { transform: scale(1); opacity: 0.3; }
+  50% { transform: scale(1.1); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 0.3; }
+}
+
+.firefly {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: #00a8ff;
+  border-radius: 50%;
+  box-shadow: 0 0 10px #00a8ff, 0 0 20px #00a8ff;
+  animation: drift var(--d) infinite ease-in-out;
+  opacity: 0;
+}
+
+@keyframes drift {
+  0% { transform: translate(0, 0) scale(0); opacity: 0; }
+  20% { opacity: 0.8; }
+  50% { transform: translate(var(--x), var(--y)) scale(1.2); opacity: 1; }
+  80% { opacity: 0.8; }
+  100% { transform: translate(calc(var(--x) * 1.5), calc(var(--y) * 1.5)) scale(0); opacity: 0; }
+}
+
+/* Base Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.8s ease-out forwards;
+}
+
+/* Layout Utilities */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+button {
+  cursor: pointer;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+button.primary {
+  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  color: white;
+  box-shadow: 0 4px 15px var(--primary-glow);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px var(--primary-glow);
+  filter: brightness(1.1);
+}
+
+button.secondary {
+  background: rgba(255, 255, 255, 0.03);
+  color: #f8fafc;
+  border: 1px solid var(--border);
+  backdrop-filter: blur(5px);
+}
+
+button.secondary:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Tactile Press Effect */
+button:active {
+  transform: translateY(2px) scale(0.98) !important;
+  filter: brightness(0.9);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5) !important;
+  border-bottom-width: 2px !important;
+}
+
+.btn-active-tactile:active {
+  transform: translateY(4px) scale(0.97) !important;
+  border-bottom-width: 2px !important;
+}
+
+/* RESPONSIVE DESIGN (Media Queries) */
+@media (max-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-main {
+    padding: 15px !important;
+    height: auto !important;
+    min-height: 100vh;
+    padding-bottom: 250px !important; /* Leave space for mobile-nav and table scrolling */
+  }
+
+  .stat-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 15px !important;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .mobile-hide {
+    display: none !important;
+  }
+
+  .mobile-show {
+    display: flex !important;
+  }
+
+  .mobile-nav-bar {
+    position: fixed;
+    bottom: 20px;
+    left: 15px;
+    right: 15px;
+    height: 70px;
+    display: flex !important;
+    justify-content: space-around;
+    align-items: center;
+    z-index: 999;
+    border-top: 1px solid var(--border);
+    border-radius: 20px !important;
+  }
+
+  /* Adjust Modal for mobile */
+  .glass.fade-in {
+    padding: 25px !important;
+    width: 95% !important;
+    margin: 10px;
+  }
+
+  h1 { font-size: 1.5rem !important; }
+  h2 { font-size: 1.2rem !important; }
+
+  /* Table responsiveness */
+  .table-container {
+    overflow-x: auto;
+    width: 100%;
+    margin-top: 20px;
+  }
+  
+  table {
+    min-width: 700px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .glass {
+    border-radius: 12px;
+  }
+}
+
+.mobile-show {
+  display: none;
+}
+
+/* Login Side-by-Side Specifics */
+.login-visual-desktop {
+  display: block;
+}
+
+@media (max-width: 1024px) {
+  .login-visual-desktop {
+    display: none !important;
+  }
+}
+
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+@keyframes pulse-gps {
+  0% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0 0 rgba(0, 168, 255, 0.7); }
+  70% { transform: scale(1.1); opacity: 1; box-shadow: 0 0 0 10px rgba(0, 168, 255, 0); }
+  100% { transform: scale(1); opacity: 0.8; box-shadow: 0 0 0 0 rgba(0, 168, 255, 0); }
+}
+
+.pulse-gps {
+  animation: pulse-gps 2s infinite;
+}
+
+.folder-card {
+  transition: all 0.3s ease-in-out;
+}
+
+.folder-card:hover {
+  transform: translateY(-5px);
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--primary) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 15px var(--primary-glow);
+}

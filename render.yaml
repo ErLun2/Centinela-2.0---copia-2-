@@ -1,0 +1,24 @@
+services:
+  # Servicio para el Backend (API de Centinela)
+  - type: web
+    name: centinela-backend
+    env: node
+    plan: free # Puedes cambiarlo a 'starter' para evitar que se "duerma"
+    region: ohio
+    buildCommand: cd server && npm install
+    startCommand: cd server && npm start
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: PORT
+        value: 10000
+      - key: DB_HOST
+        sync: false # Lo completarás en la UI de Render
+      - key: DB_USER
+        sync: false
+      - key: DB_PASS
+        sync: false
+      - key: DB_NAME
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
