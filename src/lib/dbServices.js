@@ -81,6 +81,8 @@ export const obtenerPlanes = async () => {
     return data || [];
 };
 
+export const subscribeToPlanes = (cb) => subscribeToResource('/planes', cb, 60000);
+
 export const guardarPlan = async (plan) => {
     const result = await apiRequest('/planes', 'POST', plan);
     return result ? plan.id : null;

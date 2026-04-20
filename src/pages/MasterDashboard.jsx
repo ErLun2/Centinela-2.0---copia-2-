@@ -114,6 +114,16 @@ const MasterDashboard = () => {
     const savedTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
     setTrashItems(savedTrash);
 
+    // Carga inicial de planes desde la API
+    db.obtenerPlanes().then(data => {
+      if (data && data.length > 0) {
+        const planesMap = {};
+        data.forEach(p => { planesMap[p.id.toUpperCase()] = p; });
+        setLocalPlanes(planesMap);
+        Object.assign(PLANES, planesMap);
+      }
+    });
+
     // Migración de datos: asegurar que todas las empresas tengan una lat/lng estable
     const comps = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
     let changed = false;
@@ -170,6 +180,15 @@ const MasterDashboard = () => {
         const sorted = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
         setTickets(sorted);
         localStorage.setItem('centinela_tickets', JSON.stringify(sorted));
+      }
+    });
+
+    const unsubPlanes = db.subscribeToPlanes((data) => {
+      if (data && data.length > 0) {
+        const planesMap = {};
+        data.forEach(p => { planesMap[p.id.toUpperCase()] = p; });
+        setLocalPlanes(planesMap);
+        Object.assign(PLANES, planesMap);
       }
     });
 
@@ -239,6 +258,7 @@ const MasterDashboard = () => {
       unsubPayments();
       unsubEvents();
       unsubTickets();
+      unsubPlanes();
     };
   }, []);
 
@@ -485,39 +505,52 @@ const MasterDashboard = () => {
     }, 1000);
   };
 
-  const handleSavePlan = (e) => {
+  const handleSavePlan = async (e) => {
     e.preventDefault();
     setIsSaving(true);
     
-    setTimeout(() => {
+    try {
       const planToSave = { ...editingPlanData };
       if (!planToSave.id) {
         planToSave.id = planToSave.nombre.toLowerCase().replace(/\s+/g, '_') + '_' + Date.now().toString().slice(-4);
       }
 
-      // Asegurar que el ID sea la key en el objeto PLANES para consistencia
+      // Guardar en MySQL a través de la API
+      await db.guardarPlan(planToSave);
+
+      // Actualizar estado local
       const key = planToSave.id.toUpperCase();
       const newPlanes = { ...localPlanes, [key]: planToSave };
       
-      // Persistencia
-      localStorage.setItem('centinela_planes_data', JSON.stringify(newPlanes));
-      
-      // Actualización en memoria (Regla de Oro: mantener sincronizado sin romper referencias)
       Object.assign(PLANES, newPlanes);
       setLocalPlanes({ ...newPlanes });
       
       setShowPlanModal(false);
       setEditingPlanData(null);
+      alert("✅ Plan guardado correctamente en la base de datos.");
+    } catch (error) {
+      alert("Error al guardar el plan: " + error.message);
+    } finally {
       setIsSaving(false);
-      alert("✅ Plan guardado correctamente.");
-    }, 800);
+    }
   };
 
-  const handleDeletePlan = (planId) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el plan "${planId}"? Esta acción no se puede deshacer y puede afectar a empresas que lo usen.`)) return;
+  const handleDeletePlan = async (planId) => {
+    if (!window.confirm(`¿Estás seguro de eliminar el plan "${planId}"? Esta acción no se puede deshacer.`)) return;
     
-    const key = planId.toUpperCase();
-    const { [key]: _, ...newPlanes } = localPlanes;
+    try {
+      await db.eliminarPlan(planId);
+      const key = planId.toUpperCase();
+      const { [key]: _, ...newPlanes } = localPlanes;
+      
+      Object.keys(PLANES).forEach(k => delete PLANES[k]);
+      Object.assign(PLANES, newPlanes);
+      setLocalPlanes({ ...newPlanes });
+      alert("Plan eliminado correctamente.");
+    } catch (error) {
+       alert("Error al eliminar el plan.");
+    }
+  };
     
     localStorage.setItem('centinela_planes_data', JSON.stringify(newPlanes));
     // Limpiar el objeto global y re-asignar
