@@ -142,6 +142,9 @@ export const obtenerUsuarios = async () => {
 
 export const subscribeToAllUsers = (cb) => subscribeToResource('/usuarios', cb, 35000); 
 
+export const subscribeToObjectives = (cb) => subscribeToResource('/objectives', cb, 45000);
+export const subscribeToQrPoints = (cb) => subscribeToResource('/qr_points', cb, 45000);
+
 // ========================
 // TICKETS DE SOPORTE
 // ========================
