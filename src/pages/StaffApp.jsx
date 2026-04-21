@@ -1123,8 +1123,6 @@ const StaffApp = () => {
     );
   }
 
-  const { userLocationIcon } = getLeafletIcons();
-
   return (
     <div style={styles.container}>
       <div style={styles.phoneFrame}>
