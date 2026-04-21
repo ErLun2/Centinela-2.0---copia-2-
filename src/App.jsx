@@ -67,18 +67,20 @@ const ProtectedRoute = ({ children, allowedRoles, isSecurityPage = false }) => {
 
   // Prevent back-loop from security page
   if (!user.mustChangePassword && isSecurityPage) {
-    const dest = user.rol === 'SUPER_ADMIN' ? '/master' : (user.rol === 'GUARD' ? '/staff' : '/company');
+    const dest = 
+      ['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol) ? '/master' : 
+      (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol) ? '/staff' : '/company');
     return <Navigate to={dest} replace />;
   }
 
   // Role validation
   if (allowedRoles && !allowedRoles.includes(user.rol)) {
-    if (user.rol === 'SUPER_ADMIN') return <Navigate to="/master" replace />;
-    if (user.rol === 'SUPPORT' || user.rol === 'SOPORTE') return <Navigate to="/support" replace />;
-    if (user.rol === 'GUARD' || user.rol === 'SUPERVISOR') return <Navigate to="/staff" replace />;
+    if (['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol)) return <Navigate to="/master" replace />;
+    if (['SUPPORT', 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
+    if (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol)) return <Navigate to="/staff" replace />;
 
     // Evitar loop infinito si ya estamos en /company o si el rol no coincide con nada
-    if (user.rol === 'COMPANY_ADMIN' || user.rol === 'COMPANY_CLIENT' || user.rol === 'OPERADOR') return <Navigate to="/company" replace />;
+    if (['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
 
     return <Navigate to="/login" replace />;
   }
@@ -93,11 +95,11 @@ const LoginGuard = ({ children }) => {
   if (user) {
     if (user.mustChangePassword) return <Navigate to="/password-change" replace />;
 
-    if (user.rol === 'SUPER_ADMIN') return <Navigate to="/master" replace />;
-    if (user.rol === 'SUPPORT' || user.rol === 'SOPORTE') return <Navigate to="/support" replace />;
-    if (['GUARD', 'SUPERVISOR'].includes(user.rol)) return <Navigate to="/staff" replace />;
+    if (['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol)) return <Navigate to="/master" replace />;
+    if (['SUPPORT', 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
+    if (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol)) return <Navigate to="/staff" replace />;
 
-    if (user.rol === 'COMPANY_ADMIN' || user.rol === 'COMPANY_CLIENT' || user.rol === 'OPERADOR') return <Navigate to="/company" replace />;
+    if (['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
 
     // Si el rol es desconocido/inconsistente, forzar cierre de sesión o ir al inicio
     return children;
@@ -136,13 +138,13 @@ function App() {
                 } />
 
                 <Route path="/company/*" element={
-                  <ProtectedRoute allowedRoles={['COMPANY_ADMIN', 'COMPANY_CLIENT', 'SUPERVISOR', 'OPERADOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT', 'SUPERVISOR']}>
                     <CompanyDashboard />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/staff/*" element={
-                  <ProtectedRoute allowedRoles={['GUARD', 'SUPERVISOR']}>
+                  <ProtectedRoute allowedRoles={['GUARD', 'GUARDIA', 'SUPERVISOR']}>
                     <StaffApp />
                   </ProtectedRoute>
                 } />

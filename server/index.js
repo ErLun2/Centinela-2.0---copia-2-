@@ -81,6 +81,7 @@ pool.getConnection()
             await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS birth_date DATE`);
             await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS phone VARCHAR(100)`);
             await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_changed TINYINT(1) DEFAULT 0`);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS schedule JSON`);
             await conn.query(`ALTER TABLE usuarios MODIFY COLUMN role VARCHAR(50)`);
             console.log('  [DB] Estructura de usuarios OK');
         } catch (e) { console.error('  [DB-ERROR] Usuarios:', e.message); }
@@ -466,6 +467,21 @@ app.post('/api/usuarios', async (req, res) => {
         const userPersonalEmail = u.personal_email || u.emailPersonal || '';
         const userBirthDate = u.birth_date || u.fechaNacimiento || null;
         const userPhone = u.phone || u.telefono || '';
+        
+        // Sanitizar Fecha de Nacimiento (MySQL requiere YYYY-MM-DD)
+        let sanitizedBirthDate = null;
+        if (userBirthDate) {
+            try {
+                const d = new Date(userBirthDate);
+                if (!isNaN(d.getTime())) {
+                    sanitizedBirthDate = d.toISOString().split('T')[0];
+                }
+            } catch (e) {
+                sanitizedBirthDate = null;
+            }
+        }
+
+        const userSchedule = u.schedule ? JSON.stringify(u.schedule) : null;
 
         if (!userEmail) {
             return res.status(400).json({ error: "El email es obligatorio" });
@@ -473,13 +489,13 @@ app.post('/api/usuarios', async (req, res) => {
 
         await pool.query(
             `INSERT INTO usuarios 
-                (id, email, name, surname, role, companyId, status, password, dni, legajo, personal_email, birth_date, phone) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+                (id, email, name, surname, role, companyId, status, password, dni, legajo, personal_email, birth_date, phone, schedule) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
              ON DUPLICATE KEY UPDATE 
-                email=?, name=?, surname=?, role=?, companyId=?, status=?, dni=?, legajo=?, personal_email=?, birth_date=?, phone=?`,
+                email=?, name=?, surname=?, role=?, companyId=?, status=?, dni=?, legajo=?, personal_email=?, birth_date=?, phone=?, schedule=?`,
             [
-              userId, userEmail, userName, userSurname, userRole, userCompany, u.status || 'activo', u.password || 'password123', userDni, userLegajo, userPersonalEmail, userBirthDate, userPhone,
-              userEmail, userName, userSurname, userRole, userCompany, u.status || 'activo', userDni, userLegajo, userPersonalEmail, userBirthDate, userPhone
+              userId, userEmail, userName, userSurname, userRole, userCompany, u.status || 'activo', u.password || 'password123', userDni, userLegajo, userPersonalEmail, sanitizedBirthDate, userPhone, userSchedule,
+              userEmail, userName, userSurname, userRole, userCompany, u.status || 'activo', userDni, userLegajo, userPersonalEmail, sanitizedBirthDate, userPhone, userSchedule
             ]
         );
         res.json({ success: true });
