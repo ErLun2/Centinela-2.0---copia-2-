@@ -293,18 +293,10 @@ const LandingPage = () => {
                 <button 
                   onClick={() => setShowDemo(true)}
                   className="primary" 
-                  style={{ padding: '20px 50px', fontSize: '1.2rem', borderRadius: '18px', boxShadow: '0 0 30px rgba(0,168,255,0.4)', background: 'linear-gradient(90deg, #00a8ff, #00d2ff)' }}
+                  style={{ padding: '20px 60px', fontSize: '1.2rem', borderRadius: '18px', boxShadow: '0 0 30px rgba(0,168,255,0.4)', background: 'linear-gradient(90deg, #00a8ff, #00d2ff)' }}
                 >
-                  Ver Demo
+                  Solicitar Demo
                 </button>
-                <Link to="/login">
-                  <button 
-                      className="secondary" 
-                      style={{ padding: '20px 50px', fontSize: '1.2rem', borderRadius: '18px', border: '1px solid rgba(255,255,255,0.2)', background: 'transparent' }}
-                  >
-                      Probar Gratis
-                  </button>
-                </Link>
             </div>
         </div>
       </section>
