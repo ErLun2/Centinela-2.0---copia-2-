@@ -131,10 +131,9 @@ const MasterDashboard = () => {
     };
   };
 
+
   useEffect(() => {
     const unsub = loadData();
-    return () => unsub && unsub();
-  }, []);
 
     // Carga inicial de planes desde la API (Blindado)
     db.obtenerPlanes().then(data => {
@@ -171,146 +170,13 @@ const MasterDashboard = () => {
       localStorage.setItem('centinela_companies', JSON.stringify(migrated));
       setCompanies(migrated);
     }
-  };
+
+    return () => unsub && unsub();
+  }, []);
 
 
-  useEffect(() => {
-    loadData();
 
     // REAL-TIME SUBSCRIPTIONS (Blindadas)
-    const unsubCompanies = db.subscribeToCompanies((data) => {
-      try {
-        if (data) {
-          setCompanies(data);
-          localStorage.setItem('centinela_companies', JSON.stringify(data));
-        }
-      } catch (e) { console.error("Sync Companies Error:", e); }
-    });
-
-    const unsubUsers = db.subscribeToAllUsers((data) => {
-      try {
-        if (data) {
-          setUsers(data);
-          localStorage.setItem('centinela_users', JSON.stringify(data));
-        }
-      } catch (e) { console.error("Sync Users Error:", e); }
-    });
-
-    const unsubPayments = db.subscribeToAllPayments((data) => {
-      try {
-        if (data) {
-          const sorted = data.sort((a, b) => new Date(b.fecha || b.date) - new Date(a.fecha || a.date));
-          setPayments(sorted);
-          localStorage.setItem('centinela_pagos', JSON.stringify(sorted));
-        }
-      } catch (e) { console.error("Sync Payments Error:", e); }
-    });
-
-    const unsubEvents = db.subscribeToAllEventsGroup((data) => {
-      try {
-        if (data) {
-          setEvents(data);
-          localStorage.setItem('centinela_events', JSON.stringify(data));
-        }
-      } catch (e) { console.error("Sync Events Error:", e); }
-    });
-
-    const unsubTickets = db.subscribeToTickets((data) => {
-      try {
-        if (data) {
-          const sorted = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-          setTickets(sorted);
-          localStorage.setItem('centinela_tickets', JSON.stringify(sorted));
-        }
-      } catch (e) { console.error("Sync Tickets Error:", e); }
-    });
-
-    const unsubPlanes = db.subscribeToPlanes((data) => {
-      try {
-        if (data && Array.isArray(data) && data.length > 0) {
-          const planesMap = {};
-          data.forEach(p => { 
-            if (p && p.id) {
-              planesMap[String(p.id).toUpperCase()] = p; 
-            }
-          });
-          if (Object.keys(planesMap).length > 0) {
-            setLocalPlanes(planesMap);
-            Object.assign(PLANES, planesMap);
-          }
-        }
-      } catch (e) { console.error("Sync Planes Error:", e); }
-    });
-
-    // Pre-fill companies if empty for the first time
-    if (!localStorage.getItem('centinela_companies')) {
-      const initial = [
-        { id: 'demo_001', name: "Empresa de Seguridad Demo", status: "activa", plan: "demo", guards: 0, titular: "Admin Demo", email: "admin@empresa.com", expiryDate: '2026-12-31', lat: -34.6037, lng: -58.3816 },
-        { id: '1', name: "Security Force Ltd", status: "activa", plan: "enterprise", guards: 150, expiryDate: '2026-12-31' },
-        { id: '2', name: "Vigilancia Civil 24/7", status: "activa", plan: "profesional", guards: 84, expiryDate: '2026-10-15' },
-        { id: '3', name: "Global Defense", status: "prueba", plan: "basico", guards: 12, expiryDate: '2026-04-01' },
-        { id: '4', name: "ProtGuard SA", status: "suspendida", plan: "enterprise", guards: 5, expiryDate: '2025-01-01' }
-      ];
-      localStorage.setItem('centinela_companies', JSON.stringify(initial));
-      setCompanies(initial);
-    }
-
-    if (!localStorage.getItem('centinela_users')) {
-      const initialUsers = [
-        { id: '1', name: 'Carlos Admin', email: 'carlos@securityforce.com', role: 'Admin Empresa', status: 'activo', company: 'Security Force Ltd' },
-        { id: '2', name: 'Laura Sup', email: 'laura@globaldefense.com', role: 'Supervisor', status: 'activo', company: 'Global Defense' },
-        { id: '3', name: 'Miguel Guardia', email: 'miguel@protguard.com', role: 'Guardia', status: 'bloqueado', company: 'ProtGuard SA' }
-      ];
-      localStorage.setItem('centinela_users', JSON.stringify(initialUsers));
-      setUsers(initialUsers);
-    }
-
-    if (!localStorage.getItem('centinela_tickets')) {
-      localStorage.setItem('centinela_tickets', JSON.stringify([]));
-      setTickets([]);
-    } else {
-      // Cleanup: remove mock tickets that might be in localStorage from previous versions
-      const existing = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
-      const filtered = existing.filter(t => 
-        t.empresaNombre !== "Security Force Ltd" && 
-        t.empresaNombre !== "Vigilancia Civil 24/7" && 
-        t.empresaNombre !== "Global Defense" &&
-        t.empresaNombre !== "" // Skip entries without company name (likely mock/corrupted)
-      );
-      if (filtered.length !== existing.length) {
-        localStorage.setItem('centinela_tickets', JSON.stringify(filtered));
-        setTickets(filtered);
-      }
-    }
-
-    // DATA CORRECTION: Fix pepeluisa Enterprise payment (3000 -> 7000)
-    const currentPagos = JSON.parse(localStorage.getItem('centinela_pagos') || '[]');
-    let needsFix = false;
-    const fixedPagos = currentPagos.map(p => {
-       const companyName = companies.find(c => c.id === p.empresaId || c.id === p.companyId)?.name || '';
-       if ((companyName.toLowerCase().includes('pepeluisa') || p.companyName?.toLowerCase().includes('pepeluisa')) && 
-           (p.planId?.toLowerCase() === 'enterprise' || p.plan?.toLowerCase() === 'enterprise') && 
-           Number(p.monto || p.amount) === 3000) {
-          needsFix = true;
-          return { ...p, monto: 7000, amount: 7000 };
-       }
-       return p;
-    });
-    if (needsFix) {
-       localStorage.setItem('centinela_pagos', JSON.stringify(fixedPagos));
-       setPayments(fixedPagos);
-    }
-
-    // Cleanup subscriptions on unmount
-    return () => {
-      unsubCompanies();
-      unsubUsers();
-      unsubPayments();
-      unsubEvents();
-      unsubTickets();
-      unsubPlanes();
-    };
-  }, []);
 
   const geocodeAddress = async (address) => {
     if (!address) return null;
