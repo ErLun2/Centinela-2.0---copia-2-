@@ -852,90 +852,71 @@ const CompanyDashboard = () => {
     showToast("Preparando vista de PDF...");
   };
 
-  // CARGA DE DATOS
+  // CARGA DE DATOS (REGLA DE ORO: Sincronización Real)
   const loadData = () => {
     if (!user?.empresaId) return;
 
-    // Usuarios
-    const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    let filtered = allUsers.filter(u => u.empresaId === user.empresaId || u.companyId === user.empresaId);
+    const unsubUsers = db.subscribeToAllUsers((allUsers) => {
+      const filtered = allUsers.filter(u => u.empresaId === user.empresaId || u.companyId === user.empresaId);
+      setCompanyUsers(filtered);
+    });
 
-    // REPARACIÓN DE EMERGENCIA: Si todos los usuarios son iguales (bug detectado) o está vacío
-    const isCorrupted = filtered.length > 1 && filtered.every(u => u.email === filtered[0].email && u.nombre === filtered[0].nombre);
-    if (isCorrupted) {
-      const demoUsers = [
-        { id: 'db_demo1', nombre: 'Carlos', apellido: 'Perez', dni: '1234567', legajo: 'G-001', telefono: '11223344', email: 'carlos@demo.com', password: '123', rol: 'GUARD', empresaId: user.empresaId, activo: true, foto: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?w=200&h=200&fit=crop', turno: 'MAÑANA' },
-        { id: 'db_demo2', nombre: 'Juan', apellido: 'Gomez', dni: '7654321', legajo: 'G-002', telefono: '44332211', email: 'juan@demo.com', password: '123', rol: 'GUARD', empresaId: user.empresaId, activo: true, foto: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&h=200&fit=crop', turno: 'NOCHE' }
-      ];
-      const cleanOthers = allUsers.filter(u => u.empresaId !== user.empresaId && u.companyId !== user.empresaId);
-      const restored = [...cleanOthers, ...demoUsers];
-      localStorage.setItem('centinela_users', JSON.stringify(restored));
-      filtered = demoUsers;
+    const unsubCompanies = db.subscribeToCompanies((allCompanies) => {
+      const currentComp = allCompanies.find(c => c.id === user.empresaId);
+      setCompanyData(currentComp);
+    });
+
+    const unsubEvents = db.subscribeToAllEventsGroup((allEvents) => {
+      const compEvents = allEvents.filter(e => e.empresaId === user.empresaId || e.companyId === user.empresaId);
+      compEvents.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      setEvents(compEvents);
+
+      // TRIGGER SOUNDS FOR NEW EVENTS
+      if (compEvents.length > 0) {
+        const latestEvent = compEvents[0];
+        if (lastEventIdRef.current === null) {
+          lastEventIdRef.current = latestEvent.id;
+        } else if (latestEvent.id !== lastEventIdRef.current) {
+          lastEventIdRef.current = latestEvent.id;
+          handleNewEventAlert(latestEvent);
+        }
+      }
+    });
+
+    const unsubTickets = db.subscribeToTickets((allTickets) => {
+      setTickets(allTickets.filter(t => t.empresaId === user.empresaId));
+    });
+
+    const unsubObjectives = db.subscribeToObjectives((allObjs) => {
+      setObjectives(allObjs.filter(o => o.companyId === user.empresaId));
+    });
+
+    const unsubQrPoints = db.subscribeToQrPoints((allPts) => {
+      setQrPoints(allPts.filter(p => p.companyId === user.empresaId));
+    });
+
+    return () => {
+      unsubUsers(); unsubCompanies(); unsubEvents(); unsubTickets(); unsubObjectives(); unsubQrPoints();
+    };
+  };
+
+  const handleNewEventAlert = (latestEvent) => {
+    const isPanic = latestEvent.tipo === 'panico' || latestEvent.tipo === 'emergencia';
+    if (isPanic) {
+      const obj = objectives.find(o => o.id === latestEvent.objetivoId);
+      const pName = obj?.nombre || 'Puesto Desconocido';
+      playSound('panico', `ALERTA: PÁNICO EN: ${pName}`);
+      setActivePanics(prev => [...prev, { id: latestEvent.id, pointName: pName }]);
+      showToast(`🚨 PÁNICO EN: ${pName}`, 'error');
+    } else {
+      playSound('normal');
     }
-    setCompanyUsers(filtered);
+  };
 
-    // Cargar Papelera
-    const allTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-    setTrashItems(allTrash.filter(t => t.empresaId === user.empresaId || t.companyId === user.empresaId));
-
-    // Info Empresa
-    const allCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
-    const currentComp = allCompanies.find(c => c.id === user.empresaId);
-    setCompanyData(currentComp);
-
-    // Eventos y Novedades
-    let allEvents = JSON.parse(localStorage.getItem('centinela_events') || '[]');
-    // DEPURACIÓN Y CARGA: Solo permitimos eventos con la nueva arquitectura de objetos embebidos
-    const compEvents = allEvents.filter(e => e.empresaId === user.empresaId);
-    let validEvents = compEvents.filter(e => typeof e.usuario === 'object' && e.usuario !== null);
-
-    // Ordenar por fecha desc (más reciente primero)
-    validEvents.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
-
-    // Si detectamos eventos antiguos incompatibles, los limpiamos del storage global para consistencia
-    if (validEvents.length !== compEvents.length) {
-      const otherCompEvents = allEvents.filter(e => e.empresaId !== user.empresaId);
-      localStorage.setItem('centinela_events', JSON.stringify([...otherCompEvents, ...validEvents]));
-    }
-
-    setEvents(validEvents);
-
-    // Rondas y Recorridos
-    const allRondas = JSON.parse(localStorage.getItem('centinela_rondas') || '[]') || [];
-    setRondas(allRondas.filter(r => r.empresaId === user.empresaId));
-
-    // Puntos QR
-    const allQrPoints = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]') || [];
-    setQrPoints(allQrPoints.filter(p => p.empresaId === user.empresaId));
-
-    // Objetivos
-    let allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
-    let companyObjectives = allObjectives.filter(obj => obj.empresaId === user.empresaId);
-    setObjectives(companyObjectives);
-
-    // Resumen Filters: Actualizar si el objetivo seleccionado ya no existe (raro pero posible)
-    // No es necesario de momento.
-
-    // Soporte Tickets
-    const allTickets = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
-    const compTickets = allTickets.filter(t => t.empresaId === user.empresaId);
-    setTickets(compTickets);
-
-    // Ubicaciones Reales (GPS Precision)
-    const allLocations = JSON.parse(localStorage.getItem('centinela_locations') || '[]');
-    setLocations(allLocations.filter(l => l.empresa === user.empresaId));
-
-
-    // CHECK FOR NEW EVENTS TO TRIGGER SOUNDS
-    if (validEvents.length > 0) {
-      const latestEvent = validEvents[0]; 
-      
-      // Si lastEventIdRef.current es null, significa que acabamos de cargar la página.
-      // Guardamos el ID del último evento existente para que NO suene por lo viejo,
-      // pero habilitamos el sistema para que el próximo ID que sea diferente sí suene.
-      if (lastEventIdRef.current === null) {
-        lastEventIdRef.current = latestEvent.id;
-      } else if (latestEvent.id !== lastEventIdRef.current) {
+  useEffect(() => {
+    const unsub = loadData();
+    return () => unsub && unsub();
+  }, [user?.empresaId]);
         // Evaluate type - Soporta 'panico' o 'emergencia' (enviada desde StaffApp)
         const isPanic = latestEvent.tipo === 'panico' || latestEvent.tipo === 'emergencia';
         

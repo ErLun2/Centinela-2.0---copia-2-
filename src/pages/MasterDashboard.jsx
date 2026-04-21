@@ -96,26 +96,45 @@ const MasterDashboard = () => {
   const { logout, user } = useAuth();
 
   const loadData = () => {
-    const savedCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
-    setCompanies(savedCompanies);
+    // REGLA DE ORO: Sincronización Real en lugar de LocalStorage
+    const unsubCompanies = db.subscribeToCompanies((data) => {
+      setCompanies(data);
+    });
 
-    const savedPayments = JSON.parse(localStorage.getItem('centinela_pagos') || '[]');
-    setPayments(savedPayments.sort((a, b) => new Date(b.fecha || b.date) - new Date(a.fecha || a.date)));
+    const unsubUsers = db.subscribeToAllUsers((data) => {
+      setUsers(data);
+    });
 
-    const savedUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    setUsers(savedUsers);
+    const unsubEvents = db.subscribeToAllEventsGroup((data) => {
+      setEvents(data);
+    });
 
-    const savedConfig = JSON.parse(localStorage.getItem('centinela_sysconfig') || '{"version":"1.0.1", "mantenimiento":false, "mensaje_global":""}');
-    setSysConfig(savedConfig);
+    const unsubTickets = db.subscribeToTickets((data) => {
+      setTickets(data);
+    });
 
-    const savedTickets = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
-    setTickets(savedTickets.sort((a, b) => new Date(b.fecha) - new Date(a.fecha)));
+    const unsubPayments = db.subscribeToAllPayments((data) => {
+      setPayments(data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
+    });
 
-    const savedEvents = JSON.parse(localStorage.getItem('centinela_events') || '[]');
-    setEvents(savedEvents);
+    // Carga inicial de configuración (un solo hit)
+    db.obtenerConfiguracionPagos().then(cfg => {
+       if (cfg) setSysConfig(prev => ({...prev, ...cfg}));
+    });
 
-    const savedTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-    setTrashItems(savedTrash);
+    return () => {
+      unsubCompanies();
+      unsubUsers();
+      unsubEvents();
+      unsubTickets();
+      unsubPayments();
+    };
+  };
+
+  useEffect(() => {
+    const unsub = loadData();
+    return () => unsub && unsub();
+  }, []);
 
     // Carga inicial de planes desde la API (Blindado)
     db.obtenerPlanes().then(data => {
@@ -473,67 +492,45 @@ const MasterDashboard = () => {
     e.preventDefault();
     setIsSaving(true);
 
-    let coords = null;
-    if (newCompany.address) {
-      coords = await geocodeAddress(newCompany.address);
-    }
+    try {
+        let coords = { lat: -34.6037, lng: -58.3816 };
+        if (newCompany.address) {
+            coords = await geocodeAddress(newCompany.address) || coords;
+        }
 
-    // Si el geocoding falló y es una empresa nueva, asignamos una ubicación default de Buenos Aires
-    // para evitar que salte aleatoriamente en cada renderizado.
-    const fallbackLat = -34.6037 + (Math.random() - 0.5) * 0.1;
-    const fallbackLng = -58.3816 + (Math.random() - 0.5) * 0.1;
-
-    setTimeout(() => {
-      let updated;
-      const finalId = editingCompany ? editingCompany.id : Date.now().toString();
-      const finalCompanyData = {
-        ...newCompany,
-        id: finalId,
-        name: newCompany.name,
-        nombre: newCompany.name,
-        address: newCompany.address || '',
-        lat: coords?.lat || newCompany.lat || fallbackLat,
-        lng: coords?.lng || newCompany.lng || fallbackLng
-      };
-
-      if (editingCompany) {
-        // Al editar, nos aseguramos de sobreescribir con los nuevos datos pero manteniendo IDs y campos previos no editados
-        updated = companies.map(c => c.id === editingCompany.id ? { ...c, ...finalCompanyData } : c);
-      } else {
-        updated = [finalCompanyData, ...companies];
-        
-        // REGLA DE ORO: Crear usuario admin por defecto al crear empresa
-        const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-        const defaultAdmin = {
-          id: `admin_${Date.now()}`,
-          name: `Admin ${finalCompanyData.name}`,
-          email: newCompany.appEmail || newCompany.email,
-          companyId: finalId,
-          company: finalCompanyData.name,
-          role: 'Admin Empresa',
-          status: 'activo',
-          password: 'password123',
-          mustChangePassword: true
+        const finalId = editingCompany ? editingCompany.id : Date.now().toString();
+        const finalCompanyData = {
+            ...newCompany,
+            id: finalId,
+            lat: coords.lat,
+            lng: coords.lng
         };
-        localStorage.setItem('centinela_users', JSON.stringify([defaultAdmin, ...allUsers]));
-        setUsers([defaultAdmin, ...users]);
-      }
-      localStorage.setItem('centinela_companies', JSON.stringify(updated));
-      setCompanies(updated);
-      setShowModal(false);
 
-      const debugInfo = coords ? `(Encontrado: ${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})` : "(No se encontró la dirección exacta)";
+        // REGLA DE ORO: Guardar en el servidor (esto sincroniza PC y Celular)
+        await db.crearEmpresa(finalId, finalCompanyData);
 
-      if (!editingCompany) {
-        alert(coords ? `✅ Empresa registrada y ubicada correctamente ${debugInfo}. Se creó acceso con 'password123'.` : `⚠️ Empresa registrada, pero no pudimos validar la dirección legal ${debugInfo}. Se creó acceso con 'password123'.`);
-      } else {
-        alert(coords ? `✅ Empresa actualizada y reposicionada ${debugInfo}.` : `⚠️ Datos guardados, pero la dirección no pudo ser validada en el mapa ${debugInfo}.`);
-      }
+        if (!editingCompany) {
+            // Crear usuario admin por defecto en el servidor también
+            await db.crearUsuarioSaaS({
+                name: `Admin ${finalCompanyData.name}`,
+                email: newCompany.appEmail || newCompany.email,
+                role: 'Admin Empresa',
+                status: 'activo',
+                password: 'password123'
+            }, finalId);
+            alert("✅ Empresa y Usuario Admin creados en el servidor. Acceso con 'password123'.");
+        } else {
+            alert("✅ Datos actualizados en el servidor.");
+        }
 
-      setEditingCompany(null);
-      setIsSaving(false);
-      setNewCompany({ name: '', titular: '', dni: '', email: '', telefono: '', address: '', plan: 'basico', guards: 0, status: 'activa', expiryDate: '', fecha_alta: new Date().toISOString().split('T')[0] });
-    }, 1000);
+        setShowModal(false);
+        setEditingCompany(null);
+        setNewCompany({ name: '', titular: '', dni: '', email: '', telefono: '', address: '', plan: 'basico', guards: 0, status: 'activa', expiryDate: '', fecha_alta: new Date().toISOString().split('T')[0] });
+    } catch (err) {
+        alert("Error al sincronizar con el servidor: " + err.message);
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const handleSavePlan = async (e) => {
@@ -679,32 +676,27 @@ const MasterDashboard = () => {
     loadData();
   };
 
-  const handleCreateUser = (e) => {
+  const handleCreateUser = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    setTimeout(() => {
-      let updatedUsers;
-      if (editingUser) {
-        updatedUsers = users.map(u => u.id === editingUser.id ? { ...newUser, id: u.id, status: u.status, company: companies.find(c => c.id === newUser.companyId)?.name || 'Sin Empresa' } : u);
-      } else {
-        const userToAdd = {
-          ...newUser,
-          id: Date.now().toString(),
-          status: 'activo',
-          password: 'password123',
-          mustChangePassword: true,
-          company: companies.find(c => c.id === newUser.companyId)?.name || 'Sistema'
-        };
-        updatedUsers = [userToAdd, ...users];
-      }
+    try {
+        await db.crearUsuarioSaaS({
+            ...newUser,
+            name: newUser.name,
+            role: newUser.role,
+            status: 'activo',
+            password: 'password123'
+        }, newUser.companyId);
 
-      setUsers(updatedUsers);
-      localStorage.setItem('centinela_users', JSON.stringify(updatedUsers));
-      setShowUserModal(false);
-      setEditingUser(null);
-      setIsSaving(false);
-      setNewUser({ name: '', email: '', companyId: '', role: 'Admin Empresa' });
-    }, 800);
+        alert("✅ Usuario creado en el servidor correctamente.");
+        setShowUserModal(false);
+        setEditingUser(null);
+        setNewUser({ name: '', email: '', companyId: '', role: 'Admin Empresa' });
+    } catch (err) {
+        alert("Error al crear usuario: " + err.message);
+    } finally {
+        setIsSaving(false);
+    }
   };
 
   const cycleUserStatus = (userId) => {
