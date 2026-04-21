@@ -135,9 +135,25 @@ const MasterDashboard = () => {
   useEffect(() => {
     const unsub = loadData();
 
-    // Carga inicial de planes desde la API (Blindado)
-    db.obtenerPlanes().then(data => {
+    // Carga inicial de planes desde la API con Sincronización Automática
+    db.obtenerPlanes().then(async (data) => {
       try {
+        // REGLA DE ORO: Si el servidor no tiene los planes básicos, los sincronizamos ahora mismo
+        const defaultPlanesList = Object.values(PLANES);
+        
+        if (!data || data.length === 0) {
+           console.log("🚀 Sincronizando planes base con el servidor...");
+           for (const plan of defaultPlanesList) {
+              await db.guardarPlan({
+                ...plan,
+                beneficios: JSON.stringify(plan.beneficios || [])
+              });
+           }
+           // Re-cargar después de sincronizar
+           const updatedData = await db.obtenerPlanes();
+           data = updatedData;
+        }
+
         if (data && Array.isArray(data) && data.length > 0) {
           const planesMap = {};
           data.forEach(p => { 
@@ -147,11 +163,11 @@ const MasterDashboard = () => {
           });
           if (Object.keys(planesMap).length > 0) {
             setLocalPlanes(planesMap);
-            Object.assign(PLANES, planesMap);
+            // Actualizar la referencia global si es necesario
           }
         }
       } catch (err) {
-        console.error("Error procesando planes API:", err);
+        console.error("Error sincronizando planes API:", err);
       }
     }).catch(err => console.error("Error obteniendo planes:", err));
 
@@ -1321,8 +1337,8 @@ const MasterDashboard = () => {
                    <tbody>
                      {users
                        .filter(u => {
-                         // REGLA DE ORO: Filtrado de registros vacíos y asignación a empresa
-                         if (!u.email || u.email.trim() === "") return false;
+                         // REGLA DE ORO: Filtrado de registros vacíos y exclusión del Super Admin
+                         if (!u.email || u.email.trim() === "" || u.email.toLowerCase() === 'vidal@master.com') return false;
                          
                          if (selectedCompanyId === 'all') return true;
                          const selectedCompany = companies.find(c => c.id === selectedCompanyId);
