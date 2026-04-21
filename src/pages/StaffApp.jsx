@@ -872,8 +872,12 @@ const StaffApp = () => {
   const sessionKey = user ? `centinela_session_${user.uid || user.id}` : null;
   const [session, setSession] = useState(() => {
     if (sessionKey) {
-      const saved = localStorage.getItem(sessionKey);
-      if (saved) return JSON.parse(saved);
+      try {
+        const saved = localStorage.getItem(sessionKey);
+        if (saved) return JSON.parse(saved);
+      } catch (e) {
+        console.warn("Session restore error:", e);
+      }
     }
     return {
       isCheckedIn: false,
@@ -921,30 +925,39 @@ const StaffApp = () => {
     // Timeout de seguridad: Si en 5 segundos nada carga, forzar appReady
     const timer = setTimeout(() => setAppReady(true), 5000);
     // Fetch Company Name
-    const allCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
-    const currentComp = allCompanies.find(c => c.id === user.empresaId);
-    if (currentComp) setCompanyName(currentComp.nombre || currentComp.name || user.company || 'DASHBOARD');
-    else if (user.company) setCompanyName(user.company);
+    try {
+      const allCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
+      const currentComp = allCompanies.find(c => c.id === user.empresaId);
+      if (currentComp) setCompanyName(currentComp.nombre || currentComp.name || user.company || 'DASHBOARD');
+      else if (user.company) setCompanyName(user.company);
+    } catch (e) {
+      console.warn("Storage error (companies):", e);
+      if (user.company) setCompanyName(user.company);
+    }
 
     // Fetch Assigned Objective
-    const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    const currentUserData = allUsers.find(u => 
-      (user.uid && (u.uid === user.uid || u.id === user.uid)) ||
-      (user.id && (u.id === user.id || u.uid === user.id)) ||
-      (user.email && u.email?.toLowerCase() === user.email?.toLowerCase())
-    );
-    setFullUserData(currentUserData);
-    if (currentUserData && currentUserData.schedule && currentUserData.schedule.objectiveId) {
-       const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
-       const companyObjectives = [...OBJETIVOS_MOCK, ...allObjectives.filter(obj => obj.empresaId === user.empresaId)];
-       const obj = companyObjectives.find(o => o.id === currentUserData.schedule.objectiveId);
-       if (obj) {
-          setAssignedObjectiveName(obj.nombre);
-          setAssignedObjective(obj);
-       }
+    try {
+      const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
+      const currentUserData = allUsers.find(u => 
+        (user.uid && (u.uid === user.uid || u.id === user.uid)) ||
+        (user.id && (u.id === user.id || u.uid === user.id)) ||
+        (user.email && u.email?.toLowerCase() === user.email?.toLowerCase())
+      );
+      setFullUserData(currentUserData);
+      if (currentUserData && currentUserData.schedule && currentUserData.schedule.objectiveId) {
+        const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
+        const companyObjectives = [...OBJETIVOS_MOCK, ...allObjectives.filter(obj => obj.empresaId === user.empresaId)];
+        const obj = companyObjectives.find(o => o.id === currentUserData.schedule.objectiveId);
+        if (obj) {
+            setAssignedObjectiveName(obj.nombre);
+            setAssignedObjective(obj);
+        }
 
-       const allQr = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
-       setQrPointsList(allQr.filter(p => p.objectiveId === currentUserData.schedule.objectiveId));
+        const allQr = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
+        setQrPointsList(allQr.filter(p => p.objectiveId === currentUserData.schedule.objectiveId));
+      }
+    } catch (e) {
+      console.warn("Storage error (users/objectives):", e);
     }
 
     // Geolocation API (Real Tracking)
@@ -1712,7 +1725,7 @@ const ActivityItem = ({ time, text, active }) => (
 );
 
 const styles = {
-  container: { height: '100vh', width: '100vw', background: '#020617', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: "'Outfit', sans-serif" },
+  container: { height: '100vh', width: '100vw', background: '#020617', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif' },
   phoneFrame: {
     width: '100%', maxWidth: '430px', height: '100vh', 
     background: 'linear-gradient(180deg, #020617 0%, #0f172a 100%)',

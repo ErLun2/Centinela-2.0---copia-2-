@@ -45,16 +45,17 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    // Check if there is a session in LocalStorage
-    const savedUser = localStorage.getItem('centinela_current_user');
-    if (savedUser) {
-      try {
+    // Check if there is a session in LocalStorage safely
+    try {
+      const savedUser = localStorage.getItem('centinela_current_user');
+      if (savedUser) {
         setUser(JSON.parse(savedUser));
         setLoading(false);
         return;
-      } catch (e) {
-        localStorage.removeItem('centinela_current_user');
       }
+    } catch (e) {
+      console.warn("Auth restore error:", e);
+      localStorage.removeItem('centinela_current_user');
     }
 
     // Safe Auth State Listener

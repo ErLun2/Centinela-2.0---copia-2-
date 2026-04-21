@@ -36,11 +36,15 @@ export const SoundProvider = ({ children }) => {
     // REMOVED manual .loop = true to allow alternating
     panicAudio.current.loop = false;
 
-    // Load settings from localStorage
+    // Load settings from localStorage safely
     if (user?.uid) {
-      const savedSettings = localStorage.getItem(`centinela_sound_settings_${user.uid}`);
-      if (savedSettings) {
-        setSettings(JSON.parse(savedSettings));
+      try {
+        const savedSettings = localStorage.getItem(`centinela_sound_settings_${user.uid}`);
+        if (savedSettings) {
+          setSettings(JSON.parse(savedSettings));
+        }
+      } catch (e) {
+        console.warn("Sound settings restore failed:", e);
       }
     }
   }, [user?.uid]);
