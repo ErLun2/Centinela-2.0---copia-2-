@@ -685,6 +685,52 @@ app.post('/api/audit', async (req, res) => {
     res.json({ success: true });
 });
 
+// --- OBJETIVOS (SaaS Core) ---
+app.get('/api/objectives', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM objectives');
+        res.json(rows);
+    } catch (err) { res.json([]); }
+});
+
+app.post('/api/objectives', async (req, res) => {
+    const obj = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO objectives (id, name, nombre, address, lat, lng, companyId) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, nombre=?, address=?, lat=?, lng=?, companyId=?',
+            [obj.id, obj.name, obj.nombre, obj.address, obj.lat, obj.lng, obj.companyId, obj.name, obj.nombre, obj.address, obj.lat, obj.lng, obj.companyId]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- PUNTOS QR ---
+app.get('/api/qr_points', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM qr_points');
+        res.json(rows);
+    } catch (err) { res.json([]); }
+});
+
+app.post('/api/qr_points', async (req, res) => {
+    const pt = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO qr_points (id, name, objectiveId, code, companyId) VALUES (?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, objectiveId=?, code=?, companyId=?',
+            [pt.id, pt.name, pt.objectiveId, pt.code, pt.companyId, pt.name, pt.objectiveId, pt.code, pt.companyId]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- HISTORIAL DE PAGOS ---
+app.get('/api/payments/history', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM payments ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (err) { res.json([]); }
+});
+
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
     console.log(`🚀 Centinela Backend - Modo LITE Activo - http://localhost:${PORT}`);
