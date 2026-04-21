@@ -86,13 +86,15 @@ const PasswordChange = () => {
             <h2 style={titleStyle}>ACTIVACIÓN DE CUENTA</h2>
             <p style={descriptionStyle}>Establezca su contraseña personal para continuar.</p>
 
-            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }} autoComplete="off">
               <div style={inputWrapperStyle} key="input-1">
-                <KeyRound size={20} style={inputIconStyle} />
+                <span style={{ display: 'inline-flex' }}><KeyRound size={20} style={inputIconStyle} /></span>
                 <input 
                   type="password" 
                   placeholder="Nueva Contraseña" 
                   required
+                  autoComplete="new-password"
+                  spellCheck="false"
                   value={passwords.new}
                   onChange={e => setPasswords({...passwords, new: e.target.value})}
                   style={inputStyle}
@@ -100,11 +102,13 @@ const PasswordChange = () => {
               </div>
 
               <div style={inputWrapperStyle} key="input-2">
-                <Lock size={20} style={inputIconStyle} />
+                <span style={{ display: 'inline-flex' }}><Lock size={20} style={inputIconStyle} /></span>
                 <input 
                   type="password" 
                   placeholder="Confirmar Contraseña" 
                   required
+                  autoComplete="new-password"
+                  spellCheck="false"
                   value={passwords.confirm}
                   onChange={e => setPasswords({...passwords, confirm: e.target.value})}
                   style={inputStyle}
