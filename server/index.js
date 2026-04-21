@@ -53,201 +53,217 @@ pool.getConnection()
     
     // --- INICIALIZACIÓN DE ESQUEMA (Auto-reparación) ---
     try {
-        // 1. Usuarios (Core Schema & Auto-Reparación)
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS usuarios (
-                id VARCHAR(100) PRIMARY KEY,
-                email VARCHAR(150),
-                name VARCHAR(255),
-                surname VARCHAR(150),
-                role VARCHAR(50),
-                companyId VARCHAR(100),
-                status VARCHAR(50) DEFAULT 'activo',
-                password VARCHAR(255) DEFAULT 'password123',
-                password_changed TINYINT(1) DEFAULT 0,
-                dni VARCHAR(50),
-                legajo VARCHAR(50),
-                personal_email VARCHAR(150),
-                birth_date DATE,
-                phone VARCHAR(100),
-                last_login DATETIME
-            )
-        `);
-        // Asegurar columnas por si la tabla ya existía
-        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS surname VARCHAR(150)`);
-        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
-        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS legajo VARCHAR(50)`);
-        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS personal_email VARCHAR(150)`);
-        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS birth_date DATE`);
-        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS phone VARCHAR(100)`);
-        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_changed TINYINT(1) DEFAULT 0`);
-        await conn.query(`ALTER TABLE usuarios MODIFY COLUMN role VARCHAR(50)`);
-        console.log('  - Estructura de usuarios verificada y ampliada');
+        // 1. Usuarios
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS usuarios (
+                    id VARCHAR(100) PRIMARY KEY,
+                    email VARCHAR(150),
+                    name VARCHAR(255),
+                    surname VARCHAR(150),
+                    role VARCHAR(50),
+                    companyId VARCHAR(100),
+                    status VARCHAR(50) DEFAULT 'activo',
+                    password VARCHAR(255) DEFAULT 'password123',
+                    password_changed TINYINT(1) DEFAULT 0,
+                    dni VARCHAR(50),
+                    legajo VARCHAR(50),
+                    personal_email VARCHAR(150),
+                    birth_date DATE,
+                    phone VARCHAR(100),
+                    last_login DATETIME
+                )
+            `);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS surname VARCHAR(150)`);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS legajo VARCHAR(50)`);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS personal_email VARCHAR(150)`);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS birth_date DATE`);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS phone VARCHAR(100)`);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_changed TINYINT(1) DEFAULT 0`);
+            await conn.query(`ALTER TABLE usuarios MODIFY COLUMN role VARCHAR(50)`);
+            console.log('  [DB] Estructura de usuarios OK');
+        } catch (e) { console.error('  [DB-ERROR] Usuarios:', e.message); }
 
-        // 2. Empresas (Core Schema & Auto-Reparación)
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS empresas (
-                id VARCHAR(100) PRIMARY KEY,
-                name VARCHAR(255),
-                titular VARCHAR(255),
-                email VARCHAR(150),
-                telefono VARCHAR(100),
-                address TEXT,
-                plan VARCHAR(50) DEFAULT 'demo',
-                guards INT DEFAULT 0,
-                status VARCHAR(50) DEFAULT 'activa',
-                expiryDate DATE,
-                fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                lat FLOAT,
-                lng FLOAT,
-                dni VARCHAR(50),
-                appEmail VARCHAR(100)
-            )
-        `);
-        // Asegurar columnas faltantes
-        await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
-        await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS appEmail VARCHAR(100)`);
-        console.log('  - Estructura de empresas verificada');
+        // 2. Empresas
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS empresas (
+                    id VARCHAR(100) PRIMARY KEY,
+                    name VARCHAR(255),
+                    titular VARCHAR(255),
+                    email VARCHAR(150),
+                    telefono VARCHAR(100),
+                    address TEXT,
+                    plan VARCHAR(50) DEFAULT 'demo',
+                    guards INT DEFAULT 0,
+                    status VARCHAR(50) DEFAULT 'activa',
+                    expiryDate DATE,
+                    fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    lat FLOAT,
+                    lng FLOAT,
+                    dni VARCHAR(50),
+                    appEmail VARCHAR(100)
+                )
+            `);
+            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
+            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS appEmail VARCHAR(100)`);
+            console.log('  [DB] Estructura de empresas OK');
+        } catch (e) { console.error('  [DB-ERROR] Empresas:', e.message); }
 
         // 3. Eventos
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS eventos (
-                id VARCHAR(100) PRIMARY KEY,
-                tipo VARCHAR(50),
-                subtipo VARCHAR(50),
-                descripcion TEXT,
-                fecha DATE,
-                hora TIME,
-                lat FLOAT,
-                lng FLOAT,
-                companyId VARCHAR(100),
-                guardiaId VARCHAR(100),
-                fotoUrl TEXT,
-                audioUrl TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('  - Estructura de eventos verificada');
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS eventos (
+                    id VARCHAR(100) PRIMARY KEY,
+                    tipo VARCHAR(50),
+                    subtipo VARCHAR(50),
+                    descripcion TEXT,
+                    fecha DATE,
+                    hora TIME,
+                    lat FLOAT,
+                    lng FLOAT,
+                    companyId VARCHAR(100),
+                    guardiaId VARCHAR(100),
+                    fotoUrl TEXT,
+                    audioUrl TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('  [DB] Estructura de eventos OK');
+        } catch (e) { console.error('  [DB-ERROR] Eventos:', e.message); }
 
         // 4. Leads de Demo
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS demo_requests (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                nombre VARCHAR(255),
-                empresa VARCHAR(255),
-                email VARCHAR(255),
-                telefono VARCHAR(100),
-                guardias INT DEFAULT 0,
-                empleados INT DEFAULT 0,
-                mensaje TEXT,
-                source VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('  - Estructura de leads verificada');
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS demo_requests (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nombre VARCHAR(255),
+                    empresa VARCHAR(255),
+                    email VARCHAR(255),
+                    telefono VARCHAR(100),
+                    guardias INT DEFAULT 0,
+                    empleados INT DEFAULT 0,
+                    mensaje TEXT,
+                    source VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('  [DB] Estructura de leads OK');
+        } catch (e) { console.error('  [DB-ERROR] Demo Leads:', e.message); }
 
-        // 4. Planes (Sincronización Mandatoria de IDs Core)
-        const corePlanes = [
-            { id: 'basico', nombre: 'Plan Básico', precio: 1500, limite_guardias: 70 },
-            { id: 'profesional', nombre: 'Plan Profesional', precio: 3000, limite_guardias: 150 },
-            { id: 'enterprise', nombre: 'Plan Enterprise', precio: 5000, limite_guardias: 250 },
-            { id: 'demo', nombre: 'Plan Demo', precio: 0, limite_guardias: 250 }
-        ];
-        for (const p of corePlanes) {
-            await pool.query(
-                `INSERT INTO planes (id, nombre, precio, limite_guardias) 
-                 VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE id=id`,
-                [p.id, p.nombre, p.precio, p.limite_guardias]
-            );
-        }
-        console.log('  - Planes Core sincronizados en DB');
+        // 5. Planes (Schema & Sincronización Mandatoria)
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS planes (
+                    id VARCHAR(100) PRIMARY KEY,
+                    nombre VARCHAR(100),
+                    precio FLOAT,
+                    subtitulo VARCHAR(255),
+                    limite_guardias INT,
+                    botones_panico TINYINT(1) DEFAULT 1,
+                    historial_dias INT DEFAULT 30,
+                    color VARCHAR(50),
+                    beneficios TEXT,
+                    gps TINYINT(1) DEFAULT 1,
+                    rondas TINYINT(1) DEFAULT 1,
+                    alertas_ia TINYINT(1) DEFAULT 0
+                )
+            `);
+            const corePlanes = [
+                { id: 'basico', nombre: 'Plan Básico', precio: 1500, limite_guardias: 70 },
+                { id: 'profesional', nombre: 'Plan Profesional', precio: 3000, limite_guardias: 150 },
+                { id: 'enterprise', nombre: 'Plan Enterprise', precio: 5000, limite_guardias: 250 },
+                { id: 'demo', nombre: 'Plan Demo', precio: 0, limite_guardias: 250 }
+            ];
+            for (const p of corePlanes) {
+                await conn.query(
+                    `INSERT INTO planes (id, nombre, precio, limite_guardias) 
+                     VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE id=id`,
+                    [p.id, p.nombre, p.precio, p.limite_guardias]
+                );
+            }
+            console.log('  [DB] Planes OK');
+        } catch (e) { console.error('  [DB-ERROR] Planes:', e.message); }
 
-        // 5. Limpieza Sanitaria: Normalizar nombres de planes a IDs (Evita fallos de FK)
-        await pool.query("UPDATE empresas SET plan = 'basico' WHERE plan = 'Plan Básico' OR plan = 'Básico'");
-        await pool.query("UPDATE empresas SET plan = 'profesional' WHERE plan = 'Plan Profesional' OR plan = 'Profesional'");
-        await pool.query("UPDATE empresas SET plan = 'enterprise' WHERE plan = 'Plan Enterprise' OR plan = 'Enterprise'");
-        await pool.query("UPDATE empresas SET plan = 'demo' WHERE plan = 'Plan Demo' OR plan = 'Demo'");
-        console.log('  - Sanitización de planes completada');
+        // 6. Sanitización Sanitaria (Actualizar planes antiguos)
+        try {
+            await conn.query("UPDATE empresas SET plan = 'basico' WHERE plan = 'Plan Básico' OR plan = 'Básico'");
+            await conn.query("UPDATE empresas SET plan = 'profesional' WHERE plan = 'Plan Profesional' OR plan = 'Profesional'");
+            await conn.query("UPDATE empresas SET plan = 'enterprise' WHERE plan = 'Plan Enterprise' OR plan = 'Enterprise'");
+            await conn.query("UPDATE empresas SET plan = 'demo' WHERE plan = 'Plan Demo' OR plan = 'Demo'");
+        } catch (e) { /* Silencioso si falla */ }
 
-        // 6. Tickets (Esquema Ampliado para Supervisión)
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS tickets (
-                id VARCHAR(50) PRIMARY KEY,
-                titulo VARCHAR(255),
-                descripcion TEXT,
-                asunto VARCHAR(255),
-                tipo VARCHAR(50),
-                prioridad VARCHAR(50),
-                estado VARCHAR(50) DEFAULT 'Nuevo',
-                fecha DATETIME,
-                usuarioId VARCHAR(100),
-                usuarioNombre VARCHAR(255),
-                usuarioEmail VARCHAR(150),
-                empresaId VARCHAR(100),
-                nombreEmpresa VARCHAR(255),
-                empresaPlan VARCHAR(50),
-                respuestas TEXT
-            )
-        `);
-        // Asegurar columnas faltantes
-        await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS asunto VARCHAR(255)`);
-        await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS tipo VARCHAR(50)`);
-        await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS prioridad VARCHAR(50)`);
-        await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS usuarioNombre VARCHAR(255)`);
-        await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS usuarioEmail VARCHAR(150)`);
-        await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS empresaId VARCHAR(100)`);
-        await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS nombreEmpresa VARCHAR(255)`);
-        await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS empresaPlan VARCHAR(50)`);
-        console.log('  - Estructura de tickets verificada y ampliada');
+        // 7. Tickets
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS tickets (
+                    id VARCHAR(50) PRIMARY KEY,
+                    titulo VARCHAR(255),
+                    descripcion TEXT,
+                    asunto VARCHAR(255),
+                    tipo VARCHAR(50),
+                    prioridad VARCHAR(50),
+                    estado VARCHAR(50) DEFAULT 'Nuevo',
+                    fecha DATETIME,
+                    usuarioId VARCHAR(100),
+                    usuarioNombre VARCHAR(255),
+                    usuarioEmail VARCHAR(150),
+                    empresaId VARCHAR(100),
+                    nombreEmpresa VARCHAR(255),
+                    empresaPlan VARCHAR(50),
+                    respuestas TEXT
+                )
+            `);
+            await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS asunto VARCHAR(255)`);
+            await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS tipo VARCHAR(50)`);
+            await conn.query(`ALTER TABLE tickets ADD COLUMN IF NOT EXISTS prioridad VARCHAR(50)`);
+            console.log('  [DB] Tickets OK');
+        } catch (e) { console.error('  [DB-ERROR] Tickets:', e.message); }
 
-        // 3. Sistema Config
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS sistema_config (
-                \`key\` VARCHAR(100) PRIMARY KEY,
-                value TEXT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('  - Tabla de configuración verificada');
+        // 8. Sistema Config
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS sistema_config (
+                    \`key\` VARCHAR(100) PRIMARY KEY,
+                    value TEXT,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('  [DB] Configuración OK');
+        } catch (e) { console.error('  [DB-ERROR] Config:', e.message); }
 
-        // 4. Payments
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS payments (
-                id VARCHAR(100) PRIMARY KEY,
-                data TEXT,
-                status VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('  - Tabla de pagos verificada');
+        // 9. Objectives (Puestos/Sedes)
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS objectives (
+                    id VARCHAR(100) PRIMARY KEY,
+                    name VARCHAR(255),
+                    nombre VARCHAR(255),
+                    address TEXT,
+                    lat FLOAT,
+                    lng FLOAT,
+                    companyId VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('  [DB] Objetivos OK');
+        } catch (e) { console.error('  [DB-ERROR] Objetivos:', e.message); }
 
-        // 7. Objectives (Puestos/Sedes)
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS objectives (
-                id VARCHAR(100) PRIMARY KEY,
-                name VARCHAR(255),
-                nombre VARCHAR(255),
-                address TEXT,
-                lat FLOAT,
-                lng FLOAT,
-                companyId VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('  - Estructura de objetivos verificada');
-
-        // 8. QR Points (Puntos de Control)
-        await conn.query(`
-            CREATE TABLE IF NOT EXISTS qr_points (
-                id VARCHAR(100) PRIMARY KEY,
-                name VARCHAR(255),
-                objectiveId VARCHAR(100),
-                code VARCHAR(255),
-                companyId VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `);
-        console.log('  - Estructura de puntos QR verificada');
+        // 10. QR Points
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS qr_points (
+                    id VARCHAR(100) PRIMARY KEY,
+                    name VARCHAR(255),
+                    objectiveId VARCHAR(100),
+                    code VARCHAR(255),
+                    companyId VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('  [DB] Puntos QR OK');
+        } catch (e) { console.error('  [DB-ERROR] Puntos QR:', e.message); }
 
         // 5. Usuario Maestro (REGLA DE ORO: Asegurar acceso inicial)
         const [adminRows] = await conn.query('SELECT id FROM usuarios WHERE email = "vidal@master.com"');
