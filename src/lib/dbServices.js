@@ -7,16 +7,8 @@ import { getAuth, createUserWithEmailAndPassword, signOut as signOutAuth } from 
 // CONFIGURACIÓN API (RENDER / PRODUCCIÓN)
 // ========================
 const getApiUrl = () => {
-    // Si ya tenemos una variable de entorno, la usamos
-    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
-    
-    // Si estamos en el dominio de producción, usamos el backend de Render
-    if (typeof window !== 'undefined' && window.location.hostname.includes('centinela-security.com')) {
-        return 'https://centinela-backend.onrender.com/api'; // URL de tu servidor en Render
-    }
-    
-    // Por defecto para desarrollo local
-    return 'http://localhost:3001/api';
+    // REGLA DE ORO: Forzamos la conexión al servidor real de Render para que PC y Celular vean lo mismo
+    return 'https://centinela-backend.onrender.com/api';
 };
 
 const API_URL = getApiUrl();

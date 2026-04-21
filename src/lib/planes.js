@@ -6,7 +6,7 @@ const DEFAULT_PLANES = {
   BASICO: {
     id: 'basico',
     nombre: 'Plan Básico',
-    precio: 3000,
+    precio: 1500,
     subtitulo: 'Ideal para comenzar a digitalizar y ordenar tu operación de seguridad',
     limite_guardias: 70,
     botones_panico: 30,
@@ -22,7 +22,7 @@ const DEFAULT_PLANES = {
   PROFESIONAL: {
     id: 'profesional',
     nombre: 'Plan Profesional',
-    precio: 5000,
+    precio: 3000,
     subtitulo: 'Control total de tu operación con Rondas QR y Monitoreo GPS',
     limite_guardias: 150,
     botones_panico: 100,
@@ -44,7 +44,7 @@ const DEFAULT_PLANES = {
   ENTERPRISE: {
     id: 'enterprise',
     nombre: 'Plan Enterprise',
-    precio: 7000,
+    precio: 5000,
     subtitulo: 'Solución avanzada con IA, Rondas QR y Monitoreo Centralizado',
     limite_guardias: 250,
     botones_panico: 180,
