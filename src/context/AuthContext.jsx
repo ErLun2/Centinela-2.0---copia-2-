@@ -235,19 +235,24 @@ export const AuthProvider = ({ children }) => {
     // Update local state and persistence
     const updatedUser = { ...user, password: newPassword, mustChangePassword: false };
     setUser(updatedUser);
-    localStorage.setItem('centinela_current_user', JSON.stringify(updatedUser));
     
-    // Update users database
-    const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    const updatedUsers = allUsers.map(u => {
-      const isTarget = (u.email?.toLowerCase() === user.email?.toLowerCase()) || 
-                      (user.id && u.id === user.id) ||
-                      (user.uid && u.uid === user.uid) ||
-                      (user.uid && u.id === user.uid) ||
-                      (user.id && u.uid === user.id);
-      return isTarget ? { ...u, password: newPassword, mustChangePassword: false } : u;
-    });
-    localStorage.setItem('centinela_users', JSON.stringify(updatedUsers));
+    try {
+      localStorage.setItem('centinela_current_user', JSON.stringify(updatedUser));
+      
+      // Update users database
+      const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
+      const updatedUsers = allUsers.map(u => {
+        const isTarget = (u.email?.toLowerCase() === user.email?.toLowerCase()) || 
+                        (user.id && u.id === user.id) ||
+                        (user.uid && u.uid === user.uid) ||
+                        (user.uid && u.id === user.uid) ||
+                        (user.id && u.uid === user.id);
+        return isTarget ? { ...u, password: newPassword, mustChangePassword: false } : u;
+      });
+      localStorage.setItem('centinela_users', JSON.stringify(updatedUsers));
+    } catch (e) {
+      console.warn("Storage restricted - update only in memory", e);
+    }
     
     return true;
   };
