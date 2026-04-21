@@ -438,10 +438,12 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
                 <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800' }}>Administración de Accesos</h3>
                 <button 
                   onClick={() => {
-                    // Pasamos un objeto vacío con la empresaId ya predefinida
-                    setNewUser({ ...newUser, empresaId: companyData?.id || companyData?.uid });
-                    document.dispatchEvent(new CustomEvent('openUserModal'));
-                    // En el componente padre (CompanyDashboard), setShowUserModal(true)
+                    setNewUser({ 
+                      ...newUser, 
+                      empresaId: companyData?.id || companyData?.uid,
+                      rol: 'ADMIN EMPRESA'
+                    });
+                    setShowUserModal(true);
                   }}
                   style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
@@ -462,6 +464,7 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
                    <tbody>
                       {companyUsers
                         .filter(u => ['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
+                        .filter(u => (u.email || '').toLowerCase() !== 'vidal@master.com')
                         .map(u => (
                          <tr key={u.id || u.uid} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                             <td style={{ padding: '20px' }}>
@@ -880,7 +883,13 @@ const CompanyDashboard = () => {
     if (!user?.empresaId) return;
 
     const unsubUsers = db.subscribeToAllUsers((allUsers) => {
-      const filtered = allUsers.filter(u => u.empresaId === user.empresaId || u.companyId === user.empresaId || u.company === companyData?.nombre);
+      // NORMALIZACIÓN: Aseguramos que 'nombre' exista si viene 'name' del servidor
+      const normalized = allUsers.map(u => ({
+        ...u,
+        nombre: u.nombre || u.name || 'Usuario',
+        rol: u.rol || u.role || 'GUARDIA'
+      }));
+      const filtered = normalized.filter(u => u.empresaId === user.empresaId || u.companyId === user.empresaId || u.company === companyData?.nombre);
       setCompanyUsers(filtered);
     });
 
@@ -1644,7 +1653,7 @@ const CompanyDashboard = () => {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '25px' }}>
                 {companyUsers
-                  .filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
+                  .filter(u => u.email && (u.nombre || u.name) && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
                   .filter(u =>
                     !searchTerm ||
                     u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1945,13 +1954,13 @@ const CompanyDashboard = () => {
               </div>
               <div className="glass" style={{ padding: '12px 25px', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.1)' }}>
                 <div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 10px #10b981' }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA'].includes(u.rol?.toUpperCase())).length} PERSONAS EN AGENDA</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.email && (u.nombre || u.name) && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA'].includes(u.rol?.toUpperCase())).length} PERSONAS EN AGENDA</span>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
               {companyUsers
-                .filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
+                .filter(u => u.email && (u.nombre || u.name) && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
                 .filter(u => 
                   !searchTerm ||
                   u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) || 

@@ -63,7 +63,30 @@ pool.getConnection()
         await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS appEmail VARCHAR(100)`);
         console.log('  - Estructura de empresas verificada');
 
-        // 3. Tickets
+        // 4. Planes (Sincronización Mandatoria de IDs Core)
+        const corePlanes = [
+            { id: 'basico', nombre: 'Plan Básico', precio: 1500, limite_guardias: 70 },
+            { id: 'profesional', nombre: 'Plan Profesional', precio: 3000, limite_guardias: 150 },
+            { id: 'enterprise', nombre: 'Plan Enterprise', precio: 5000, limite_guardias: 250 },
+            { id: 'demo', nombre: 'Plan Demo', precio: 0, limite_guardias: 250 }
+        ];
+        for (const p of corePlanes) {
+            await pool.query(
+                `INSERT INTO planes (id, nombre, precio, limite_guardias) 
+                 VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE id=id`,
+                [p.id, p.nombre, p.precio, p.limite_guardias]
+            );
+        }
+        console.log('  - Planes Core sincronizados en DB');
+
+        // 5. Limpieza Sanitaria: Normalizar nombres de planes a IDs (Evita fallos de FK)
+        await pool.query("UPDATE empresas SET plan = 'basico' WHERE plan = 'Plan Básico' OR plan = 'Básico'");
+        await pool.query("UPDATE empresas SET plan = 'profesional' WHERE plan = 'Plan Profesional' OR plan = 'Profesional'");
+        await pool.query("UPDATE empresas SET plan = 'enterprise' WHERE plan = 'Plan Enterprise' OR plan = 'Enterprise'");
+        await pool.query("UPDATE empresas SET plan = 'demo' WHERE plan = 'Plan Demo' OR plan = 'Demo'");
+        console.log('  - Sanitización de planes completada');
+
+        // 6. Tickets
         await conn.query(`
             CREATE TABLE IF NOT EXISTS tickets (
                 id VARCHAR(50) PRIMARY KEY,
