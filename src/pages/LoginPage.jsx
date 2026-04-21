@@ -802,9 +802,7 @@ const SalesModal = ({ isOpen, onClose }) => {
       }
     } catch (err) {
       console.error("Error en solicitud comercial:", err);
-      // Fallback a éxito si ya se guardó para no frustrar al usuario, 
-      // o a error si falló todo.
-      setStatus('success'); 
+      setStatus('error');
     }
   };
 

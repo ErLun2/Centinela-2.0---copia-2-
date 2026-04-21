@@ -443,11 +443,8 @@ const DemoModal = ({ isOpen, onClose }) => {
       }
     } catch (err) {
       console.error(err);
-      // Fallback a éxito simulado si el usuario solo quiere ver el flujo visual funcional
-      // pero el backend aún no está desplegado.
-      setStatus('success'); 
-      setFormData({ nombre: '', empresa: '', telefono: '', email: '', guardias: '' });
-      setTimeout(() => onClose(), 3000);
+      setError(err.message || 'Error al procesar la solicitud');
+      setStatus('error');
     }
   };
 

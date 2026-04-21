@@ -17,7 +17,11 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
         if (body) options.body = JSON.stringify(body);
         
         const response = await fetch(`${API_URL}${endpoint}`, options);
-        if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error(`API Error in ${endpoint}:`, response.status, errorData);
+            return null;
+        }
         return await response.json();
     } catch (error) {
         console.error(`Error en API (${endpoint}):`, error);
