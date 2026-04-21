@@ -461,7 +461,7 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
                    </thead>
                    <tbody>
                       {companyUsers
-                        .filter(u => u.rol?.toUpperCase() === 'ADMIN' || u.rol?.toUpperCase() === 'OPERADOR')
+                        .filter(u => ['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes(u.rol?.toUpperCase()))
                         .map(u => (
                          <tr key={u.id || u.uid} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                             <td style={{ padding: '20px' }}>
@@ -1631,7 +1631,7 @@ const CompanyDashboard = () => {
               </div>
               <div className="glass" style={{ padding: '12px 25px', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,210,255,0.05)', border: '1px solid rgba(0,210,255,0.1)' }}>
                 <div style={{ width: '10px', height: '10px', background: '#00d2ff', borderRadius: '50%', boxShadow: '0 0 10px #00d2ff' }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.email && !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase())).length} INTEGRANTES ACTIVOS</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA'].includes(u.rol?.toUpperCase())).length} INTEGRANTES ACTIVOS</span>
               </div>
             </div>
 
@@ -1644,7 +1644,7 @@ const CompanyDashboard = () => {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '25px' }}>
                 {companyUsers
-                  .filter(u => u.email && !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase()))
+                  .filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes(u.rol?.toUpperCase()))
                   .filter(u =>
                     !searchTerm ||
                     u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1945,13 +1945,13 @@ const CompanyDashboard = () => {
               </div>
               <div className="glass" style={{ padding: '12px 25px', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.1)' }}>
                 <div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 10px #10b981' }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.email && !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase())).length} PERSONAS EN AGENDA</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA'].includes(u.rol?.toUpperCase())).length} PERSONAS EN AGENDA</span>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
               {companyUsers
-                .filter(u => u.email && !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase()))
+                .filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes(u.rol?.toUpperCase()))
                 .filter(u => 
                   !searchTerm ||
                   u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) || 

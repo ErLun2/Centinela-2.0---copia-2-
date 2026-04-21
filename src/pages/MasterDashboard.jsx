@@ -1348,7 +1348,7 @@ const MasterDashboard = () => {
                          const sName = (selectedCompany.name || '').toLowerCase().trim();
 
                          // 1. Coincidencia por nombre de empresa (estricto)
-                         if (uCompany === sName) return true;
+                         if (u.companyId === selectedCompanyId || u.empresaId === selectedCompanyId || uCompany === sName) return true;
 
                          // 2. Intento de emparejamiento por dominio de email
                          if (u.email && u.email.includes('@')) {
