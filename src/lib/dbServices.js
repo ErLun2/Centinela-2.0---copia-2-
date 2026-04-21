@@ -135,7 +135,11 @@ export const obtenerUsuariosEmpresa = async (empresaId) => {
     return await apiRequest(`/usuarios?companyId=${empresaId}`);
 };
 
-export const subscribeToAllUsers = (cb) => subscribeToResource('/usuarios', cb, 35000); // Un poco más lento para priorizar eventos
+export const obtenerUsuarios = async () => {
+    return await apiRequest('/usuarios');
+};
+
+export const subscribeToAllUsers = (cb) => subscribeToResource('/usuarios', cb, 35000); 
 
 // ========================
 // TICKETS DE SOPORTE

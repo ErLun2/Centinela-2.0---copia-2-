@@ -898,6 +898,7 @@ const StaffApp = () => {
 
   const [loading, setLoading] = useState(false);
   const [appReady, setAppReady] = useState(false); // Estado para evitar pantalla negra en inicio frío
+  const { userLocationIcon, objectiveIcon } = getLeafletIcons();
   const [currentGps, setCurrentGps] = useState(null);
   const [companyName, setCompanyName] = useState('DASHBOARD');
   const [assignedObjectiveName, setAssignedObjectiveName] = useState('SIN ASIGNAR');
