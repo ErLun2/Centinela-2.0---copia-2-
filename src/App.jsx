@@ -1,17 +1,40 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, Component } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth, ROLES } from './context/AuthContext';
 import { SoundProvider } from './context/SoundContext';
 
-// Carga Perezosa (Lazy Loading) - Crucial para estabilidad en celulares
+// Importación estática por seguridad (Pantallas críticas)
+import PasswordChange from './pages/PasswordChange';
+
+// Carga Perezosa (Lazy Loading) - Para dashboards pesados
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const LoginPage = lazy(() => import('./pages/LoginPage'));
-const PasswordChange = lazy(() => import('./pages/PasswordChange'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const MasterDashboard = lazy(() => import('./pages/MasterDashboard'));
 const SupportDashboard = lazy(() => import('./pages/SupportDashboard'));
 const CompanyDashboard = lazy(() => import('./pages/CompanyDashboard'));
 const StaffApp = lazy(() => import('./pages/StaffApp'));
+
+// Muro de Seguridad (Error Boundary)
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) { return { hasError: true }; }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#020617', color: 'white', padding: '20px', textAlign: 'center' }}>
+          <h2 style={{ fontSize: '1.2rem', marginBottom: '10px' }}>⚠️ ERROR DE CARGA</h2>
+          <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '20px' }}>Hubo un problema al inicializar la App en este dispositivo.</p>
+          <button onClick={() => window.location.reload()} style={{ padding: '12px 24px', background: '#00a8ff', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold' }}>REINTENTAR</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 // Loader sencillo para transiciones
 const PageLoader = () => (
@@ -79,51 +102,53 @@ const LoginGuard = ({ children }) => {
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <SoundProvider>
-          <Suspense fallback={<PageLoader />}>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<LoginGuard><LoginPage /></LoginGuard>} />
-              <Route path="/reset-password" element={<ResetPassword />} />
+    <ErrorBoundary>
+      <Router>
+        <AuthProvider>
+          <SoundProvider>
+            <Suspense fallback={<PageLoader />}>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginGuard><LoginPage /></LoginGuard>} />
+                <Route path="/reset-password" element={<ResetPassword />} />
 
-              <Route path="/password-change" element={
-                <ProtectedRoute isSecurityPage={true}>
-                  <PasswordChange />
-                </ProtectedRoute>
-              } />
+                <Route path="/password-change" element={
+                  <ProtectedRoute isSecurityPage={true}>
+                    <PasswordChange />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/master/*" element={
-                <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
-                  <MasterDashboard />
-                </ProtectedRoute>
-              } />
+                <Route path="/master/*" element={
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                    <MasterDashboard />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/support/*" element={
-                <ProtectedRoute allowedRoles={['SUPPORT', 'SOPORTE', 'SUPER_ADMIN']}>
-                  <SupportDashboard />
-                </ProtectedRoute>
-              } />
+                <Route path="/support/*" element={
+                  <ProtectedRoute allowedRoles={['SUPPORT', 'SOPORTE', 'SUPER_ADMIN']}>
+                    <SupportDashboard />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/company/*" element={
-                <ProtectedRoute allowedRoles={['COMPANY_ADMIN', 'COMPANY_CLIENT', 'SUPERVISOR', 'OPERADOR']}>
-                  <CompanyDashboard />
-                </ProtectedRoute>
-              } />
+                <Route path="/company/*" element={
+                  <ProtectedRoute allowedRoles={['COMPANY_ADMIN', 'COMPANY_CLIENT', 'SUPERVISOR', 'OPERADOR']}>
+                    <CompanyDashboard />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/staff/*" element={
-                <ProtectedRoute allowedRoles={['GUARD', 'SUPERVISOR']}>
-                  <StaffApp />
-                </ProtectedRoute>
-              } />
+                <Route path="/staff/*" element={
+                  <ProtectedRoute allowedRoles={['GUARD', 'SUPERVISOR']}>
+                    <StaffApp />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-          </Suspense>
-        </SoundProvider>
-      </AuthProvider>
-    </Router>
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </Suspense>
+          </SoundProvider>
+        </AuthProvider>
+      </Router>
+    </ErrorBoundary>
   );
 }
 
