@@ -129,8 +129,8 @@ export const AuthProvider = ({ children }) => {
       if (result && result.success && result.user) {
         const u = result.user;
         let finalRole = (u.role || u.rol || ROLES.GUARD).toUpperCase();
-        if (finalRole === 'ADMIN EMPRESA' || finalRole === 'ADMIN_EMPRESA') finalRole = ROLES.COMPANY_ADMIN;
-        if (finalRole === 'SUPER ADMIN') finalRole = ROLES.SUPER_ADMIN;
+        if (finalRole === 'ADMIN EMPRESA' || finalRole === 'ADMIN_EMPRESA' || finalRole === 'ADMIN') finalRole = ROLES.COMPANY_ADMIN;
+        if (finalRole === 'SUPER ADMIN' || finalRole === 'SUPER_ADMIN' || (finalRole === 'ADMIN' && email.includes('master'))) finalRole = ROLES.SUPER_ADMIN;
         if (finalRole === 'GUARDIA') finalRole = ROLES.GUARD;
         if (finalRole === 'SOPORTE') finalRole = ROLES.SUPPORT;
 
