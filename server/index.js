@@ -267,6 +267,24 @@ pool.getConnection()
             console.log('  [DB] Puntos QR OK');
         } catch (e) { console.error('  [DB-ERROR] Puntos QR:', e.message); }
 
+        // 11. Programación de Rondas
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS rondas (
+                    id VARCHAR(100) PRIMARY KEY,
+                    nombre VARCHAR(255),
+                    objectiveId VARCHAR(100),
+                    startTime VARCHAR(10),
+                    tolerance INT DEFAULT 15,
+                    days JSON,
+                    assignedQrIds JSON,
+                    companyId VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('  [DB] Rondas OK');
+        } catch (e) { console.error('  [DB-ERROR] Rondas Programación:', e.message); }
+
         // 5. Usuario Maestro (REGLA DE ORO: Asegurar acceso inicial)
         const [adminRows] = await conn.query('SELECT id FROM usuarios WHERE email = "vidal@master.com"');
         if (adminRows.length === 0) {
@@ -960,6 +978,44 @@ app.post('/api/objectives', async (req, res) => {
             'INSERT INTO objectives (id, name, nombre, address, lat, lng, companyId) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, nombre=?, address=?, lat=?, lng=?, companyId=?',
             [obj.id, obj.name, obj.nombre, obj.address, obj.lat, obj.lng, obj.companyId, obj.name, obj.nombre, obj.address, obj.lat, obj.lng, obj.companyId]
         );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// --- PROGRAMACIÓN DE RONDAS ---
+app.get('/api/rondas', async (req, res) => {
+    const { companyId } = req.query;
+    try {
+        let sql = 'SELECT * FROM rondas';
+        let params = [];
+        if (companyId) {
+            sql += ' WHERE companyId = ?';
+            params.push(companyId);
+        }
+        const [rows] = await pool.query(sql, params);
+        res.json(rows);
+    } catch (err) { res.json([]); }
+});
+
+app.post('/api/rondas', async (req, res) => {
+    const r = req.body;
+    try {
+        await pool.query(
+            `INSERT INTO rondas (id, nombre, objectiveId, startTime, tolerance, days, assignedQrIds, companyId) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?) 
+             ON DUPLICATE KEY UPDATE nombre=?, objectiveId=?, startTime=?, tolerance=?, days=?, assignedQrIds=?, companyId=?`,
+            [
+                r.id, r.nombre, r.objectiveId, r.startTime, r.tolerance, JSON.stringify(r.days), JSON.stringify(r.assignedQrIds), r.companyId,
+                r.nombre, r.objectiveId, r.startTime, r.tolerance, JSON.stringify(r.days), JSON.stringify(r.assignedQrIds), r.companyId
+            ]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/rondas/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM rondas WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });

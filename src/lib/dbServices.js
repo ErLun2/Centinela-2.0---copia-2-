@@ -155,6 +155,12 @@ export const crearQrPoint = async (data) => {
 export const subscribeToObjectives = (cb) => subscribeToResource('/objectives', cb, 45000);
 export const subscribeToQrPoints = (cb) => subscribeToResource('/qr_points', cb, 45000);
 
+// Rondas (Programación)
+export const guardarRondaProgramada = async (data) => await apiRequest('/rondas', 'POST', data);
+export const obtenerRondas = async (companyId) => await apiRequest(`/rondas?companyId=${companyId}`);
+export const eliminarRonda = async (id) => await apiRequest(`/rondas/${id}`, 'DELETE');
+export const subscribeToRondas = (cb) => subscribeToResource('/rondas', cb, 45000);
+
 // ========================
 // TICKETS DE SOPORTE
 // ========================

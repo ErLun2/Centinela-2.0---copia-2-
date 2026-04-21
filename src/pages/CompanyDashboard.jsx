@@ -437,7 +437,7 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800' }}>Administración de Accesos</h3>
                 <button 
-                  onClick={() => {
+                  onClick(async () => {
                     setNewUser({ 
                       ...newUser, 
                       empresaId: companyData?.id || companyData?.uid,
@@ -487,7 +487,7 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
                                   <button onClick={() => toggleUserStatus(u.id || u.uid, u.activo !== false)} style={{ background: 'transparent', border: 'none', color: u.activo !== false ? '#ef4444' : '#10b981', cursor: 'pointer', fontSize: '0.8rem' }}>
                                      {u.activo !== false ? 'Desactivar' : 'Activar'}
                                   </button>
-                                  <button onClick={() => {
+                                  <button onClick(async () => {
                                       setSelectedUserForView(u);
                                    }} style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem' }}>Editar</button>
                                </div>
@@ -1032,8 +1032,17 @@ const CompanyDashboard = () => {
       setQrPoints(allPts.filter(p => p.companyId === user.empresaId));
     });
 
+    const unsubRondas = db.subscribeToRondas((allR) => {
+      const normalized = allR.map(r => ({
+        ...r,
+        days: typeof r.days === 'string' ? JSON.parse(r.days) : r.days,
+        assignedQrIds: typeof r.assignedQrIds === 'string' ? JSON.parse(r.assignedQrIds) : r.assignedQrIds
+      }));
+      setRondas(normalized.filter(r => r.companyId === user.empresaId));
+    });
+
     return () => {
-      unsubUsers(); unsubCompanies(); unsubEvents(); unsubTickets(); unsubObjectives(); unsubQrPoints();
+      unsubUsers(); unsubCompanies(); unsubEvents(); unsubTickets(); unsubObjectives(); unsubQrPoints(); unsubRondas();
     };
   };
 
@@ -1280,7 +1289,7 @@ const CompanyDashboard = () => {
     // Preparar data base del ticket
     const ticketData = {
       ...newTicket,
-      empresaId: user.empresaId,
+      companyId: user.empresaId,
       nombreEmpresa: user.orgName || user.empresa || 'Empresa Cliente',
       empresaPlan: user.empresaPlan || 'standard',
       usuarioId: user.id || user.uid,
@@ -1457,7 +1466,7 @@ const CompanyDashboard = () => {
               </div>
             </div>
             <button 
-              onClick={() => {
+              onClick(async () => {
                 const updated = activePanics.filter(a => a.id !== alert.id);
                 setActivePanics(updated);
                 if (updated.length === 0) stopPanic();
@@ -1499,7 +1508,7 @@ const CompanyDashboard = () => {
               </div>
             </div>
             <button 
-              onClick={() => {
+              onClick(async () => {
                 const updated = activeMissedRounds.filter(a => a.id !== alert.id);
                 setActiveMissedRounds(updated);
                 if (updated.length === 0) stopMissedRound();
@@ -1656,7 +1665,7 @@ const CompanyDashboard = () => {
               </div>
             </div>
             <button 
-              onClick={() => {
+              onClick(async () => {
                 testSound('normal');
                 setAutoplayBlocked(false);
               }}
@@ -1928,7 +1937,7 @@ const CompanyDashboard = () => {
 
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <button
-                    onClick={() => { 
+                    onClick(async () => { 
                       // Mapear campos de DB a campos de Formulario para que no aparezcan vacíos
                       const mappedUser = {
                         ...selectedUserForView,
@@ -1949,14 +1958,14 @@ const CompanyDashboard = () => {
                     <Edit3 size={18} /> EDITAR PERFIL COMPLETO
                   </button>
                   <button
-                    onClick={() => { handleOpenShift(selectedUserForView); setSelectedUserForView(null); }}
+                    onClick(async () => { handleOpenShift(selectedUserForView); setSelectedUserForView(null); }}
                     className="secondary"
                     style={{ flex: 1, padding: '16px', borderRadius: '16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)' }}
                   >
                     <MapPin size={18} /> ASIGNAR PUESTO
                   </button>
                   <button
-                    onClick={() => { handleSoftDeleteUser(selectedUserForView); setSelectedUserForView(null); }}
+                    onClick(async () => { handleSoftDeleteUser(selectedUserForView); setSelectedUserForView(null); }}
                     style={{
                       flex: 0.4, padding: '16px', borderRadius: '16px',
                       background: 'rgba(239,68,68,0.1)', color: '#ef4444',
@@ -2372,21 +2381,24 @@ const CompanyDashboard = () => {
                 />
 
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     if (!newQrPoint.name || !newQrPoint.objectiveId) return alert("Complete el nombre del punto y seleccione a qué objetivo pertenece.");
                     const np = { 
                       id: 'qr_' + Date.now().toString(36), 
-                      empresaId: user.empresaId, 
+                      companyId: user.empresaId, 
                       objectiveId: newQrPoint.objectiveId, 
                       name: newQrPoint.name,
-                      horarios: [] 
+                      code: 'QR-' + Math.random().toString(36).substr(2, 6).toUpperCase()
                     };
-                    const allQrPoints = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]') || [];
-                    allQrPoints.push(np);
-                    localStorage.setItem('centinela_qr_points', JSON.stringify(allQrPoints));
-                    setQrPoints([...qrPoints, np]);
-                    setNewQrPoint({ name: '', objectiveId: newQrPoint.objectiveId, horarios: [] });
-                    showToast("✅ Punto de control creado con éxito.");
+                    
+                    try {
+                      await db.crearQrPoint(np);
+                      setQrPoints([...qrPoints, np]);
+                      setNewQrPoint({ name: '', objectiveId: newQrPoint.objectiveId, horarios: [] });
+                      showToast("✅ Punto de control creado con éxito.");
+                    } catch (e) {
+                      showToast("Error al guardar punto QR", "error");
+                    }
                   }}
                   className="primary noprint"
                   style={{ padding: '15px 30px', borderRadius: '12px', height: '100%', fontWeight: 'bold' }}
@@ -2458,7 +2470,7 @@ const CompanyDashboard = () => {
 
                         <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>PT-ID: {point.id.toUpperCase()}</div>
                         <button
-                          onClick={() => {
+                          onClick(async () => {
                             if (confirm(`¿Eliminar definitivamente el punto "${point.name}"? Los guardias no podrán escanearlo.`)) {
                               const allQrPoints = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
                               const updated = allQrPoints.filter(p => p.id !== point.id);
@@ -2546,7 +2558,7 @@ const CompanyDashboard = () => {
                                     const isSel = Array.isArray(newRonda.days) && newRonda.days.includes(d);
                                     return (
                                        <button 
-                                          key={d} onClick={() => {
+                                          key={d} onClick(async () => {
                                              const currentDays = Array.isArray(newRonda.days) ? newRonda.days : [];
                                              const updated = isSel ? currentDays.filter(x => x !== d) : [...currentDays, d];
                                              setNewRonda({...newRonda, days: updated});
@@ -2580,7 +2592,7 @@ const CompanyDashboard = () => {
                                                 return (
                                                    <div 
                                                       key={p.id} 
-                                                      onClick={() => {
+                                                      onClick(async () => {
                                                          const currentIds = Array.isArray(newRonda.assignedQrIds) ? newRonda.assignedQrIds : [];
                                                          const up = isSel ? currentIds.filter(x => x !== p.id) : [...currentIds, p.id];
                                                          setNewRonda({...newRonda, assignedQrIds: up});
@@ -2603,12 +2615,12 @@ const CompanyDashboard = () => {
 
                            <button 
                               className="primary" style={{ padding: '15px', marginTop: '10px' }}
-                              onClick={() => {
+                              onClick(async () => {
                                  if (!newRonda.nombre || !Array.isArray(newRonda.assignedQrIds) || newRonda.assignedQrIds.length === 0) return alert("Complete el nombre y asigne al menos un punto QR.");
-                                 const nr = { ...newRonda, id: 'rd_' + Date.now().toString(36), empresaId: user.empresaId };
-                                 const allR = JSON.parse(localStorage.getItem('centinela_rondas') || '[]') || [];
-                                 allR.push(nr);
-                                 localStorage.setItem('centinela_rondas', JSON.stringify(allR));
+                                 const nr = { ...newRonda, id: 'rd_' + Date.now().toString(36), companyId: user.empresaId };
+                                 
+                                 
+                                 await db.guardarRondaProgramada(nr);
                                  setRondas([...rondas, nr]);
                                  setNewRonda({ nombre: '', objectiveId: '', startTime: '22:00', tolerance: 15, days: ['LUN', 'MAR', 'MIE', 'JUE', 'VIE', 'SAB', 'DOM'], assignedQrIds: [] });
                                  showToast("✅ Ronda programada correctamente.");
@@ -2628,10 +2640,10 @@ const CompanyDashboard = () => {
                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                                     <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{(r.nombre || 'SIN NOMBRE').toUpperCase()}</div>
                                     <button 
-                                       onClick={() => {
+                                       onClick(async () => {
                                           if (confirm(`¿Eliminar programación "${r.nombre}"?`)) {
                                              const up = rondas.filter(x => x.id !== r.id);
-                                             localStorage.setItem('centinela_rondas', JSON.stringify(up));
+                                             await db.eliminarRonda(r.id);
                                              setRondas(up);
                                           }
                                        }}
@@ -3031,7 +3043,7 @@ const CompanyDashboard = () => {
             <div className="glass" style={{ padding: '20px 30px', borderRadius: '25px', marginBottom: '30px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                 <div 
-                  onClick={() => { setSelectedHistoryMonth(null); setSelectedHistoryWeek(null); setSelectedHistoryDate(null); }}
+                  onClick(async () => { setSelectedHistoryMonth(null); setSelectedHistoryWeek(null); setSelectedHistoryDate(null); }}
                   style={{ cursor: 'pointer', color: 'var(--primary)', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}
                 >
                   <HardDrive size={20} /> MI UNIDAD
@@ -3040,7 +3052,7 @@ const CompanyDashboard = () => {
                   <>
                     <ChevronRight size={16} style={{ opacity: 0.3 }} />
                     <div 
-                       onClick={() => { setSelectedHistoryWeek(null); setSelectedHistoryDate(null); }}
+                       onClick(async () => { setSelectedHistoryWeek(null); setSelectedHistoryDate(null); }}
                        style={{ cursor: 'pointer', color: 'white', fontWeight: 'bold', textTransform: 'uppercase' }}
                     >
                        {['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'][parseInt(selectedHistoryMonth.split('-')[1]) - 1]} {selectedHistoryMonth.split('-')[0]}
@@ -3051,7 +3063,7 @@ const CompanyDashboard = () => {
                   <>
                     <ChevronRight size={16} style={{ opacity: 0.3 }} />
                     <div 
-                       onClick={() => { setSelectedHistoryDate(null); }}
+                       onClick(async () => { setSelectedHistoryDate(null); }}
                        style={{ cursor: 'pointer', color: 'white', fontWeight: 'bold' }}
                     >
                        SEMANA {selectedHistoryWeek}
@@ -4634,7 +4646,7 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
         </div>
         {!selectedPlan && (
           <button 
-            onClick={() => {
+            onClick(async () => {
               const el = document.getElementById('pricing-plans');
               el?.scrollIntoView({ behavior: 'smooth' });
             }}
