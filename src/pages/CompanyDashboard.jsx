@@ -799,7 +799,14 @@ const CompanyDashboard = () => {
   const permisos = useMemo(() => {
     let base;
     try {
-      base = getPlanPermisos(companyData?.plan);
+      const rawPlan = (companyData?.plan || companyData?.planId || 'demo').toLowerCase();
+      let cleanId = rawPlan;
+      if (rawPlan.includes('demo')) cleanId = 'demo';
+      if (rawPlan.includes('basi')) cleanId = 'basico';
+      if (rawPlan.includes('prof')) cleanId = 'profesional';
+      if (rawPlan.includes('ent')) cleanId = 'enterprise';
+      
+      base = getPlanPermisos(cleanId);
     } catch (e) {
       base = { gps: false, rondas: false };
     }
@@ -1533,7 +1540,7 @@ const CompanyDashboard = () => {
                 fontWeight: '900',
                 letterSpacing: '1px'
               }}>
-                MODO: {companyData?.plan?.toUpperCase() || 'SaaS'}
+                MODO: {currentPlanInfo?.nombre?.replace('Plan ', '').toUpperCase() || 'DEMO'}
               </span>
             </div>
           </div>
@@ -1582,7 +1589,7 @@ const CompanyDashboard = () => {
           <div>
             <h2 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0 }}>GESTIÓN DE {activeItem.toUpperCase()}</h2>
             <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
-              Centro de Operaciones: {companyData?.nombre || companyData?.name || user?.company || 'Gestión de Seguridad'}
+              Centro de Operaciones: {companyData?.nombre || companyData?.name || user?.company || 'STARK INDUSTRIES'}
             </p>
           </div>
           {activeItem === 'Dotacion' && (
@@ -4509,7 +4516,17 @@ const BillingPanel = ({ companyData, showToast, refreshData }) => {
     }
   };
 
-  const currentPlanInfo = PLANES[(companyData?.plan || 'demo').toUpperCase()] || PLANES.DEMO;
+  const currentPlanInfo = useMemo(() => {
+    const pId = (companyData?.plan || companyData?.planId || 'demo').toLowerCase();
+    // Normalización de nombres a IDs
+    let cleanId = pId;
+    if (pId.includes('demo')) cleanId = 'demo';
+    if (pId.includes('basi')) cleanId = 'basico';
+    if (pId.includes('prof')) cleanId = 'profesional';
+    if (pId.includes('ent')) cleanId = 'enterprise';
+    
+    return PLANES[cleanId.toUpperCase()] || PLANES.DEMO;
+  }, [companyData]);
   const isExpired = companyData?.expiryDate ? (new Date(companyData.expiryDate) < new Date().setHours(0,0,0,0)) : false;
   const daysLeft = (() => {
     if (!companyData?.expiryDate) return 0;
