@@ -917,53 +917,6 @@ const CompanyDashboard = () => {
     const unsub = loadData();
     return () => unsub && unsub();
   }, [user?.empresaId]);
-        // Evaluate type - Soporta 'panico' o 'emergencia' (enviada desde StaffApp)
-        const isPanic = latestEvent.tipo === 'panico' || latestEvent.tipo === 'emergencia';
-        
-        if (isPanic) {
-          const obj = objectives.find(o => o.id === latestEvent.objetivoId);
-          const guardianName = `${latestEvent.usuario?.nombre || ''} ${latestEvent.usuario?.apellido || ''}`.trim();
-          const pName = obj?.nombre || (guardianName ? `Guardia ${guardianName}` : 'Puesto Desconocido');
-          const msg = `ALERTA: BOTÓN DE PÁNICO ACTIVADO EN: ${pName}`;
-          
-          playSound('panico', msg);
-          setActivePanics(prev => [...prev, { id: latestEvent.id, pointName: pName }]);
-          showToast(`🚨 PÁNICO ACTIVADO EN: ${pName}`, 'error');
-        } else if (latestEvent.tipo === 'qr_scan') {
-          // Obtener nombre del puesto para la locución
-          let oName = latestEvent.objetivoNombre;
-          if (!oName && latestEvent.objetivoId) {
-            oName = objectives.find(o => o.id === latestEvent.objetivoId)?.nombre;
-          }
-          if (!oName && latestEvent.puntoId) {
-            const pt = qrPoints.find(p => p.id === latestEvent.puntoId);
-            if (pt) oName = objectives.find(o => o.id === pt.objectiveId)?.nombre;
-          }
-          const finalOName = oName || 'Puesto General';
-          const pName = latestEvent.puntoNombre || 'Punto de Control';
-          playSound('qr', `RONDA QR: PUNTO ${pName.toUpperCase()} REGISTRADO EN: ${finalOName.toUpperCase()}`);
-        } else if (latestEvent.tipo === 'ronda_completada' || latestEvent.tipo === 'recorrido_completado' || latestEvent.tipo === 'ronda') {
-          // Obtener nombre del puesto
-          let pName = latestEvent.objetivoNombre;
-          if (!pName && latestEvent.objetivoId) {
-            const obj = objectives.find(o => o.id === latestEvent.objetivoId);
-            pName = obj?.nombre;
-          }
-          const finalName = pName || 'Puesto General';
-          playSound('qr', `RONDA COMPLETADA EN: ${finalName.toUpperCase()}`);
-        } else {
-          playSound('normal');
-        }
-        lastEventIdRef.current = latestEvent.id;
-      }
-    } else {
-      // Si no hay eventos, nos aseguramos de que el ref indique que estamos listos para el primero
-      if (lastEventIdRef.current === null) lastEventIdRef.current = 'ready';
-    }
-
-    // CHECK FOR MISSED QR ROUNDS
-    checkRondaCompliance(allRondas.filter(r => r.empresaId === user.empresaId), validEvents);
-  };
 
   const checkRondaCompliance = (currentRondas, currentEvents) => {
     const now = new Date();
@@ -1053,59 +1006,55 @@ const CompanyDashboard = () => {
     setIsSaving(false);
   };
 
-  const handleSaveObjective = () => {
+  const handleSaveObjective = async () => {
     if (!newObjective.nombre || !newObjectiveCoords) {
       alert("Complete el nombre y verifique la dirección en el mapa antes de guardar.");
       return;
     }
     setIsSaving(true);
-    setTimeout(() => {
-      const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
-      const objectiveToAdd = {
-        id: "obj_" + Date.now(),
-        empresaId: user.empresaId,
-        nombre: newObjective.nombre,
-        address: newObjective.address,
-        lat: newObjectiveCoords.lat,
-        lng: newObjectiveCoords.lng
-      };
-      localStorage.setItem('centinela_objectives', JSON.stringify([...allObjectives, objectiveToAdd]));
-      loadData();
-      setNewObjective({ nombre: '', address: '' });
-      setNewObjectiveCoords(null);
-      setIsSaving(false);
-      showToast("Objetivo guardado correctamente.");
-    }, 800);
+    try {
+        const id = "obj_" + Date.now();
+        await db.crearObjective({
+            id,
+            companyId: user.empresaId,
+            name: newObjective.nombre,
+            nombre: newObjective.nombre,
+            address: newObjective.address,
+            lat: newObjectiveCoords.lat,
+            lng: newObjectiveCoords.lng
+        });
+        showToast("✅ Objetivo guardado en servidor.");
+        setNewObjective({ nombre: '', address: '' });
+        setNewObjectiveCoords(null);
+    } catch (err) {
+        alert("Error al guardar objetivo: " + err.message);
+    } finally {
+        setIsSaving(false);
+    }
   };
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 5000);
-    return () => clearInterval(interval);
-  }, [user?.empresaId]);
 
   const handleAddGuard = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-    setTimeout(() => {
-      try {
-        const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-        const userToAdd = {
-          ...newUser, id: "db_" + Date.now(), empresaId: user.empresaId, activo: true, fechaAlta: new Date().toISOString(), schedule: null, mustChangePassword: true
-        };
-        localStorage.setItem('centinela_users', JSON.stringify([...allUsers, userToAdd]));
-        loadData();
+    try {
+        await db.crearUsuarioSaaS({
+            ...newUser,
+            rol: 'GUARD',
+            empresaId: user.empresaId,
+            status: 'activo'
+        }, user.empresaId);
+
+        showToast("✅ Guardia registrado en el servidor.");
         setShowUserModal(false);
-        setNewUser({ nombre: '', apellido: '', dni: '', legajo: '', telefono: '', email: '', password: 'password123', rol: 'GUARDIA', mustChangePassword: true, estado: 'ACTIVO', foto: '', turno: '' });
-        showToast("Nuevo integrante registrado correctamente.");
-      } catch (error) {
-        console.error("Error saving user:", error);
-        showToast("Error al guardar: El archivo es demasiado grande.", "error");
-      } finally {
+        setNewUser({ nombre: '', apellido: '', dni: '', legajo: '', telefono: '', email: '', password: 'password123', rol: 'GUARD', mustChangePassword: true, estado: 'ACTIVO', foto: '', turno: '' });
+    } catch (err) {
+        alert("Error al registrar guardia: " + err.message);
+    } finally {
         setIsSaving(false);
-      }
-    }, 800);
+    }
   };
+
 
   const resetUserAccess = (userId) => {
     if (confirm("¿Está seguro de que desea blanquear la contraseña de este usuario a 'password123'? El sistema forzará el cambio al ingresar.")) {
