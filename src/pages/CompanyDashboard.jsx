@@ -1534,8 +1534,8 @@ const CompanyDashboard = () => {
           <img src="/logo-centinela.png" alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(0,210,255,0.3))' }} />
           <div>
             <h1 style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '2px', background: 'linear-gradient(to right, #00d2ff, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>CENTINELA</h1>
-            <p style={{ fontSize: '0.6rem', color: 'rgba(148, 163, 184, 0.8)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 'bold' }}>
-              {(companyData?.nombre || companyData?.name || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'CENTINELA')).toUpperCase()}
+            <p style={{ fontSize: '0.75rem', color: '#00d2ff', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '900', marginTop: '2px' }}>
+              {companyData?.nombre || companyData?.name || user?.company || 'STARK INDUSTRIES'}
             </p>
             <div style={{ marginTop: '5px' }}>
               <span style={{ 
@@ -1596,9 +1596,6 @@ const CompanyDashboard = () => {
         <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '40px' }}>
           <div>
             <h2 style={{ fontSize: '1.8rem', fontWeight: 900, margin: 0 }}>GESTIÓN DE {activeItem.toUpperCase()}</h2>
-            <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
-              Centro de Operaciones: {companyData?.nombre || companyData?.name || user?.company || 'STARK INDUSTRIES'}
-            </p>
           </div>
           {activeItem === 'Dotacion' && (
             <button className="primary" onClick={() => setShowUserModal(true)} style={{ padding: '12px 25px', borderRadius: '12px' }}>

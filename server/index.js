@@ -84,10 +84,67 @@ pool.getConnection()
         await conn.query(`ALTER TABLE usuarios MODIFY COLUMN role VARCHAR(50)`);
         console.log('  - Estructura de usuarios verificada y ampliada');
 
-        // 2. Empresas (Asegurar columnas faltantes)
+        // 2. Empresas (Core Schema & Auto-Reparación)
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS empresas (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255),
+                titular VARCHAR(255),
+                email VARCHAR(150),
+                telefono VARCHAR(100),
+                address TEXT,
+                plan VARCHAR(50) DEFAULT 'demo',
+                guards INT DEFAULT 0,
+                status VARCHAR(50) DEFAULT 'activa',
+                expiryDate DATE,
+                fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                lat FLOAT,
+                lng FLOAT,
+                dni VARCHAR(50),
+                appEmail VARCHAR(100)
+            )
+        `);
+        // Asegurar columnas faltantes
         await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
         await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS appEmail VARCHAR(100)`);
         console.log('  - Estructura de empresas verificada');
+
+        // 3. Eventos
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS eventos (
+                id VARCHAR(100) PRIMARY KEY,
+                tipo VARCHAR(50),
+                subtipo VARCHAR(50),
+                descripcion TEXT,
+                fecha DATE,
+                hora TIME,
+                lat FLOAT,
+                lng FLOAT,
+                companyId VARCHAR(100),
+                guardiaId VARCHAR(100),
+                fotoUrl TEXT,
+                audioUrl TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('  - Estructura de eventos verificada');
+
+        // 4. Leads de Demo
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS demo_requests (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                nombre VARCHAR(255),
+                empresa VARCHAR(255),
+                email VARCHAR(255),
+                telefono VARCHAR(100),
+                guardias INT DEFAULT 0,
+                empleados INT DEFAULT 0,
+                mensaje TEXT,
+                source VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('  - Estructura de leads verificada');
 
         // 4. Planes (Sincronización Mandatoria de IDs Core)
         const corePlanes = [
@@ -163,6 +220,34 @@ pool.getConnection()
             )
         `);
         console.log('  - Tabla de pagos verificada');
+
+        // 7. Objectives (Puestos/Sedes)
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS objectives (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255),
+                nombre VARCHAR(255),
+                address TEXT,
+                lat FLOAT,
+                lng FLOAT,
+                companyId VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('  - Estructura de objetivos verificada');
+
+        // 8. QR Points (Puntos de Control)
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS qr_points (
+                id VARCHAR(100) PRIMARY KEY,
+                name VARCHAR(255),
+                objectiveId VARCHAR(100),
+                code VARCHAR(255),
+                companyId VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('  - Estructura de puntos QR verificada');
 
         // 5. Usuario Maestro (REGLA DE ORO: Asegurar acceso inicial)
         const [adminRows] = await conn.query('SELECT id FROM usuarios WHERE email = "vidal@master.com"');
@@ -444,24 +529,6 @@ app.get('/api/eventos', async (req, res) => {
 app.post('/api/eventos', async (req, res) => {
     const e = req.body;
     try {
-        // Asegurar tabla (Silent check)
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS eventos (
-                id VARCHAR(100) PRIMARY KEY,
-                tipo VARCHAR(50),
-                subtipo VARCHAR(50),
-                descripcion TEXT,
-                fecha DATE,
-                hora TIME,
-                lat FLOAT,
-                lng FLOAT,
-                companyId VARCHAR(100),
-                guardiaId VARCHAR(100),
-                fotoUrl TEXT,
-                audioUrl TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `).catch(() => {});
 
         // Sanitizar Fecha (MySQL requiere YYYY-MM-DD)
         let fechaSanitizada = e.fecha;
@@ -654,23 +721,8 @@ app.post('/api/demo-requests', async (req, res) => {
     const { nombre, empresa, email, telefono, guardias, empleados, mensaje, source } = req.body;
     
     try {
-        // Asegurar que la tabla existe (Silent check)
+        // Guardar Lead en DB (Transaccional)
         try {
-            await pool.query(`
-                CREATE TABLE IF NOT EXISTS demo_requests (
-                    id INT AUTO_INCREMENT PRIMARY KEY,
-                    nombre VARCHAR(255),
-                    empresa VARCHAR(255),
-                    email VARCHAR(255),
-                    telefono VARCHAR(100),
-                    guardias INT DEFAULT 0,
-                    empleados INT DEFAULT 0,
-                    mensaje TEXT,
-                    source VARCHAR(100),
-                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-                )
-            `);
-            
             await pool.query(
                 'INSERT INTO demo_requests (nombre, empresa, email, telefono, guardias, empleados, mensaje, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
                 [nombre, empresa, email, telefono, guardias || 0, empleados || 0, mensaje, source]
