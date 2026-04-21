@@ -286,52 +286,68 @@ app.post('/api/config/:key', async (req, res) => {
     }
 });
 
-// 7. SOLICITUDES DE DEMO (EMAIL)
+// 7. SOLICITUDES DE DEMO (EMAIL + DB)
 app.post('/api/demo-requests', async (req, res) => {
     const { nombre, empresa, email, telefono, guardias, empleados, mensaje, source } = req.body;
     
     try {
-        // Enviar Email a Ventas
-        const mailOptions = {
-            from: `"Centinela SaaS" <${process.env.SMTP_USER}>`,
-            to: 'ventas@centinela-security.com',
-            subject: `🚀 Nueva Solicitud de Contacto (${source || 'Web'}): ${empresa}`,
-            html: `
-                <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #eee; border-radius: 10px; background: #fdfdfd;">
-                    <h2 style="color: #00a8ff; text-align: center;">Nueva Solicitud de Interés</h2>
-                    <p style="text-align: center; color: #666;">Se ha recibido una nueva solicitud desde <strong>${source || 'la Landing Page'}</strong> de Centinela.</p>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-                    <div style="line-height: 1.6; color: #333;">
-                        <p><strong>👤 Nombre:</strong> ${nombre}</p>
-                        <p><strong>🏢 Empresa:</strong> ${empresa}</p>
-                        <p><strong>📧 Email:</strong> <a href="mailto:${email}" style="color: #00a8ff; text-decoration: none;">${email}</a></p>
-                        <p><strong>📞 Teléfono:</strong> ${telefono}</p>
-                        ${guardias ? `<p><strong>🛡️ Cantidad de Guardias:</strong> ${guardias}</p>` : ''}
-                        ${empleados ? `<p><strong>👥 Cantidad de Empleados:</strong> ${empleados}</p>` : ''}
-                        ${mensaje ? `
-                            <div style="background: #f4f4f4; padding: 15px; border-radius: 8px; margin-top: 15px;">
-                                <strong>📝 Mensaje Adicional:</strong><br />
-                                <span style="font-style: italic; color: #555;">"${mensaje}"</span>
-                            </div>
-                        ` : ''}
-                    </div>
-                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
-                    <p style="font-size: 0.8rem; color: #999; text-align: center;">Este es un mensaje automático generado por Centinela-SaaS-Backend en tiempo real.</p>
-                </div>
-            `
-        };
-
-        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-            await transporter.sendMail(mailOptions);
-            console.log(`📧 Email enviado para demo de: ${empresa}`);
-        } else {
-            console.warn("⚠️ SMTP no configurado en .env del Servidor. El email no se envió.");
+        // Asegurar que la tabla existe (Silent check)
+        try {
+            await pool.query(`
+                CREATE TABLE IF NOT EXISTS demo_requests (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    nombre VARCHAR(255),
+                    empresa VARCHAR(255),
+                    email VARCHAR(255),
+                    telefono VARCHAR(100),
+                    guardias INT DEFAULT 0,
+                    empleados INT DEFAULT 0,
+                    mensaje TEXT,
+                    source VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            
+            await pool.query(
+                'INSERT INTO demo_requests (nombre, empresa, email, telefono, guardias, empleados, mensaje, source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [nombre, empresa, email, telefono, guardias || 0, empleados || 0, mensaje, source]
+            );
+        } catch (dbErr) {
+            console.error("⚠️ Error en Base de Datos (Leads):", dbErr.message);
         }
 
-        res.json({ success: true, message: 'Solicitud enviada correctamente' });
+        // Intento de envío de Email (No bloqueante)
+        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+            const mailOptions = {
+                from: `"Centinela Lead System" <${process.env.SMTP_USER}>`,
+                to: 'ventas@centinela-security.com',
+                replyTo: email,
+                subject: `🚀 Nuevo Lead: Solicitud de (${source || 'Web'}) - ${empresa}`,
+                html: `
+                    <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #eee; border-radius: 10px; background: #fff;">
+                        <h2 style="color: #00a8ff;">Nueva Solicitud de Interés</h2>
+                        <p>Origen: <strong>${source || 'Landing Page'}</strong></p>
+                        <hr />
+                        <p><strong>👤 Nombre:</strong> ${nombre}</p>
+                        <p><strong>🏢 Empresa:</strong> ${empresa}</p>
+                        <p><strong>📧 Email:</strong> ${email}</p>
+                        <p><strong>📞 Teléfono:</strong> ${telefono}</p>
+                        ${mensaje ? `<p><strong>📝 Mensaje:</strong> ${mensaje}</p>` : ''}
+                    </div>
+                `
+            };
+
+            transporter.sendMail(mailOptions).catch(mailErr => {
+                console.error("❌ Error enviando email de Lead:", mailErr.message);
+            });
+        }
+
+        // Siempre respondemos éxito al cliente para no "congelar" la UI
+        res.json({ success: true, message: 'Solicitud recibida correctamente' });
+
     } catch (err) {
-        console.error("Error enviando email:", err);
-        res.status(500).json({ error: 'Error al procesar la solicitud de correo' });
+        console.error("Error crítico en demo-requests:", err);
+        res.status(200).json({ success: true, warning: 'Procesado con observaciones' }); 
     }
 });
 
@@ -345,8 +361,9 @@ app.post('/api/send-proposal', async (req, res) => {
         const plan = planRows[0] || { nombre: planId.toUpperCase(), precio: 'Consultar' };
 
         const mailOptions = {
-            from: `"Administración Centinela" <admin@centinela-security.com>`,
+            from: `"Administración Centinela" <${process.env.SMTP_USER}>`,
             to: email,
+            replyTo: 'admin@centinela-security.com',
             subject: `📋 Propuesta Comercial: Sistema Inteligente Centinela - ${companyName}`,
             html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 15px; overflow: hidden; background: #ffffff;">
