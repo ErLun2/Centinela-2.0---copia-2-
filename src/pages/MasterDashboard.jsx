@@ -561,15 +561,24 @@ const MasterDashboard = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
-        await db.crearUsuarioSaaS({
+        const selectedCompany = companies.find(c => c.id === newUser.companyId);
+        const userData = {
             ...newUser,
-            name: newUser.name,
+            nombre: newUser.name, // Sincronización de campos
+            apellido: '',
+            rol: newUser.role,    // Sincronización rol/role
             role: newUser.role,
+            company: selectedCompany?.name || '',
+            companyId: newUser.companyId,
+            empresaId: newUser.companyId,
             status: 'activo',
+            estado: 'ACTIVO',
             password: 'password123'
-        }, newUser.companyId);
+        };
 
-        alert("✅ Usuario creado en el servidor correctamente.");
+        await db.crearUsuarioSaaS(userData, newUser.companyId);
+
+        alert("✅ Usuario administrador creado en el servidor correctamente.");
         setShowUserModal(false);
         setEditingUser(null);
         setNewUser({ name: '', email: '', companyId: '', role: 'Admin Empresa' });
@@ -1371,9 +1380,13 @@ const MasterDashboard = () => {
                        })
                        .map(u => (
                        <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)', transition: '0.2s' }} className="hover-row">
-                         <td style={{ padding: '15px', fontWeight: 'bold' }}>{u.name}</td>
+                         <td style={{ padding: '15px', fontWeight: 'bold' }}>{u.name || (u.nombre ? `${u.nombre} ${u.apellido || ''}` : 'S/N')}</td>
                          <td style={{ padding: '15px', color: '#cbd5e1', fontSize: '0.9rem' }}>{u.email}</td>
-                         {selectedCompanyId === 'all' && <td style={{ padding: '15px' }}>{u.company}</td>}
+                         {selectedCompanyId === 'all' && (
+                            <td style={{ padding: '15px' }}>
+                              {u.company || companies.find(c => c.id === u.companyId || c.id === u.empresaId)?.name || 'S/E'}
+                            </td>
+                         )}
                          <td style={{ padding: '15px' }}>
                             <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{u.role}</span>
                          </td>

@@ -55,7 +55,8 @@ pool.getConnection()
     try {
         // 1. Usuarios (Asegurar columna password)
         await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT "password123"`);
-        console.log('  - Estructura de usuarios verificada');
+        await conn.query(`ALTER TABLE usuarios MODIFY COLUMN role VARCHAR(50)`);
+        console.log('  - Estructura de usuarios verificada y role ampliado');
 
         // 2. Tickets
         await conn.query(`

@@ -461,7 +461,7 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
                    </thead>
                    <tbody>
                       {companyUsers
-                        .filter(u => ['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes(u.rol?.toUpperCase()))
+                        .filter(u => ['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
                         .map(u => (
                          <tr key={u.id || u.uid} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
                             <td style={{ padding: '20px' }}>
@@ -880,7 +880,7 @@ const CompanyDashboard = () => {
     if (!user?.empresaId) return;
 
     const unsubUsers = db.subscribeToAllUsers((allUsers) => {
-      const filtered = allUsers.filter(u => u.empresaId === user.empresaId || u.companyId === user.empresaId);
+      const filtered = allUsers.filter(u => u.empresaId === user.empresaId || u.companyId === user.empresaId || u.company === companyData?.nombre);
       setCompanyUsers(filtered);
     });
 
@@ -1644,7 +1644,7 @@ const CompanyDashboard = () => {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '25px' }}>
                 {companyUsers
-                  .filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes(u.rol?.toUpperCase()))
+                  .filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
                   .filter(u =>
                     !searchTerm ||
                     u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1951,7 +1951,7 @@ const CompanyDashboard = () => {
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
               {companyUsers
-                .filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes(u.rol?.toUpperCase()))
+                .filter(u => u.email && u.nombre && !['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
                 .filter(u => 
                   !searchTerm ||
                   u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -3598,10 +3598,10 @@ const CompanyDashboard = () => {
                      onChange={e => setNewUser({...newUser, rol: e.target.value})}
                      style={styles.input}
                    >
-                     <option value="GUARD">GUARDIA OPERATIVO</option>
+                     <option value="GUARD">GUARDIA</option>
                      <option value="SUPERVISOR">SUPERVISOR</option>
-                     <option value="OPERADOR">OPERADOR DE MONITOREO</option>
-                     <option value="ADMIN">ADMINISTRADOR DE EMPRESA</option>
+                     <option value="OPERADOR">OPERADOR</option>
+                     <option value="ADMIN">ADMINISTRADOR</option>
                    </select>
                 </div>
                 <div style={{ marginBottom: '25px' }}>
