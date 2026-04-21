@@ -19,15 +19,20 @@ const StaffApp = lazy(() => import('./pages/StaffApp'));
 class ErrorBoundary extends Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorDetail: '' };
   }
-  static getDerivedStateFromError(error) { return { hasError: true }; }
+  static getDerivedStateFromError(error) { 
+    return { hasError: true, errorDetail: error.message }; 
+  }
   render() {
     if (this.state.hasError) {
       return (
         <div style={{ height: '100vh', width: '100vw', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#020617', color: 'white', padding: '20px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '1.2rem', marginBottom: '10px' }}>⚠️ ERROR DE CARGA</h2>
-          <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '20px' }}>Hubo un problema al inicializar la App en este dispositivo.</p>
+          <h2 style={{ fontSize: '1.2rem', marginBottom: '10px', color: '#ef4444' }}>⚠️ ERROR CRÍTICO</h2>
+          <p style={{ opacity: 0.7, fontSize: '0.9rem', marginBottom: '10px' }}>Hubo un problema técnico al inicializar este componente.</p>
+          <code style={{ background: 'rgba(239, 68, 68, 0.1)', padding: '10px', borderRadius: '8px', fontSize: '0.7rem', color: '#ef4444', marginBottom: '20px', display: 'block', maxWidth: '90%' }}>
+            {this.state.errorDetail}
+          </code>
           <button onClick={() => window.location.reload()} style={{ padding: '12px 24px', background: '#00a8ff', border: 'none', borderRadius: '8px', color: 'white', fontWeight: 'bold' }}>REINTENTAR</button>
         </div>
       );

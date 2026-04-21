@@ -30,11 +30,15 @@ export const SoundProvider = ({ children }) => {
 
   // Initialize audio objects
   useEffect(() => {
-    normalAudio.current = new Audio('/sounds/normal.mp3');
-    qrAudio.current = new Audio('/sounds/qr.mp3');
-    panicAudio.current = new Audio('/sounds/panico.mp3');
-    // REMOVED manual .loop = true to allow alternating
-    panicAudio.current.loop = false;
+    try {
+      normalAudio.current = new Audio('/sounds/normal.mp3');
+      qrAudio.current = new Audio('/sounds/qr.mp3');
+      panicAudio.current = new Audio('/sounds/panico.mp3');
+      // REMOVED manual .loop = true to allow alternating
+      panicAudio.current.loop = false;
+    } catch (e) {
+      console.warn("Audio Context restricted by browser:", e);
+    }
 
     // Load settings from localStorage safely
     if (user?.uid) {
