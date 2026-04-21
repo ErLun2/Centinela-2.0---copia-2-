@@ -823,6 +823,18 @@ const CompanyDashboard = () => {
     return base;
   }, [companyData]);
 
+  const currentPlanInfo = useMemo(() => {
+    const pId = (companyData?.plan || companyData?.planId || 'demo').toLowerCase();
+    // Normalización de nombres a IDs
+    let cleanId = pId;
+    if (pId.includes('demo')) cleanId = 'demo';
+    if (pId.includes('basi')) cleanId = 'basico';
+    if (pId.includes('prof')) cleanId = 'profesional';
+    if (pId.includes('ent')) cleanId = 'enterprise';
+    
+    return PLANES[cleanId.toUpperCase()] || PLANES.DEMO;
+  }, [companyData]);
+
   const exportToCSV = (data, filename) => {
     const headers = ['FECHA', 'HORA', 'USUARIO', 'TIPO', 'OBJETIVO', 'DESCRIPCION', 'ESTADO'];
     const rows = data.map(e => [
@@ -4516,17 +4528,6 @@ const BillingPanel = ({ companyData, showToast, refreshData }) => {
     }
   };
 
-  const currentPlanInfo = useMemo(() => {
-    const pId = (companyData?.plan || companyData?.planId || 'demo').toLowerCase();
-    // Normalización de nombres a IDs
-    let cleanId = pId;
-    if (pId.includes('demo')) cleanId = 'demo';
-    if (pId.includes('basi')) cleanId = 'basico';
-    if (pId.includes('prof')) cleanId = 'profesional';
-    if (pId.includes('ent')) cleanId = 'enterprise';
-    
-    return PLANES[cleanId.toUpperCase()] || PLANES.DEMO;
-  }, [companyData]);
   const isExpired = companyData?.expiryDate ? (new Date(companyData.expiryDate) < new Date().setHours(0,0,0,0)) : false;
   const daysLeft = (() => {
     if (!companyData?.expiryDate) return 0;
