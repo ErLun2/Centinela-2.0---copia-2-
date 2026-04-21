@@ -408,7 +408,7 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
              </div>
 
              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                {objectives.map(obj => (
+                {Array.isArray(objectives) && objectives.map(obj => (
                    <div key={obj.id} style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '20px' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '15px' }}>
                          <div>
@@ -723,7 +723,7 @@ const CompanyDashboard = () => {
     const ticket = {
       id: 'TK-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
       empresaId: companyData?.id || companyData?.uid,
-      nombreEmpresa: companyData?.nombre || 'Empresa Cliente',
+      nombreEmpresa: companyData?.nombre || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'CENTINELA'),
       ...newTicket,
       status: 'Abierto',
       fecha: new Date().toISOString(),
@@ -930,7 +930,7 @@ const CompanyDashboard = () => {
         // NORMALIZACIÓN ESTRATÉGICA (Evitar 'PREMIUM'/'CLIENTE' fantasmas)
         setCompanyData({
           ...found,
-          nombre: found.nombre || found.name || user?.company || 'Empresa Cliente',
+          nombre: found.nombre || found.name || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'CENTINELA'),
           plan: (found.plan || found.planId || 'demo').toLowerCase() // Priorizamos 'demo' como fallback operativo
         });
       }
@@ -1539,7 +1539,7 @@ const CompanyDashboard = () => {
           <div>
             <h1 style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '2px', background: 'linear-gradient(to right, #00d2ff, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>CENTINELA</h1>
             <p style={{ fontSize: '0.6rem', color: 'rgba(148, 163, 184, 0.8)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 'bold' }}>
-              {(companyData?.nombre || companyData?.name || user?.company || 'CLIENTE').toUpperCase()}
+              {(companyData?.nombre || companyData?.name || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'CENTINELA')).toUpperCase()}
             </p>
             <div style={{ marginTop: '5px' }}>
               <span style={{ 
@@ -2335,7 +2335,7 @@ const CompanyDashboard = () => {
                   onChange={e => setNewQrPoint({ ...newQrPoint, objectiveId: e.target.value })}
                 >
                   <option value="">-- Seleccionar Objetivo --</option>
-                  {objectives.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+                  {Array.isArray(objectives) && objectives.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
                 </select>
                 <input
                   type="text"
@@ -2380,7 +2380,7 @@ const CompanyDashboard = () => {
                     onChange={(e) => setSelectedQrObjective(e.target.value)}
                   >
                     <option value="">Todos los Objetivos</option>
-                    {objectives.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+                    {Array.isArray(objectives) && objectives.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
                   </select>
                   <button
                     onClick={() => window.print()}
@@ -2911,7 +2911,7 @@ const CompanyDashboard = () => {
               <div style={{ marginTop: '30px' }}>
                 <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '10px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '15px' }}>
-                    {objectives.map(obj => {
+                    {Array.isArray(objectives) && objectives.map(obj => {
                       const assignedGuards = companyUsers.filter(u => u.schedule?.objectiveId === obj.id);
                       const totalCount = assignedGuards.length;
                       const currentCount = assignedGuards.filter(u => {
@@ -3400,7 +3400,7 @@ const CompanyDashboard = () => {
                   onChange={(e) => setResumenFilters({ ...resumenFilters, objetivo: e.target.value })}
                 >
                   <option value="">Todos los Objetivos</option>
-                  {objectives.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
+                  {Array.isArray(objectives) && objectives.map(o => <option key={o.id} value={o.id}>{o.nombre}</option>)}
                 </select>
                 <select
                   style={styles.filterSelect}
@@ -3709,7 +3709,7 @@ const CompanyDashboard = () => {
                       style={{ ...styles.input, fontSize: '1rem' }}
                    >
                       <option value="">Seleccione un objetivo...</option>
-                      {objectives.map(obj => <option key={obj.id} value={obj.id}>{obj.nombre}</option>)}
+                      {Array.isArray(objectives) && objectives.map(obj => <option key={obj.id} value={obj.id}>{obj.nombre}</option>)}
                    </select>
                 </div>
 
@@ -4147,6 +4147,7 @@ const CompanyDashboard = () => {
               companyData={companyData} 
               showToast={showToast} 
               refreshData={loadData}
+              currentPlanInfo={currentPlanInfo}
            />
         )}
       </div>
@@ -4206,7 +4207,7 @@ const CompanyDashboard = () => {
 // ============================================================
 // BILLING PANEL - REDISEÑO B2B PREMIUM
 // ============================================================
-const BillingPanel = ({ companyData, showToast, refreshData }) => {
+const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) => {
   const [billingConfig, setBillingConfig] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null); // 'transfer' | 'mp'
@@ -4248,7 +4249,7 @@ const BillingPanel = ({ companyData, showToast, refreshData }) => {
     // Lógica avanzada de Cliente (Forzado a Responsable Inscripto por req)
     const condicionIvaFinal = 'Responsable Inscripto';
     const cuitFinal = companyData?.dni || 'CUIT NO REGISTRADO';
-    const nombreFinal = companyData?.nombre || 'CLIENTE CORPORATIVO';
+    const nombreFinal = companyData?.nombre || user?.company || 'STARK INDUSTRIES';
     const direccionFinal = companyData?.address || 'Domicilio no registrado';
     const representanteFinal = companyData?.responsable || companyData?.titular || '';
 

@@ -335,6 +335,19 @@ app.post('/api/usuarios', async (req, res) => {
     }
 });
 
+app.post('/api/usuarios/update-password', async (req, res) => {
+    const { email, newPassword } = req.body;
+    try {
+        await pool.query(
+            'UPDATE usuarios SET password = ?, password_changed = 1 WHERE email = ?',
+            [newPassword, email]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.delete('/api/usuarios/:id', async (req, res) => {
     try {
         await pool.query('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
