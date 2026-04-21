@@ -53,10 +53,36 @@ pool.getConnection()
     
     // --- INICIALIZACIÓN DE ESQUEMA (Auto-reparación) ---
     try {
-        // 1. Usuarios (Asegurar columna password)
-        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT "password123"`);
+        // 1. Usuarios (Core Schema & Auto-Reparación)
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id VARCHAR(100) PRIMARY KEY,
+                email VARCHAR(150),
+                name VARCHAR(255),
+                surname VARCHAR(150),
+                role VARCHAR(50),
+                companyId VARCHAR(100),
+                status VARCHAR(50) DEFAULT 'activo',
+                password VARCHAR(255) DEFAULT 'password123',
+                password_changed TINYINT(1) DEFAULT 0,
+                dni VARCHAR(50),
+                legajo VARCHAR(50),
+                personal_email VARCHAR(150),
+                birth_date DATE,
+                phone VARCHAR(100),
+                last_login DATETIME
+            )
+        `);
+        // Asegurar columnas por si la tabla ya existía
+        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS surname VARCHAR(150)`);
+        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
+        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS legajo VARCHAR(50)`);
+        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS personal_email VARCHAR(150)`);
+        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS birth_date DATE`);
+        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS phone VARCHAR(100)`);
+        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_changed TINYINT(1) DEFAULT 0`);
         await conn.query(`ALTER TABLE usuarios MODIFY COLUMN role VARCHAR(50)`);
-        console.log('  - Estructura de usuarios verificada y role ampliado');
+        console.log('  - Estructura de usuarios verificada y ampliada');
 
         // 2. Empresas (Asegurar columnas faltantes)
         await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
@@ -295,7 +321,7 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/usuarios', async (req, res) => {
     const { companyId } = req.query;
     try {
-        let sql = 'SELECT id, email, name, role, companyId, status, password FROM usuarios';
+        let sql = 'SELECT id, email, name, surname, role, companyId, status, password, dni, legajo, personal_email, birth_date, phone FROM usuarios';
         let params = [];
         if (companyId) {
             sql += ' WHERE companyId = ?';
@@ -311,21 +337,31 @@ app.get('/api/usuarios', async (req, res) => {
 app.post('/api/usuarios', async (req, res) => {
     const u = req.body;
     try {
-        const userName = u.name || u.nombre || u.fullName || (u.apellido ? `${u.nombre} ${u.apellido}` : 'Usuario Sin Nombre');
-        const userEmail = (u.email || '').toLowerCase().trim();
         const userId = u.id || u.uid || `user_${Date.now()}`;
+        const userEmail = (u.email || '').toLowerCase().trim();
+        const userName = u.name || u.nombre || '';
+        const userSurname = u.surname || u.apellido || '';
         const userRole = u.role || u.rol || 'GUARD';
         const userCompany = u.companyId || u.empresaId;
+        const userDni = u.dni || '';
+        const userLegajo = u.legajo || '';
+        const userPersonalEmail = u.personal_email || u.emailPersonal || '';
+        const userBirthDate = u.birth_date || u.fechaNacimiento || null;
+        const userPhone = u.phone || u.telefono || '';
 
         if (!userEmail) {
             return res.status(400).json({ error: "El email es obligatorio" });
         }
 
         await pool.query(
-            'INSERT INTO usuarios (id, email, name, role, companyId, status, password) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email=?, name=?, role=?, companyId=?, status=?, password=?',
+            `INSERT INTO usuarios 
+                (id, email, name, surname, role, companyId, status, password, dni, legajo, personal_email, birth_date, phone) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) 
+             ON DUPLICATE KEY UPDATE 
+                email=?, name=?, surname=?, role=?, companyId=?, status=?, dni=?, legajo=?, personal_email=?, birth_date=?, phone=?`,
             [
-              userId, userEmail, userName, userRole, userCompany, u.status || 'activo', u.password || 'password123',
-              userEmail, userName, userRole, userCompany, u.status || 'activo', u.password || 'password123'
+              userId, userEmail, userName, userSurname, userRole, userCompany, u.status || 'activo', u.password || 'password123', userDni, userLegajo, userPersonalEmail, userBirthDate, userPhone,
+              userEmail, userName, userSurname, userRole, userCompany, u.status || 'activo', userDni, userLegajo, userPersonalEmail, userBirthDate, userPhone
             ]
         );
         res.json({ success: true });

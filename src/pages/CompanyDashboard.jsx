@@ -742,6 +742,48 @@ const CompanyDashboard = () => {
     showToast("✅ Consulta enviada con éxito. Un analista revisará su caso a la brevedad.");
   };
 
+  const handleAddGuard = async (e) => {
+    e.preventDefault();
+    if (!newUser.nombre || !newUser.apellido || !newUser.email) {
+      showToast("Nombre, Apellido y Email de Acceso son obligatorios", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const uid = newUser.id || newUser.uid || `user_${Date.now()}`;
+      const payload = {
+        ...newUser,
+        id: uid,
+        uid: uid,
+        name: newUser.nombre,
+        surname: newUser.apellido,
+        dni: newUser.dni,
+        legajo: newUser.legajo,
+        personal_email: newUser.emailPersonal,
+        birth_date: newUser.fechaNacimiento,
+        phone: newUser.telefono,
+        companyId: user.empresaId
+      };
+
+      const result = await db.crearUsuarioSaaS(payload, user.empresaId);
+      if (result) {
+        showToast(newUser.id || newUser.uid ? "Usuario actualizado" : "Usuario registrado con éxito");
+        setShowUserModal(false);
+        setNewUser({ 
+          nombre: '', apellido: '', dni: '', legajo: '', 
+          email: '', emailPersonal: '', fechaNacimiento: '', 
+          rol: 'GUARD', telefono: '', password: 'password123' 
+        });
+        loadData();
+      }
+    } catch (error) {
+      showToast("Error al guardar usuario", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const [showTrashModal, setShowTrashModal] = useState(false);
   const [trashItems, setTrashItems] = useState([]);
 
@@ -785,8 +827,17 @@ const CompanyDashboard = () => {
     setTimeout(() => setToast({ show: false, message: '', type: 'success' }), 4000);
   };
 
-  const [newUser, setNewUser] = useState({
-    nombre: '', apellido: '', dni: '', legajo: '', telefono: '', email: '', password: 'password123', rol: 'GUARD', mustChangePassword: true, estado: 'ACTIVO', foto: '', turno: ''
+  const [newUser, setNewUser] = useState({ 
+    nombre: '', 
+    apellido: '', 
+    dni: '', 
+    legajo: '', 
+    email: '', 
+    emailPersonal: '', 
+    fechaNacimiento: '', 
+    rol: 'GUARD', 
+    telefono: '', 
+    password: 'password123' 
   });
 
   const [scheduleUpdate, setScheduleUpdate] = useState({
@@ -913,13 +964,18 @@ const CompanyDashboard = () => {
     if (!user?.empresaId) return;
 
     const unsubUsers = db.subscribeToAllUsers((allUsers) => {
-      // NORMALIZACIÓN: Aseguramos que 'nombre' exista si viene 'name' del servidor
       const normalized = allUsers.map(u => ({
         ...u,
         nombre: u.nombre || u.name || 'Usuario',
         rol: u.rol || u.role || 'GUARDIA'
       }));
-      const filtered = normalized.filter(u => u.empresaId === user.empresaId || u.companyId === user.empresaId || u.company === companyData?.nombre);
+      const filtered = normalized.filter(u => {
+        // REGLA DE ORO: Un SUPER_ADMIN nunca es parte de la dotación operativa de una empresa
+        if (u.rol === 'SUPER_ADMIN' || u.role === 'SUPER_ADMIN') return false;
+        
+        const compId = user.empresaId || user.companyId;
+        return (u.companyId === compId || u.empresaId === compId);
+      });
       setCompanyUsers(filtered);
     });
 
@@ -1106,31 +1162,78 @@ const CompanyDashboard = () => {
 
   const handleAddGuard = async (e) => {
     e.preventDefault();
+    if (!newUser.nombre || !newUser.apellido || !newUser.email) {
+      showToast("Nombre, Apellido y Email de Acceso son obligatorios", "error");
+      return;
+    }
+
     setIsSaving(true);
     try {
-        // Enviar Nombre y Apellido combinados como 'name' para evitar error de MySQL
-        const fullName = `${newUser.nombre} ${newUser.apellido}`.trim() || 'Nuevo Guardia';
-        
-        await db.crearUsuarioSaaS({
-            ...newUser,
-            name: fullName,
-            nombre: newUser.nombre,
-            apellido: newUser.apellido,
-            rol: newUser.rol || 'GUARD',
-            empresaId: user.empresaId || newUser.empresaId,
-            status: 'activo'
-        }, user.empresaId || newUser.empresaId);
+      const uid = newUser.id || newUser.uid || `user_${Date.now()}`;
+      const payload = {
+        ...newUser,
+        id: uid,
+        uid: uid,
+        name: newUser.nombre,
+        surname: newUser.apellido,
+        dni: newUser.dni,
+        legajo: newUser.legajo,
+        personal_email: newUser.emailPersonal,
+        birth_date: newUser.fechaNacimiento,
+        phone: newUser.telefono,
+        companyId: user.empresaId,
+        status: 'activo'
+      };
 
-        showToast("✅ Guardia registrado en el servidor.");
-        setShowUserModal(false);
-        setNewUser({ nombre: '', apellido: '', dni: '', legajo: '', telefono: '', email: '', password: 'password123', rol: 'GUARD', mustChangePassword: true, estado: 'ACTIVO', foto: '', turno: '' });
-    } catch (err) {
-        alert("Error al registrar guardia: " + err.message);
+      await db.crearUsuarioSaaS(payload, user.empresaId);
+      showToast(newUser.id || newUser.uid ? "Usuario actualizado" : "Usuario registrado con éxito");
+      setShowUserModal(false);
+      setNewUser({ 
+        nombre: '', apellido: '', dni: '', legajo: '', 
+        email: '', emailPersonal: '', fechaNacimiento: '', 
+        rol: 'GUARD', telefono: '', password: 'password123' 
+      });
+      loadData();
+    } catch (error) {
+      showToast("Error al guardar usuario", "error");
     } finally {
-        setIsSaving(false);
+      setIsSaving(false);
     }
   };
 
+  const handleEditUserSave = async (e) => {
+    e.preventDefault();
+    if (!editingUser.nombre || !editingUser.apellido || !editingUser.email) {
+      showToast("Nombre, Apellido y Email de Acceso son obligatorios", "error");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...editingUser,
+        name: editingUser.nombre,
+        surname: editingUser.apellido,
+        dni: editingUser.dni,
+        legajo: editingUser.legajo,
+        personal_email: editingUser.emailPersonal,
+        birth_date: editingUser.fechaNacimiento,
+        phone: editingUser.telefono,
+        companyId: user.empresaId,
+        status: editingUser.estado || editingUser.status || 'activo'
+      };
+
+      await db.crearUsuarioSaaS(payload, user.empresaId);
+      showToast("Datos actualizados correctamente.");
+      setShowEditUserModal(false);
+      setEditingUser(null);
+      loadData();
+    } catch (error) {
+      showToast("Error al sincronizar con el servidor", "error");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const resetUserAccess = async (userId) => {
     if (confirm("¿Está seguro de que desea blanquear la contraseña de este usuario a 'password123'? El sistema forzará el cambio al ingresar.")) {
@@ -1138,7 +1241,7 @@ const CompanyDashboard = () => {
         const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
         if (!targetUser) return;
 
-        await db.crearUsuarioSaaS({ ...targetUser, password: 'password123', mustChangePassword: true });
+        await db.crearUsuarioSaaS({ ...targetUser, password: 'password123', mustChangePassword: true }, user.empresaId);
         showToast("Contraseña restablecida correctamente.");
       } catch (error) {
         showToast("Error al restablecer contraseña: " + error.message, "error");
@@ -1151,10 +1254,9 @@ const CompanyDashboard = () => {
       const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
       if (!targetUser) return;
 
-      await db.crearUsuarioSaaS({ ...targetUser, rol: newRole });
+      await db.crearUsuarioSaaS({ ...targetUser, rol: newRole, role: newRole }, user.empresaId);
       showToast("Rol de usuario actualizado.");
       loadData();
-      // Update the selectedUserForView to reflect change immediately in UI
       if (selectedUserForView && (selectedUserForView.id === userId || selectedUserForView.uid === userId)) {
         setSelectedUserForView({ ...selectedUserForView, rol: newRole });
       }
@@ -1171,14 +1273,18 @@ const CompanyDashboard = () => {
       const file = e.target.files[0];
       if (!file) return;
 
-      optimizeImage(file, (base64) => {
-        const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-        const updated = allUsers.map(u => (u.id === userId || u.uid === userId) ? { ...u, foto: base64 } : u);
-        localStorage.setItem('centinela_users', JSON.stringify(updated));
-        loadData();
-        showToast("Fotografía actualizada correctamente.");
-        if (selectedUserForView && (selectedUserForView.id === userId || selectedUserForView.uid === userId)) {
-          setSelectedUserForView({ ...selectedUserForView, foto: base64 });
+      optimizeImage(file, async (base64) => {
+        try {
+          const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
+          if (!targetUser) return;
+          await db.crearUsuarioSaaS({ ...targetUser, foto: base64 }, user.empresaId);
+          showToast("Fotografía actualizada.");
+          loadData();
+          if (selectedUserForView && (selectedUserForView.id === userId || selectedUserForView.uid === userId)) {
+            setSelectedUserForView({ ...selectedUserForView, foto: base64 });
+          }
+        } catch (err) {
+          showToast("Error al subir foto", "error");
         }
       });
     };
@@ -1190,78 +1296,10 @@ const CompanyDashboard = () => {
     try {
         await db.eliminarUsuario(u.id || u.uid);
         showToast("✅ Usuario eliminado permanentemente.");
+        loadData();
     } catch (err) {
         showToast("Error al eliminar usuario: " + err.message, "error");
     }
-  };
-
-  const handleSoftDeleteObjective = async (obj) => {
-    if (!window.confirm(`¿Eliminar definitivamente el objetivo "${obj.nombre || obj.name}"?`)) return;
-    try {
-        await db.eliminarObjective(obj.id);
-        showToast("✅ Objetivo eliminado permanentemente.");
-    } catch (err) {
-        showToast("Error al eliminar objetivo: " + err.message, "error");
-    }
-  };
-
-  const handleRestoreFromTrash = (item) => {
-    const allTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-
-    if (item.originalType === 'objective') {
-      const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
-      localStorage.setItem('centinela_objectives', JSON.stringify([...allObjectives, item]));
-    } else {
-      const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-      localStorage.setItem('centinela_users', JSON.stringify([...allUsers, item]));
-    }
-
-    // Quitar de papelera
-    const filteredTrash = allTrash.filter(curr => curr.deletedAt !== item.deletedAt);
-    localStorage.setItem('centinela_trash', JSON.stringify(filteredTrash));
-
-    loadData();
-    showToast("Registro restaurado correctamente.");
-  };
-
-  const handlePermanentDelete = (item) => {
-    if (!window.confirm("¿Eliminar definitivamente? Esta acción no se puede deshacer.")) return;
-    const allTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-    const filteredTrash = allTrash.filter(curr => curr.deletedAt !== item.deletedAt);
-    localStorage.setItem('centinela_trash', JSON.stringify(filteredTrash));
-    loadData();
-  };
-
-  const handleEmptyTrash = () => {
-    if (!window.confirm("¿Está seguro de vaciar TODA la papelera? Esta acción es definitiva.")) return;
-    localStorage.setItem('centinela_trash', JSON.stringify([]));
-    loadData();
-  };
-
-  const handleEditUserSave = (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    setTimeout(() => {
-      try {
-        const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-        const updated = allUsers.map(u => {
-          // Solo reemplazamos si existe una coincidencia de ID real y válida
-          const isMatch = (editingUser.id && u.id === editingUser.id) ||
-            (editingUser.uid && u.uid === editingUser.uid);
-          return isMatch ? editingUser : u;
-        });
-        localStorage.setItem('centinela_users', JSON.stringify(updated));
-        loadData();
-        setShowEditUserModal(false);
-        setEditingUser(null);
-        showToast("Datos actualizados correctamente.");
-      } catch (error) {
-        console.error("Error saving user:", error);
-        showToast("Error al actualizar: El archivo es demasiado grande.", "error");
-      } finally {
-        setIsSaving(false);
-      }
-    }, 800);
   };
 
   const handleCreateTicket = async (e) => {
@@ -3624,41 +3662,43 @@ const CompanyDashboard = () => {
         {/* Modal: Agregar Nuevo Guardia */}
         {showUserModal && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-             <div className="glass fade-up" style={{ width: '500px', padding: '40px', borderRadius: '32px', border: '1px solid rgba(0,168,255,0.3)' }}>
-                <h3 style={{ margin: '0 0 25px', display: 'flex', alignItems: 'center', gap: '15px' }}><Plus size={24} color="#00d2ff" /> Alta de Nuevo Guardia</h3>
+             <div className="glass fade-up" style={{ width: '600px', padding: '40px', borderRadius: '32px', border: '1px solid rgba(0,168,255,0.3)', maxHeight: '90vh', overflowY: 'auto' }}>
+                <h3 style={{ margin: '0 0 25px', display: 'flex', alignItems: 'center', gap: '15px' }}><Plus size={24} color="#00d2ff" /> Alta de Nuevo Personal</h3>
+                
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
-                   <div><label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Nombre</label><input type="text" value={newUser.nombre} onChange={e => setNewUser({...newUser, nombre: e.target.value})} style={styles.input} /></div>
-                   <div><label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Apellido</label><input type="text" value={newUser.apellido} onChange={e => setNewUser({...newUser, apellido: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Nombre</label><input type="text" value={newUser.nombre} onChange={e => setNewUser({...newUser, nombre: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Apellido</label><input type="text" value={newUser.apellido} onChange={e => setNewUser({...newUser, apellido: e.target.value})} style={styles.input} /></div>
                 </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
-                   <div><label style={{ fontSize: '0.75rem', opacity: 0.5 }}>DNI</label><input type="text" value={newUser.dni} onChange={e => setNewUser({...newUser, dni: e.target.value})} style={styles.input} /></div>
-                   <div><label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Legajo</label><input type="text" value={newUser.legajo} onChange={e => setNewUser({...newUser, legajo: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>DNI / Documento</label><input type="text" value={newUser.dni} onChange={e => setNewUser({...newUser, dni: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Legajo / ID</label><input type="text" value={newUser.legajo} onChange={e => setNewUser({...newUser, legajo: e.target.value})} style={styles.input} /></div>
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                   <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Email de Acceso</label>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                   <div><label style={styles.modalLabel}>Email Personal</label><input type="email" value={newUser.emailPersonal} onChange={e => setNewUser({...newUser, emailPersonal: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Fecha de Nacimiento</label><input type="date" value={newUser.fechaNacimiento} onChange={e => setNewUser({...newUser, fechaNacimiento: e.target.value})} style={styles.input} /></div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                   <div><label style={styles.modalLabel}>Teléfono</label><input type="tel" value={newUser.telefono} onChange={e => setNewUser({...newUser, telefono: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Rol / Rango</label>
+                      <select value={newUser.rol} onChange={e => setNewUser({...newUser, rol: e.target.value})} style={styles.input}>
+                         <option value="GUARD">GUARDIA (App Móvil)</option>
+                         <option value="SUPERVISOR">SUPERVISOR (App Móvil)</option>
+                         <option value="OPERADOR">OPERADOR (Panel Control)</option>
+                         <option value="ADMIN">ADMINISTRADOR (Acceso Total)</option>
+                      </select>
+                   </div>
+                </div>
+
+                <div style={{ marginBottom: '25px' }}>
+                   <label style={styles.modalLabel}>Email de Acceso (USUARIO)</label>
                    <input type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} style={styles.input} />
                 </div>
-                <div style={{ marginBottom: '15px' }}>
-                   <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Rol del Usuario</label>
-                   <select 
-                     value={newUser.rol || 'GUARD'} 
-                     onChange={e => setNewUser({...newUser, rol: e.target.value})}
-                     style={styles.input}
-                   >
-                     <option value="GUARD">GUARDIA</option>
-                     <option value="SUPERVISOR">SUPERVISOR</option>
-                     <option value="OPERADOR">OPERADOR</option>
-                     <option value="ADMIN">ADMINISTRADOR</option>
-                   </select>
-                </div>
-                <div style={{ marginBottom: '25px' }}>
-                   <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Teléfono de Contacto</label>
-                   <input type="tel" value={newUser.telefono} onChange={e => setNewUser({...newUser, telefono: e.target.value})} style={styles.input} />
-                </div>
+
                 <div style={{ display: 'flex', gap: '15px' }}>
-                   <button onClick={handleAddGuard} className="primary" style={{ flex: 1, padding: '15px', borderRadius: '15px' }}>
-                      {newUser.id || newUser.uid ? 'GUARDAR CAMBIOS' : 'REGISTRAR USUARIO'}
-                   </button>
+                   <button onClick={handleAddGuard} className="primary" style={{ flex: 1, padding: '15px', borderRadius: '15px' }}>REGISTRAR USUARIO</button>
                    <button onClick={() => setShowUserModal(false)} className="secondary" style={{ flex: 1, padding: '15px', borderRadius: '15px' }}>CANCELAR</button>
                 </div>
              </div>
@@ -3668,25 +3708,46 @@ const CompanyDashboard = () => {
         {/* Modal: Editar Guardia */}
         {showEditUserModal && editingUser && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-             <div className="glass fade-up" style={{ width: '500px', padding: '40px', borderRadius: '32px', border: '1px solid #00d2ff' }}>
+             <div className="glass fade-up" style={{ width: '600px', padding: '40px', borderRadius: '32px', border: '1px solid #00d2ff', maxHeight: '90vh', overflowY: 'auto' }}>
                 <h3 style={{ margin: '0 0 25px', display: 'flex', alignItems: 'center', gap: '15px' }}><UserCircle size={24} color="#00d2ff" /> Modificar Datos: {editingUser.nombre}</h3>
+                
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
-                   <div><label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Nombre</label><input type="text" value={editingUser.nombre} onChange={e => setEditingUser({...editingUser, nombre: e.target.value})} style={styles.input} /></div>
-                   <div><label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Apellido</label><input type="text" value={editingUser.apellido} onChange={e => setEditingUser({...editingUser, apellido: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Nombre</label><input type="text" value={editingUser.nombre} onChange={e => setEditingUser({...editingUser, nombre: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Apellido</label><input type="text" value={editingUser.apellido} onChange={e => setEditingUser({...editingUser, apellido: e.target.value})} style={styles.input} /></div>
                 </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
-                   <div><label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Legajo</label><input type="text" value={editingUser.legajo} onChange={e => setEditingUser({...editingUser, legajo: e.target.value})} style={styles.input} /></div>
-                   <div><label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Estado</label>
-                      <select value={editingUser.estado} onChange={e => setEditingUser({...editingUser, estado: e.target.value})} style={styles.input}>
+                   <div><label style={styles.modalLabel}>DNI / Documento</label><input type="text" value={editingUser.dni} onChange={e => setEditingUser({...editingUser, dni: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Legajo / ID</label><input type="text" value={editingUser.legajo} onChange={e => setEditingUser({...editingUser, legajo: e.target.value})} style={styles.input} /></div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                   <div><label style={styles.modalLabel}>Email Personal</label><input type="email" value={editingUser.emailPersonal} onChange={e => setEditingUser({...editingUser, emailPersonal: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Fecha de Nacimiento</label><input type="date" value={editingUser.fechaNacimiento} onChange={e => setEditingUser({...editingUser, fechaNacimiento: e.target.value})} style={styles.input} /></div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '15px' }}>
+                   <div><label style={styles.modalLabel}>Teléfono</label><input type="tel" value={editingUser.telefono} onChange={e => setEditingUser({...editingUser, telefono: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Rol / Rango</label>
+                      <select value={editingUser.rol || editingUser.role} onChange={e => setEditingUser({...editingUser, rol: e.target.value, role: e.target.value})} style={styles.input}>
+                         <option value="GUARD">GUARDIA (App Móvil)</option>
+                         <option value="SUPERVISOR">SUPERVISOR (App Móvil)</option>
+                         <option value="OPERADOR">OPERADOR (Panel Control)</option>
+                         <option value="ADMIN">ADMINISTRADOR (Acceso Total)</option>
+                      </select>
+                   </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
+                   <div><label style={styles.modalLabel}>Email de Acceso</label><input type="email" value={editingUser.email} onChange={e => setEditingUser({...editingUser, email: e.target.value})} style={styles.input} /></div>
+                   <div><label style={styles.modalLabel}>Estado</label>
+                      <select value={editingUser.estado || editingUser.status} onChange={e => setEditingUser({...editingUser, estado: e.target.value})} style={styles.input}>
                          <option value="ACTIVO">ACTIVO</option>
                          <option value="INACTIVO">INACTIVO</option>
                       </select>
                    </div>
                 </div>
-                <div style={{ marginBottom: '25px' }}>
-                   <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Teléfono</label>
-                   <input type="tel" value={editingUser.telefono} onChange={e => setEditingUser({...editingUser, telefono: e.target.value})} style={styles.input} />
-                </div>
+
                 <div style={{ display: 'flex', gap: '15px' }}>
                    <button onClick={handleEditUserSave} className="primary" style={{ flex: 1, padding: '15px', borderRadius: '15px' }}>GUARDAR CAMBIOS</button>
                    <button onClick={() => setShowEditUserModal(false)} className="secondary" style={{ flex: 1, padding: '15px', borderRadius: '15px' }}>DESCARTAR</button>
@@ -4888,6 +4949,15 @@ const styles = {
     justifyContent: 'center',
     zIndex: 1000,
     animation: 'fadeIn 0.3s ease-out'
+  },
+  modalLabel: {
+    fontSize: '0.75rem',
+    opacity: 0.5,
+    display: 'block',
+    marginBottom: '8px',
+    color: '#94a3b8',
+    fontWeight: 'bold',
+    textTransform: 'uppercase'
   }
 };
 
