@@ -127,7 +127,7 @@ export const subscribeToAllEventsGroup = (cb) => subscribeToResource('/eventos',
 // USUARIOS (SaaS)
 // ========================
 export const crearUsuarioSaaS = async (datos, adminEmpresaId) => {
-    let uid = `user_${Date.now()}`;
+    let uid = datos.id || datos.uid || `user_${Date.now()}`;
     await apiRequest('/usuarios', 'POST', { ...datos, id: uid, companyId: adminEmpresaId });
     return uid;
 };
@@ -142,8 +142,16 @@ export const obtenerUsuarios = async () => {
 
 export const subscribeToAllUsers = (cb) => subscribeToResource('/usuarios', cb, 35000); 
 
+export const eliminarUsuario = async (id) => {
+    return await apiRequest(`/usuarios/${id}`, 'DELETE');
+};
+
 export const crearObjective = async (data) => {
     return await apiRequest('/objectives', 'POST', data);
+};
+
+export const eliminarObjective = async (id) => {
+    return await apiRequest(`/objectives/${id}`, 'DELETE');
 };
 
 export const crearQrPoint = async (data) => {

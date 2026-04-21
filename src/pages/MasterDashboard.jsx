@@ -487,19 +487,18 @@ const MasterDashboard = () => {
     localStorage.setItem('centinela_companies', JSON.stringify(updated));
   };
 
-  const handleDeleteUser = (id) => {
+  const handleDeleteUser = async (id) => {
     const userToMove = users.find(u => u.id === id);
     if (!userToMove) return;
-    if (!window.confirm(`¿Mover a ${userToMove.name} a la papelera?`)) return;
+    if (!window.confirm(`¿Seguro que desea eliminar a ${userToMove.name || userToMove.nombre} DEFINITIVAMENTE del servidor?`)) return;
 
-    const allTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-    const trashItem = { ...userToMove, deletedAt: new Date().toISOString(), originalType: 'user' };
-    localStorage.setItem('centinela_trash', JSON.stringify([...allTrash, trashItem]));
-
-    const filtered = users.filter(u => u.id !== id);
-    setUsers(filtered);
-    localStorage.setItem('centinela_users', JSON.stringify(filtered));
-    loadData();
+    try {
+        await db.eliminarUsuario(id);
+        setUsers(prev => prev.filter(u => u.id !== id));
+        alert("✅ Usuario eliminado permanentemente del servidor.");
+    } catch (err) {
+        alert("Error al eliminar del servidor: " + err.message);
+    }
   };
 
   const handleSoftDeleteCompany = (compId) => {
@@ -565,18 +564,19 @@ const MasterDashboard = () => {
     }
   };
 
-  const cycleUserStatus = (userId) => {
+  const cycleUserStatus = async (userId, currentStatus) => {
     const statuses = ['activo', 'bloqueado', 'eliminado'];
-    const updated = users.map(u => {
-      if (u.id === userId) {
-        const currentIndex = statuses.indexOf(u.status);
-        const nextStatus = statuses[(currentIndex + 1) % statuses.length];
-        return { ...u, status: nextStatus };
-      }
-      return u;
-    });
-    setUsers(updated);
-    localStorage.setItem('centinela_users', JSON.stringify(updated));
+    const currentIndex = statuses.indexOf(currentStatus);
+    const nextStatus = statuses[(currentIndex + 1) % statuses.length];
+    
+    try {
+        const userToUpdate = users.find(u => u.id === userId);
+        if (userToUpdate) {
+            await db.crearUsuarioSaaS({ ...userToUpdate, status: nextStatus }, userToUpdate.companyId);
+        }
+    } catch (err) {
+        alert("Error al actualizar estado: " + err.message);
+    }
   };
 
   const handleResetCompanyPassword = (companyId, companyEmail) => {
@@ -1321,6 +1321,9 @@ const MasterDashboard = () => {
                    <tbody>
                      {users
                        .filter(u => {
+                         // REGLA DE ORO: Filtrado de registros vacíos y asignación a empresa
+                         if (!u.email || u.email.trim() === "") return false;
+                         
                          if (selectedCompanyId === 'all') return true;
                          const selectedCompany = companies.find(c => c.id === selectedCompanyId);
                          if (!selectedCompany) return false;

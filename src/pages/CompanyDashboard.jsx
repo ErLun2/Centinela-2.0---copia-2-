@@ -251,12 +251,22 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
     refreshData();
   };
 
-  const toggleUserStatus = (userId) => {
-    const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    const updated = allUsers.map(u => (u.id === userId || u.uid === userId) ? { ...u, activo: !u.activo } : u);
-    localStorage.setItem('centinela_users', JSON.stringify(updated));
-    showToast("Estado de usuario actualizado.");
-    refreshData();
+  const toggleUserStatus = async (userId, currentStatus) => {
+    try {
+      // Usamos el servicio de base de datos para alternar el estado
+      // Nota: asumimos que dbServices tiene una forma de actualizar, o usamos crearUsuarioSaaS para update
+      // Si no hay endpoint de "update", usamos el patrón de reenviar el objeto con el campo cambiado.
+      const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
+      if (!targetUser) return;
+
+      const updatedUser = { ...targetUser, activo: !currentStatus };
+      await db.crearUsuarioSaaS(updatedUser); 
+      
+      showToast("Estado de usuario actualizado correctamente.");
+      refreshData();
+    } catch (error) {
+      showToast("Error al actualizar estado: " + error.message, "error");
+    }
   };
 
   return (
@@ -427,7 +437,12 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800' }}>Administración de Accesos</h3>
                 <button 
-                  onClick={() => showToast("Modal de creación de usuario abierto")}
+                  onClick={() => {
+                    // Pasamos un objeto vacío con la empresaId ya predefinida
+                    setNewUser({ ...newUser, empresaId: companyData?.id || companyData?.uid });
+                    document.dispatchEvent(new CustomEvent('openUserModal'));
+                    // En el componente padre (CompanyDashboard), setShowUserModal(true)
+                  }}
                   style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '10px 25px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' }}
                 >
                    CREAR USUARIO
@@ -466,10 +481,12 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
                             </td>
                             <td style={{ padding: '20px', textAlign: 'right' }}>
                                <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
-                                  <button onClick={() => toggleUserStatus(u.id || u.uid)} style={{ background: 'transparent', border: 'none', color: u.activo !== false ? '#ef4444' : '#10b981', cursor: 'pointer', fontSize: '0.8rem' }}>
+                                  <button onClick={() => toggleUserStatus(u.id || u.uid, u.activo !== false)} style={{ background: 'transparent', border: 'none', color: u.activo !== false ? '#ef4444' : '#10b981', cursor: 'pointer', fontSize: '0.8rem' }}>
                                      {u.activo !== false ? 'Desactivar' : 'Activar'}
                                   </button>
-                                  <button onClick={() => setSelectedUserForView(u)} style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem' }}>Editar</button>
+                                  <button onClick={() => {
+                                      setSelectedUserForView(u);
+                                   }} style={{ background: 'transparent', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem' }}>Editar</button>
                                </div>
                             </td>
                          </tr>
@@ -608,6 +625,12 @@ const CompanyDashboard = () => {
 
   const [activeItem, setActiveItem] = useState('Tablero');
   const [showUserModal, setShowUserModal] = useState(false);
+
+  useEffect(() => {
+    const handleOpenModal = () => setShowUserModal(true);
+    document.addEventListener('openUserModal', handleOpenModal);
+    return () => document.removeEventListener('openUserModal', handleOpenModal);
+  }, []);
   const [showShiftModal, setShowShiftModal] = useState(false);
   const [companyUsers, setCompanyUsers] = useState([]);
   const [companyData, setCompanyData] = useState(null);
@@ -1038,12 +1061,18 @@ const CompanyDashboard = () => {
     e.preventDefault();
     setIsSaving(true);
     try {
+        // Enviar Nombre y Apellido combinados como 'name' para evitar error de MySQL
+        const fullName = `${newUser.nombre} ${newUser.apellido}`.trim() || 'Nuevo Guardia';
+        
         await db.crearUsuarioSaaS({
             ...newUser,
-            rol: 'GUARD',
-            empresaId: user.empresaId,
+            name: fullName,
+            nombre: newUser.nombre,
+            apellido: newUser.apellido,
+            rol: newUser.rol || 'GUARD',
+            empresaId: user.empresaId || newUser.empresaId,
             status: 'activo'
-        }, user.empresaId);
+        }, user.empresaId || newUser.empresaId);
 
         showToast("✅ Guardia registrado en el servidor.");
         setShowUserModal(false);
@@ -1056,25 +1085,34 @@ const CompanyDashboard = () => {
   };
 
 
-  const resetUserAccess = (userId) => {
+  const resetUserAccess = async (userId) => {
     if (confirm("¿Está seguro de que desea blanquear la contraseña de este usuario a 'password123'? El sistema forzará el cambio al ingresar.")) {
-      const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-      const updated = allUsers.map(u => (u.id === userId || u.uid === userId) ? { ...u, password: 'password123', mustChangePassword: true } : u);
-      localStorage.setItem('centinela_users', JSON.stringify(updated));
-      loadData();
-      showToast("Contraseña restablecida correctamente.");
+      try {
+        const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
+        if (!targetUser) return;
+
+        await db.crearUsuarioSaaS({ ...targetUser, password: 'password123', mustChangePassword: true });
+        showToast("Contraseña restablecida correctamente.");
+      } catch (error) {
+        showToast("Error al restablecer contraseña: " + error.message, "error");
+      }
     }
   };
 
-  const handleUpdateUserRole = (userId, newRole) => {
-    const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    const updated = allUsers.map(u => (u.id === userId || u.uid === userId) ? { ...u, rol: newRole } : u);
-    localStorage.setItem('centinela_users', JSON.stringify(updated));
-    loadData();
-    showToast(`Rol actualizado a ${newRole} correctamente.`);
-    // Update the selectedUserForView to reflect change immediately in UI
-    if (selectedUserForView && (selectedUserForView.id === userId || selectedUserForView.uid === userId)) {
-      setSelectedUserForView({ ...selectedUserForView, rol: newRole });
+  const handleUpdateUserRole = async (userId, newRole) => {
+    try {
+      const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
+      if (!targetUser) return;
+
+      await db.crearUsuarioSaaS({ ...targetUser, rol: newRole });
+      showToast("Rol de usuario actualizado.");
+      loadData();
+      // Update the selectedUserForView to reflect change immediately in UI
+      if (selectedUserForView && (selectedUserForView.id === userId || selectedUserForView.uid === userId)) {
+        setSelectedUserForView({ ...selectedUserForView, rol: newRole });
+      }
+    } catch (error) {
+      showToast("Error al actualizar rol: " + error.message, "error");
     }
   };
 
@@ -1100,35 +1138,24 @@ const CompanyDashboard = () => {
     input.click();
   };
 
-  const handleSoftDeleteUser = (u) => {
-    if (!window.confirm(`¿Mover a ${u.nombre} a la papelera?`)) return;
-    const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    const allTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-
-    // Mover a papelera
-    const trashItem = { ...u, deletedAt: new Date().toISOString(), originalType: 'user' };
-    localStorage.setItem('centinela_trash', JSON.stringify([...allTrash, trashItem]));
-
-    // Quitar de usuarios activo
-    const filtered = allUsers.filter(curr => {
-      const isTarget = (u.id && curr.id === u.id) || (u.uid && curr.uid === u.uid);
-      return !isTarget;
-    });
-    localStorage.setItem('centinela_users', JSON.stringify(filtered));
-    loadData();
+  const handleSoftDeleteUser = async (u) => {
+    if (!window.confirm(`¿Eliminar definitivamente a ${u.nombre || u.name}? Esta acción no se puede deshacer.`)) return;
+    try {
+        await db.eliminarUsuario(u.id || u.uid);
+        showToast("✅ Usuario eliminado permanentemente.");
+    } catch (err) {
+        showToast("Error al eliminar usuario: " + err.message, "error");
+    }
   };
 
-  const handleSoftDeleteObjective = (obj) => {
-    if (!window.confirm(`¿Mover el objetivo "${obj.nombre}" a la papelera?`)) return;
-    const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
-    const allTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-
-    const trashItem = { ...obj, deletedAt: new Date().toISOString(), originalType: 'objective' };
-    localStorage.setItem('centinela_trash', JSON.stringify([...allTrash, trashItem]));
-
-    const filtered = allObjectives.filter(curr => curr.id !== obj.id);
-    localStorage.setItem('centinela_objectives', JSON.stringify(filtered));
-    loadData();
+  const handleSoftDeleteObjective = async (obj) => {
+    if (!window.confirm(`¿Eliminar definitivamente el objetivo "${obj.nombre || obj.name}"?`)) return;
+    try {
+        await db.eliminarObjective(obj.id);
+        showToast("✅ Objetivo eliminado permanentemente.");
+    } catch (err) {
+        showToast("Error al eliminar objetivo: " + err.message, "error");
+    }
   };
 
   const handleRestoreFromTrash = (item) => {
@@ -1604,7 +1631,7 @@ const CompanyDashboard = () => {
               </div>
               <div className="glass" style={{ padding: '12px 25px', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,210,255,0.05)', border: '1px solid rgba(0,210,255,0.1)' }}>
                 <div style={{ width: '10px', height: '10px', background: '#00d2ff', borderRadius: '50%', boxShadow: '0 0 10px #00d2ff' }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase())).length} INTEGRANTES ACTIVOS</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.email && !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase())).length} INTEGRANTES ACTIVOS</span>
               </div>
             </div>
 
@@ -1617,7 +1644,7 @@ const CompanyDashboard = () => {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '25px' }}>
                 {companyUsers
-                  .filter(u => !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase()))
+                  .filter(u => u.email && !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase()))
                   .filter(u =>
                     !searchTerm ||
                     u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1918,13 +1945,13 @@ const CompanyDashboard = () => {
               </div>
               <div className="glass" style={{ padding: '12px 25px', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.1)' }}>
                 <div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 10px #10b981' }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase())).length} PERSONAS EN AGENDA</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.email && !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase())).length} PERSONAS EN AGENDA</span>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
               {companyUsers
-                .filter(u => !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase()))
+                .filter(u => u.email && !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase()))
                 .filter(u => 
                   !searchTerm ||
                   u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -3564,12 +3591,27 @@ const CompanyDashboard = () => {
                    <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Email de Acceso</label>
                    <input type="email" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} style={styles.input} />
                 </div>
+                <div style={{ marginBottom: '15px' }}>
+                   <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Rol del Usuario</label>
+                   <select 
+                     value={newUser.rol || 'GUARD'} 
+                     onChange={e => setNewUser({...newUser, rol: e.target.value})}
+                     style={styles.input}
+                   >
+                     <option value="GUARD">GUARDIA OPERATIVO</option>
+                     <option value="SUPERVISOR">SUPERVISOR</option>
+                     <option value="OPERADOR">OPERADOR DE MONITOREO</option>
+                     <option value="ADMIN">ADMINISTRADOR DE EMPRESA</option>
+                   </select>
+                </div>
                 <div style={{ marginBottom: '25px' }}>
                    <label style={{ fontSize: '0.75rem', opacity: 0.5 }}>Teléfono de Contacto</label>
                    <input type="tel" value={newUser.telefono} onChange={e => setNewUser({...newUser, telefono: e.target.value})} style={styles.input} />
                 </div>
                 <div style={{ display: 'flex', gap: '15px' }}>
-                   <button onClick={handleAddGuard} className="primary" style={{ flex: 1, padding: '15px', borderRadius: '15px' }}>REGISTRAR GUARDIA</button>
+                   <button onClick={handleAddGuard} className="primary" style={{ flex: 1, padding: '15px', borderRadius: '15px' }}>
+                      {newUser.id || newUser.uid ? 'GUARDAR CAMBIOS' : 'REGISTRAR USUARIO'}
+                   </button>
                    <button onClick={() => setShowUserModal(false)} className="secondary" style={{ flex: 1, padding: '15px', borderRadius: '15px' }}>CANCELAR</button>
                 </div>
              </div>

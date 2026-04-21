@@ -282,13 +282,42 @@ app.get('/api/usuarios', async (req, res) => {
 app.post('/api/usuarios', async (req, res) => {
     const u = req.body;
     try {
+        const userName = u.name || u.nombre || u.fullName || (u.apellido ? `${u.nombre} ${u.apellido}` : 'Usuario Sin Nombre');
+        const userEmail = (u.email || '').toLowerCase().trim();
+        const userId = u.id || u.uid || `user_${Date.now()}`;
+        const userRole = u.role || u.rol || 'GUARD';
+        const userCompany = u.companyId || u.empresaId;
+
+        if (!userEmail) {
+            return res.status(400).json({ error: "El email es obligatorio" });
+        }
+
         await pool.query(
             'INSERT INTO usuarios (id, email, name, role, companyId, status, password) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email=?, name=?, role=?, companyId=?, status=?, password=?',
             [
-              u.id, u.email, u.name, u.role, u.companyId, u.status || 'activo', u.password || 'password123',
-              u.email, u.name, u.role, u.companyId, u.status || 'activo', u.password || 'password123'
+              userId, userEmail, userName, userRole, userCompany, u.status || 'activo', u.password || 'password123',
+              userEmail, userName, userRole, userCompany, u.status || 'activo', u.password || 'password123'
             ]
         );
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error en POST /api/usuarios:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/usuarios/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/objectives/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM objectives WHERE id = ?', [req.params.id]);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
