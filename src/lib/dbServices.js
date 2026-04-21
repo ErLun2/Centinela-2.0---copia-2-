@@ -29,6 +29,10 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
 const getLocal = (key) => JSON.parse(localStorage.getItem(key) || '[]');
 const setLocal = (key, data) => localStorage.setItem(key, JSON.stringify(data));
 
+export const registrarSolicitudDemo = async (data) => {
+    return await apiRequest('/demo-requests', 'POST', data);
+};
+
 // ========================
 // MOTOR DE SUSCRIPCIÓN "LITE" (SMART POLLING)
 // ========================
@@ -40,7 +44,7 @@ const subscribeToResource = (endpoint, callback, interval = 30000) => {
         const data = await apiRequest(url);
         if (data && data.length > 0) {
             // Si es la primera carga o no hay ID previo, guardamos el ID más alto
-            const currentMaxId = Math.max(...data.map(i => i.id || 0));
+            const currentMaxId = data && data.length > 0 ? Math.max(...data.map(i => i.id || 0)) : 0;
             if (currentMaxId > lastId) lastId = currentMaxId;
             callback(data);
         }
@@ -167,3 +171,31 @@ export const ejecutarDiagnosticoAutomatico = async (u, t) => ({ summary: 'Sincro
 export const ejecutarAccionSoporte = async (a, u, t) => ({ success: true, message: 'Acción ejecutada' });
 
 export const logAction = async (u, a, e, d = {}) => { console.log(`[API-LOG] ${u} -> ${a}`); };
+
+// ========================
+// FUNCIONES RESTAURADAS PARA ESTABILIDAD (REGLA DE ORO)
+// ========================
+export const obtenerConfiguracionPagos = async () => await apiRequest('/pagos/config');
+export const guardarConfiguracionPagos = async (data) => await apiRequest('/pagos/config', 'POST', data);
+export const obtenerSuscripciones = async () => await apiRequest('/suscripciones');
+export const obtenerHistorialPagos = async (compId = null) => {
+    const url = compId ? `/payments/history?companyId=${compId}` : '/payments/history';
+    return await apiRequest(url);
+};
+export const actualizarEstadoPago = async (id, status) => await apiRequest(`/payments/${id}`, 'POST', { status });
+export const actualizarSuscripcion = async (id, data) => await apiRequest(`/suscripciones/${id}`, 'POST', data);
+export const actualizarEstadoEmpresa = async (id, status) => await apiRequest(`/empresas/${id}`, 'POST', { status });
+export const eliminarEmpresa = async (id) => await apiRequest(`/empresas/${id}`, 'DELETE');
+
+// Soporte & Diagnóstico
+export const obtenerSugerenciasInteligentes = async (ticket) => [];
+export const detectarIncidentesMasivos = async () => [];
+
+// Staff App & GPS
+export const actualizarUbicacionGPS = async (userId, coords) => await apiRequest('/gps', 'POST', { userId, ...coords });
+export const iniciarRonda = async (data) => await apiRequest('/rondas/start', 'POST', data);
+export const finalizarRonda = async (id) => await apiRequest(`/rondas/finish/${id}`, 'POST');
+export const registrarPuntoRuta = async (data) => await apiRequest('/rondas/point', 'POST', data);
+export const registrarEventoAudit = async (data) => await apiRequest('/audit', 'POST', data);
+export const actualizarTicket = async (id, data) => await apiRequest(`/tickets/${id}`, 'POST', data);
+export const enviarPropuesta = async (proposalData) => await apiRequest('/send-proposal', 'POST', proposalData);

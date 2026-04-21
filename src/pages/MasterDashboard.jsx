@@ -89,6 +89,8 @@ const MasterDashboard = () => {
   const [diagnosticLogs, setDiagnosticLogs] = useState([]);
   const [diagnosticSummary, setDiagnosticSummary] = useState(null);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const { logout, user } = useAuth();
 
@@ -114,15 +116,25 @@ const MasterDashboard = () => {
     const savedTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
     setTrashItems(savedTrash);
 
-    // Carga inicial de planes desde la API
+    // Carga inicial de planes desde la API (Blindado)
     db.obtenerPlanes().then(data => {
-      if (data && data.length > 0) {
-        const planesMap = {};
-        data.forEach(p => { planesMap[p.id.toUpperCase()] = p; });
-        setLocalPlanes(planesMap);
-        Object.assign(PLANES, planesMap);
+      try {
+        if (data && Array.isArray(data) && data.length > 0) {
+          const planesMap = {};
+          data.forEach(p => { 
+            if (p && p.id) {
+              planesMap[String(p.id).toUpperCase()] = p; 
+            }
+          });
+          if (Object.keys(planesMap).length > 0) {
+            setLocalPlanes(planesMap);
+            Object.assign(PLANES, planesMap);
+          }
+        }
+      } catch (err) {
+        console.error("Error procesando planes API:", err);
       }
-    });
+    }).catch(err => console.error("Error obteniendo planes:", err));
 
     // Migración de datos: asegurar que todas las empresas tengan una lat/lng estable
     const comps = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
@@ -145,51 +157,69 @@ const MasterDashboard = () => {
   useEffect(() => {
     loadData();
 
-    // REAL-TIME SUBSCRIPTIONS
+    // REAL-TIME SUBSCRIPTIONS (Blindadas)
     const unsubCompanies = db.subscribeToCompanies((data) => {
-      if (data) {
-        setCompanies(data);
-        localStorage.setItem('centinela_companies', JSON.stringify(data));
-      }
+      try {
+        if (data) {
+          setCompanies(data);
+          localStorage.setItem('centinela_companies', JSON.stringify(data));
+        }
+      } catch (e) { console.error("Sync Companies Error:", e); }
     });
 
     const unsubUsers = db.subscribeToAllUsers((data) => {
-      if (data) {
-        setUsers(data);
-        localStorage.setItem('centinela_users', JSON.stringify(data));
-      }
+      try {
+        if (data) {
+          setUsers(data);
+          localStorage.setItem('centinela_users', JSON.stringify(data));
+        }
+      } catch (e) { console.error("Sync Users Error:", e); }
     });
 
     const unsubPayments = db.subscribeToAllPayments((data) => {
-      if (data) {
-        const sorted = data.sort((a, b) => new Date(b.fecha || b.date) - new Date(a.fecha || a.date));
-        setPayments(sorted);
-        localStorage.setItem('centinela_pagos', JSON.stringify(sorted));
-      }
+      try {
+        if (data) {
+          const sorted = data.sort((a, b) => new Date(b.fecha || b.date) - new Date(a.fecha || a.date));
+          setPayments(sorted);
+          localStorage.setItem('centinela_pagos', JSON.stringify(sorted));
+        }
+      } catch (e) { console.error("Sync Payments Error:", e); }
     });
 
     const unsubEvents = db.subscribeToAllEventsGroup((data) => {
-      if (data) {
-        setEvents(data);
-        localStorage.setItem('centinela_events', JSON.stringify(data));
-      }
+      try {
+        if (data) {
+          setEvents(data);
+          localStorage.setItem('centinela_events', JSON.stringify(data));
+        }
+      } catch (e) { console.error("Sync Events Error:", e); }
     });
 
     const unsubTickets = db.subscribeToTickets((data) => {
-      if (data) {
-        const sorted = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-        setTickets(sorted);
-        localStorage.setItem('centinela_tickets', JSON.stringify(sorted));
-      }
+      try {
+        if (data) {
+          const sorted = data.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+          setTickets(sorted);
+          localStorage.setItem('centinela_tickets', JSON.stringify(sorted));
+        }
+      } catch (e) { console.error("Sync Tickets Error:", e); }
     });
 
     const unsubPlanes = db.subscribeToPlanes((data) => {
-      if (data && data.length > 0) {
-        const planesMap = {};
-        data.forEach(p => { planesMap[p.id.toUpperCase()] = p; });
-        setLocalPlanes(planesMap);
-        Object.assign(PLANES, planesMap);
-      }
+      try {
+        if (data && Array.isArray(data) && data.length > 0) {
+          const planesMap = {};
+          data.forEach(p => { 
+            if (p && p.id) {
+              planesMap[String(p.id).toUpperCase()] = p; 
+            }
+          });
+          if (Object.keys(planesMap).length > 0) {
+            setLocalPlanes(planesMap);
+            Object.assign(PLANES, planesMap);
+          }
+        }
+      } catch (e) { console.error("Sync Planes Error:", e); }
     });
 
     // Pre-fill companies if empty for the first time
@@ -551,15 +581,6 @@ const MasterDashboard = () => {
        alert("Error al eliminar el plan.");
     }
   };
-    
-    localStorage.setItem('centinela_planes_data', JSON.stringify(newPlanes));
-    // Limpiar el objeto global y re-asignar
-    Object.keys(PLANES).forEach(k => delete PLANES[k]);
-    Object.assign(PLANES, newPlanes);
-    setLocalPlanes({ ...newPlanes });
-    
-    alert("Plan eliminado correctamente.");
-  };
 
   const updateCompanyStatus = (id, newStatus) => {
     const updated = companies.map(c => c.id === id ? { ...c, status: newStatus } : c);
@@ -766,7 +787,44 @@ const MasterDashboard = () => {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate('/login');
+  };
+
+  const handleApprove = async (payment) => {
+    if (!payment) return;
+    setIsProcessing(true);
+    try {
+      const updatedPayments = payments.map(p => 
+        (p.id === payment.id) ? { ...p, estado: 'approved', status: 'Completado' } : p
+      );
+      setPayments(updatedPayments);
+      localStorage.setItem('centinela_pagos', JSON.stringify(updatedPayments));
+      
+      // Activar empresa
+      const companyId = payment.companyId || payment.empresaId;
+      const updatedCompanies = companies.map(c => 
+        (c.id === companyId) ? { ...c, status: 'activa' } : c
+      );
+      setCompanies(updatedCompanies);
+      localStorage.setItem('centinela_companies', JSON.stringify(updatedCompanies));
+      
+      setSelectedPayment(null);
+      alert("✅ Pago aprobado y empresa activada con éxito.");
+    } catch (e) {
+      alert("Error al procesar el pago.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReject = (id) => {
+    if (!window.confirm("¿Rechazar este pago?")) return;
+    const updatedPayments = payments.map(p => 
+      (p.id === id) ? { ...p, estado: 'rejected', status: 'Rechazado' } : p
+    );
+    setPayments(updatedPayments);
+    localStorage.setItem('centinela_pagos', JSON.stringify(updatedPayments));
+    alert("Pago rechazado.");
   };
 
   const dashboardStats = {
@@ -900,19 +958,23 @@ const MasterDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {companies.slice(0, 5).map(c => (
-                      <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                        <td style={{ padding: '15px' }}>
-                          <div style={{ fontWeight: 'bold' }}>{c.name}</div>
-                        </td>
-                        <td style={{ padding: '15px' }}>
-                          <span style={{ color: PLANES[c.plan.toUpperCase()]?.color }}>{c.plan.toUpperCase()}</span>
-                        </td>
-                        <td style={{ padding: '15px' }}>
-                          <span style={{ color: getStatusColor(c.status).text }}>{c.status.toUpperCase()}</span>
-                        </td>
-                      </tr>
-                    ))}
+                    {companies.slice(0, 5).map(c => {
+                      const pk = (c.plan || 'basico').toUpperCase();
+                      const pi = PLANES[pk] || PLANES.BASICO;
+                      return (
+                        <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                          <td style={{ padding: '15px' }}>
+                            <div style={{ fontWeight: 'bold' }}>{c.name}</div>
+                          </td>
+                          <td style={{ padding: '15px' }}>
+                            <span style={{ color: pi.color }}>{pk}</span>
+                          </td>
+                          <td style={{ padding: '15px' }}>
+                            <span style={{ color: getStatusColor(c.status).text }}>{(c.status || 'activa').toUpperCase()}</span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -2036,31 +2098,35 @@ const MasterDashboard = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredCompanies.map(c => {
-                    const usage = getCompanyNetwork(c);
-                    const revenue = approvedPayments
-                      .filter(p => p.empresaId === c.id || p.companyId === c.id)
-                      .reduce((acc, curr) => acc + (Number(curr.monto || curr.amount) || 0), 0);
-                    
-                    return (
-                      <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                        <td style={{ padding: '15px', fontWeight: 'bold' }}>{c.name}</td>
-                        <td style={{ fontSize: '0.85rem' }}>
-                          <span style={{ color: PLANES[c.plan.toUpperCase()]?.color }}>{c.plan.toUpperCase()}</span>
-                        </td>
-                        <td style={{ fontWeight: 'bold', color: '#10b981' }}>${revenue.toLocaleString()}</td>
-                        <td style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{usage.in} / {usage.out} GB</td>
-                        <td>
-                          <span style={{
-                            padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold',
-                            backgroundColor: getStatusColor(c.status).bg, color: getStatusColor(c.status).text
-                          }}>
-                            {c.status.toUpperCase()}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                      {filteredCompanies.map(c => {
+                        const usage = getCompanyNetwork(c);
+                        const revenue = approvedPayments
+                          .filter(p => p.empresaId === c.id || p.companyId === c.id)
+                          .reduce((acc, curr) => acc + (Number(curr.monto || curr.amount) || 0), 0);
+                        
+                        // Defensive plan access
+                        const planKey = (c.plan || 'basico').toUpperCase();
+                        const planInfo = PLANES[planKey] || PLANES.BASICO;
+
+                        return (
+                          <tr key={c.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                            <td style={{ padding: '15px', fontWeight: 'bold' }}>{c.name}</td>
+                            <td style={{ fontSize: '0.85rem' }}>
+                              <span style={{ color: planInfo.color }}>{planKey}</span>
+                            </td>
+                            <td style={{ fontWeight: 'bold', color: '#10b981' }}>${revenue.toLocaleString()}</td>
+                            <td style={{ fontSize: '0.85rem', color: '#94a3b8' }}>{usage.in} / {usage.out} GB</td>
+                            <td>
+                              <span style={{
+                                padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold',
+                                backgroundColor: getStatusColor(c.status).bg, color: getStatusColor(c.status).text
+                              }}>
+                                {(c.status || 'activa').toUpperCase()}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
                 </tbody>
               </table>
             </div>
@@ -2116,7 +2182,7 @@ const MasterDashboard = () => {
           )}
         </div>
 
-        <nav style={{ flex: 1, marginTop: '20px' }}>
+        <nav style={{ flex: 1, marginTop: '20px', overflowY: 'auto', paddingRight: '5px' }} className="custom-scrollbar">
           <SidebarItem icon={<BarChart size={20} />} label="Panel" active={activeTab === 'Estadísticas'} onClick={() => setActiveTab('Estadísticas')} isOpen={isSidebarOpen} />
           <SidebarItem icon={<Building2 size={20} />} label="Empresas" active={activeTab === 'Empresas'} onClick={() => setActiveTab('Empresas')} isOpen={isSidebarOpen} />
           <SidebarItem icon={<Users size={20} />} label="Usuarios" active={activeTab === 'Usuarios'} onClick={() => setActiveTab('Usuarios')} isOpen={isSidebarOpen} />
@@ -2227,9 +2293,14 @@ const MasterDashboard = () => {
                   <button
                     className="primary"
                     style={{ flex: 1 }}
-                    onClick={() => {
-                      alert(`Propuesta enviada con éxito a ${proposalData.email}\nAsunto: Propuesta - Sistema Centinela\nPlan: ${PLANES[proposalData.planId.toUpperCase()].nombre}`);
-                      setShowProposalModal(false);
+                    onClick={async () => {
+                      const res = await enviarPropuesta(proposalData);
+                      if (res) {
+                        alert(`¡Propuesta enviada con éxito a ${proposalData.email}!`);
+                        setShowProposalModal(false);
+                      } else {
+                        alert("Error al enviar la propuesta. Verifica la conexión.");
+                      }
                     }}
                   >Enviar Propuesta</button>
                   <button className="secondary" style={{ flex: 1 }} onClick={() => setShowProposalModal(false)}>Cancelar</button>

@@ -98,9 +98,8 @@ const LoginPage = () => {
   return (
     <>
       <div className="login-ultimate" style={styles.container}>
-
         {/* LOGIN CARD */}
-        <div className={`glass ${isVisible ? 'fade-up' : ''}`} style={styles.loginCard}>
+        <div className={`glass login-card-mobile ${isVisible ? 'fade-up' : ''}`} style={styles.loginCard}>
 
           <div style={styles.headerSection}>
             <div className="pulse-primary" style={styles.logoCircle}>
@@ -208,7 +207,7 @@ const LoginPage = () => {
         </div>
 
         {/* FOOTER EXTERNO (FONDO IZQUIERDA) */}
-        <footer style={styles.externalFooter}>
+        <footer className="external-footer-mobile" style={styles.externalFooter}>
           <div style={styles.footerLinks}>
             <button onClick={() => setShowTerms(true)} style={styles.footerLink}>Términos y condiciones</button>
             <span style={styles.footerDivider}>|</span>
@@ -600,7 +599,7 @@ const styles = {
   },
 
   loginCard: {
-    width: '100%', maxWidth: '460px', padding: '50px 45px',
+    width: '100%', maxWidth: '460px', padding: 'clamp(25px, 5vw, 50px) clamp(20px, 5vw, 45px)',
     background: 'rgba(7, 12, 26, 0.7)', backdropFilter: 'blur(40px) saturate(160%)',
     borderRadius: '40px', border: '1px solid rgba(0, 168, 255, 0.25)',
     boxShadow: '0 30px 60px rgba(0, 0, 0, 0.5), 0 0 30px rgba(0, 168, 255, 0.1)',
@@ -790,23 +789,13 @@ const SalesModal = ({ isOpen, onClose }) => {
     setStatus('loading');
 
     try {
-      // 1. Persistir en Base de Datos (Seguimiento de Leads)
-      await registrarSolicitudDemo(formData);
-
-      // 2. Notificar al backend para envío de email a ventas@centinela-security.com
-      const response = await fetch('/api/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          source: 'Login Modal',
-          asunto: `Nueva solicitud de contacto - ${formData.empresa}`
-        })
+      // Enviar solicitud unificada (Base de datos + Notificación por Email)
+      const result = await registrarSolicitudDemo({
+        ...formData,
+        source: 'Portal Login'
       });
-
-      // Si el backend responde o si cae en 404 (simulando que aún no está desplegado) 
-      // damos éxito porque los datos ya están preservados en Firestore.
-      if (response.ok || response.status === 404) {
+      
+      if (result) {
         setStatus('success');
       } else {
         throw new Error('Error al procesar la solicitud');

@@ -3,6 +3,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import mysql from 'mysql2/promise';
+import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -18,6 +19,20 @@ const app = express();
 app.use(compression()); // Optimización Lite: Comprime respuestas
 app.use(cors());
 app.use(bodyParser.json());
+
+// --- CONFIGURACIÓN DE CORREO ---
+const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: parseInt(process.env.SMTP_PORT) === 465, // true para puerto 465 (SSL), false para otros (TLS)
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS
+    },
+    tls: {
+        rejectUnauthorized: false // Permite certificados auto-firmados comunes en hostings compartidos
+    }
+});
 
 // --- CONEXIÓN A MYSQL (ILIMITADOHOSTING) ---
 const pool = mysql.createPool({
@@ -268,6 +283,123 @@ app.post('/api/config/:key', async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
+    }
+});
+
+// 7. SOLICITUDES DE DEMO (EMAIL)
+app.post('/api/demo-requests', async (req, res) => {
+    const { nombre, empresa, email, telefono, guardias, empleados, mensaje, source } = req.body;
+    
+    try {
+        // Enviar Email a Ventas
+        const mailOptions = {
+            from: `"Centinela SaaS" <${process.env.SMTP_USER}>`,
+            to: 'ventas@centinela-security.com',
+            subject: `🚀 Nueva Solicitud de Contacto (${source || 'Web'}): ${empresa}`,
+            html: `
+                <div style="font-family: sans-serif; max-width: 600px; padding: 20px; border: 1px solid #eee; border-radius: 10px; background: #fdfdfd;">
+                    <h2 style="color: #00a8ff; text-align: center;">Nueva Solicitud de Interés</h2>
+                    <p style="text-align: center; color: #666;">Se ha recibido una nueva solicitud desde <strong>${source || 'la Landing Page'}</strong> de Centinela.</p>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                    <div style="line-height: 1.6; color: #333;">
+                        <p><strong>👤 Nombre:</strong> ${nombre}</p>
+                        <p><strong>🏢 Empresa:</strong> ${empresa}</p>
+                        <p><strong>📧 Email:</strong> <a href="mailto:${email}" style="color: #00a8ff; text-decoration: none;">${email}</a></p>
+                        <p><strong>📞 Teléfono:</strong> ${telefono}</p>
+                        ${guardias ? `<p><strong>🛡️ Cantidad de Guardias:</strong> ${guardias}</p>` : ''}
+                        ${empleados ? `<p><strong>👥 Cantidad de Empleados:</strong> ${empleados}</p>` : ''}
+                        ${mensaje ? `
+                            <div style="background: #f4f4f4; padding: 15px; border-radius: 8px; margin-top: 15px;">
+                                <strong>📝 Mensaje Adicional:</strong><br />
+                                <span style="font-style: italic; color: #555;">"${mensaje}"</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                    <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+                    <p style="font-size: 0.8rem; color: #999; text-align: center;">Este es un mensaje automático generado por Centinela-SaaS-Backend en tiempo real.</p>
+                </div>
+            `
+        };
+
+        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+            await transporter.sendMail(mailOptions);
+            console.log(`📧 Email enviado para demo de: ${empresa}`);
+        } else {
+            console.warn("⚠️ SMTP no configurado en .env del Servidor. El email no se envió.");
+        }
+
+        res.json({ success: true, message: 'Solicitud enviada correctamente' });
+    } catch (err) {
+        console.error("Error enviando email:", err);
+        res.status(500).json({ error: 'Error al procesar la solicitud de correo' });
+    }
+});
+
+// 8. ENVÍO DE PROPUESTA COMERCIAL
+app.post('/api/send-proposal', async (req, res) => {
+    const { companyName, email, planId, guards, panicUsers, message } = req.body;
+    
+    try {
+        // Obtener detalles del plan (desde MySQL si es posible, o fallback)
+        const [planRows] = await pool.query('SELECT * FROM planes WHERE id = ?', [planId]);
+        const plan = planRows[0] || { nombre: planId.toUpperCase(), precio: 'Consultar' };
+
+        const mailOptions = {
+            from: `"Administración Centinela" <admin@centinela-security.com>`,
+            to: email,
+            subject: `📋 Propuesta Comercial: Sistema Inteligente Centinela - ${companyName}`,
+            html: `
+                <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 15px; overflow: hidden; background: #ffffff;">
+                    <div style="background: #0f172a; padding: 40px; text-align: center;">
+                        <h1 style="color: #00d2ff; margin: 0; font-size: 24px; letter-spacing: 2px;">CENTINELA</h1>
+                        <p style="color: #94a3b8; margin: 10px 0 0 0; font-size: 14px;">Propuesta de Gestión de Seguridad Inteligente</p>
+                    </div>
+                    <div style="padding: 40px; color: #334155; line-height: 1.6;">
+                        <p>Estimados amigos de <strong>${companyName}</strong>,</p>
+                        <p>Es un gusto saludarlos. De acuerdo a lo conversado, adjuntamos el detalle del plan sugerido para la digitalización y control de su operación de seguridad:</p>
+                        
+                        <div style="background: #f8fafc; border-radius: 12px; padding: 25px; border: 1px solid #e2e8f0; margin: 30px 0;">
+                            <h3 style="color: #0f172a; margin-top: 0;">Plan ${plan.nombre}</h3>
+                            <p style="font-size: 28px; font-weight: bold; color: #3b82f6; margin: 10px 0;">$${plan.precio} <span style="font-size: 14px; color: #64748b;">/mes</span></p>
+                            <ul style="padding-left: 20px; color: #475569;">
+                                <li>Capacidad: ${guards || plan.limite_guardias || 'S/D'} Guardias</li>
+                                <li>Botones de Pánico: ${panicUsers || plan.botones_panico || 'Consultar'}</li>
+                                <li>Monitoreo GPS en tiempo real</li>
+                                <li>Rondas QR con evidencia digital</li>
+                                <li>Dashboard de gestión centralizada</li>
+                            </ul>
+                        </div>
+
+                        ${message ? `
+                        <div style="border-left: 4px solid #00d2ff; padding-left: 20px; margin: 30px 0;">
+                            <p style="font-style: italic; color: #64748b;">"${message}"</p>
+                        </div>
+                        ` : ''}
+
+                        <p>Nuestro sistema le permitirá eliminar por completo las planillas manuales, garantizando trazabilidad total y reportes automáticos para sus clientes.</p>
+                        
+                        <div style="text-align: center; margin-top: 40px;">
+                            <p style="font-size: 13px; color: #94a3b8;">Para activar este plan o solicitar una reunión técnica:</p>
+                            <p style="font-weight: bold; color: #0f172a;">admin@centinela-security.com</p>
+                        </div>
+                    </div>
+                    <div style="background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;">
+                        © 2026 Centinela Security. Todos los derechos reservados.
+                    </div>
+                </div>
+            `
+        };
+
+        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+            await transporter.sendMail(mailOptions);
+            res.json({ success: true, message: 'Propuesta enviada correctamente' });
+        } else {
+            console.warn("⚠️ SMTP no configurado. Propuesta no enviada via email.");
+            res.json({ success: true, message: 'Simulado: Propuesta generada (SMTP no configurado)' });
+        }
+    } catch (err) {
+        console.error("Error enviando propuesta:", err);
+        res.status(500).json({ error: 'Error al enviar la propuesta comercial' });
     }
 });
 

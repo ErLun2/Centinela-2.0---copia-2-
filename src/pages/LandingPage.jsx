@@ -21,11 +21,12 @@ const LandingPage = () => {
             <img src="/logo-new.png" alt="Logo" className="logo-isotipo" style={{ height: '72px', width: 'auto' }} />
             <div className="firefly" style={{ '--x': '15px', '--y': '-10px', '--d': '3s' }}></div>
           </div>
-          <span style={{ fontSize: '1.2rem', fontWeight: '900', letterSpacing: '2px', color: 'white' }}>CENTINELA</span>
+          <span className="mobile-hide" style={{ fontSize: '1.2rem', fontWeight: '900', letterSpacing: '2px', color: 'white' }}>CENTINELA</span>
         </div>
         <div style={{ display: 'flex', gap: '25px', alignItems: 'center' }}>
           <a 
             href="#nosotros" 
+            className="mobile-hide"
             onClick={(e) => {
               e.preventDefault();
               document.getElementById('nosotros').scrollIntoView({ behavior: 'smooth' });
@@ -34,7 +35,7 @@ const LandingPage = () => {
           >
             Nosotros
           </a>
-          <a href="#features" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 'bold' }}>Funciones</a>
+          <a href="#features" className="mobile-hide" style={{ color: 'rgba(255,255,255,0.6)', textDecoration: 'none', fontSize: '0.9rem', fontWeight: 'bold' }}>Funciones</a>
           <Link to="/login">
             <button className="primary" style={{ padding: '10px 25px', borderRadius: '12px' }}>Ingresar</button>
           </Link>
@@ -52,19 +53,19 @@ const LandingPage = () => {
             <span style={{ fontSize: '1.725rem', fontWeight: '900', letterSpacing: '8px', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' }}>CENTINELA</span>
         </div>
 
-        <h1 className="fade-in" style={{ fontSize: 'clamp(1.75rem, 4.2vw, 3.15rem)', marginBottom: '24px', maxWidth: '1000px', lineHeight: 1.1, animationDelay: '0.1s', fontWeight: '900' }}>
+        <h1 className="fade-in hero-title" style={{ fontSize: 'clamp(1.75rem, 4.2vw, 3.15rem)', marginBottom: '24px', maxWidth: '1000px', lineHeight: 1.1, animationDelay: '0.1s', fontWeight: '900' }}>
             El Futuro de la <span className="gradient-text" style={{ background: 'linear-gradient(90deg, #00a8ff, #00ffcc)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>Seguridad Inteligente</span>
         </h1>
         
-        <p className="fade-in" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.25rem', maxWidth: '800px', marginBottom: '48px', animationDelay: '0.2s', lineHeight: 1.6, fontWeight: '500' }}>
+        <p className="fade-in hero-p" style={{ color: 'rgba(255,255,255,0.7)', fontSize: '1.25rem', maxWidth: '800px', marginBottom: '48px', animationDelay: '0.2s', lineHeight: 1.6, fontWeight: '500' }}>
             Supervisá guardias, recorridos y asistencia desde un solo panel. <br className="mobile-hide" /> Sin planillas. Sin errores. Con evidencia real y trazabilidad absoluta.
         </p>
 
-        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px', maxWidth: '1000px', marginBottom: '60px', width: '100%', padding: '0 20px' }}>
-            <Bullet text="Asistencia en Tiempo Real" icon={<CheckCircle size={18} />} />
-            <Bullet text="Rastreo Satelital (GPS) 24/7" icon={<MapPin size={18} />} />
-            <Bullet text="Rondas QR Verificables" icon={<QrCode size={18} />} />
-            <Bullet text="Alertas Críticas al Instante" icon={<ShieldAlert size={18} />} />
+        <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', maxWidth: '1000px', marginBottom: '60px', width: '100%', padding: '0 20px' }}>
+            <Bullet text="Asistencia Real" icon={<CheckCircle size={18} />} />
+            <Bullet text="GPS 24/7" icon={<MapPin size={18} />} />
+            <Bullet text="Rondas QR" icon={<QrCode size={18} />} />
+            <Bullet text="Alertas Críticas" icon={<ShieldAlert size={18} />} />
         </div>
 
         <div className="fade-in" style={{ display: 'flex', gap: '24px', flexWrap: 'wrap', justifyContent: 'center', animationDelay: '0.4s' }}>
@@ -309,8 +310,8 @@ const LandingPage = () => {
       </section>
 
       {/* Footer */}
-      <footer style={{ padding: '60px 0', borderTop: '1px solid var(--border)', textAlign: 'center', color: 'var(--text-muted)' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '20px', fontSize: '0.9rem' }}>
+      <footer style={{ padding: '60px 20px', borderTop: '1px solid var(--border)', textAlign: 'center', color: 'var(--text-muted)' }}>
+        <div className="footer-links" style={{ display: 'flex', justifyContent: 'center', gap: '20px', marginBottom: '20px', fontSize: '0.9rem' }}>
           <button onClick={() => setShowTerms(true)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>Términos y Condiciones</button>
           <button onClick={() => setShowPrivacy(true)} style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}>Privacidad</button>
           <Link to="/login" style={{ color: 'inherit', textDecoration: 'none' }}>Soporte Técnico</Link>
@@ -393,10 +394,28 @@ const TermsModal = ({ isOpen, onClose }) => {
         </div>
         <div className="custom-scrollbar" style={modalStyles.content}>
            <div style={modalStyles.section}>
-             <h3 style={modalStyles.sectionTitle}>1. Objeto del Servicio</h3>
-             <p style={modalStyles.text}>SaaS para gestión operativa de seguridad.</p>
+             <h3 style={modalStyles.sectionTitle}>1. Aceptación de los Términos</h3>
+             <p style={modalStyles.text}>Al acceder y utilizar la plataforma Centinela ("el Servicio"), usted acepta estar sujeto a estos Términos y Condiciones. Si no está de acuerdo con alguna parte de estos términos, no podrá acceder al servicio.</p>
            </div>
-           <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '0.8rem' }}>Continuación de términos legales...</p>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>2. Descripción del Servicio</h3>
+             <p style={modalStyles.text}>Centinela es una solución SaaS (Software as a Service) diseñada para la gestión operativa, supervisión y control de personal de seguridad en tiempo real. El servicio incluye monitoreo GPS, gestión de rondas QR, reportes de novedades y paneles analíticos.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>3. Responsabilidad del Usuario</h3>
+             <p style={modalStyles.text}>El usuario es responsable de mantener la confidencialidad de sus credenciales de acceso y de todas las actividades que ocurran bajo su cuenta. Se compromete a utilizar el servicio de manera lícita y profesional, cumpliendo con las regulaciones locales de seguridad privada.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>4. Propiedad Intelectual</h3>
+             <p style={modalStyles.text}>Todos los derechos de propiedad intelectual sobre el software, diseño, logotipos y algoritmos de Centinela son propiedad exclusiva de Centinela Security. Queda prohibida la reproducción, ingeniería inversa o distribución no autorizada.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>5. Modificaciones del Servicio</h3>
+             <p style={modalStyles.text}>Nos reservamos el derecho de actualizar, modificar o discontinuar cualquier aspecto del servicio en cualquier momento. Los términos comerciales se regirán por el plan de suscripción activo contratado por el cliente.</p>
+           </div>
+           <div style={{ textAlign: 'center', marginTop: '40px', padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+             <button onClick={onClose} className="primary" style={{ padding: '10px 30px', borderRadius: '10px' }}>Entendido</button>
+           </div>
         </div>
       </div>
     </div>
@@ -420,24 +439,15 @@ const DemoModal = ({ isOpen, onClose }) => {
     setStatus('loading');
 
     try {
-      // 1. Guardar en base de datos (Real functionality backup)
-      await registrarSolicitudDemo(formData);
+      // Enviar solicitud a través del servicio centralizado (Base de datos + Email)
+      const result = await registrarSolicitudDemo(formData);
 
-      // 2. Intentar POST a API para integración con backend/email
-      const response = await fetch('/api/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
-      });
-
-      // Incluso si falla el endpoint real (porque el backend no existe aún), 
-      // simulamos éxito para la experiencia del usuario o éxito real si el endpoint existe.
-      if (response.ok || response.status === 404) {
+      if (result) {
         setStatus('success');
         setFormData({ nombre: '', empresa: '', telefono: '', email: '', guardias: '' });
         setTimeout(() => onClose(), 3000);
       } else {
-        throw new Error('Error al enviar');
+        throw new Error('Error al enviar la solicitud');
       }
     } catch (err) {
       console.error(err);
@@ -566,7 +576,25 @@ const PrivacyModal = ({ isOpen, onClose }) => {
             <button onClick={onClose} style={modalStyles.closeBtn}><X size={20} /></button>
         </div>
         <div className="custom-scrollbar" style={modalStyles.content}>
-           <p style={{ color: 'rgba(255,255,255,0.7)', lineHeight: 1.6 }}>Política de protección de datos personales...</p>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>1. Recopilación de Información</h3>
+             <p style={modalStyles.text}>Recopilamos información necesaria para la prestación del servicio, incluyendo datos de geolocalización en tiempo real (GPS) mientras la aplicación de personal está en uso, registros de actividad (logs), imágenes y videos cargados como evidencia operativa.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>2. Uso de los Datos</h3>
+             <p style={modalStyles.text}>Los datos recopilados se utilizan exclusivamente para: supervisión de seguridad, generación de reportes automáticos, auditoría de cumplimiento de rondas y mejora de la seguridad operativa de nuestros clientes.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>3. Protección de Datos</h3>
+             <p style={modalStyles.text}>Implementamos medidas de seguridad de grado industrial para proteger la información contra accesos no autorizados, incluyendo cifrado SSL en tránsito y almacenamiento seguro de datos bajo estándares internacionales.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>4. Confidencialidad</h3>
+             <p style={modalStyles.text}>Centinela Security no vende ni comercializa datos personales o corporativos a terceros. El acceso a la información está estrictamente limitado a los usuarios autorizados definidos por la empresa cliente.</p>
+           </div>
+           <div style={{ textAlign: 'center', marginTop: '40px', padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+             <button onClick={onClose} className="secondary" style={{ padding: '10px 30px', borderRadius: '10px', border: '1px solid #38bdf8', color: '#38bdf8' }}>Cerrar</button>
+           </div>
         </div>
       </div>
     </div>

@@ -248,6 +248,35 @@ button:active {
   table {
     min-width: 700px;
   }
+
+  /* Landing & Login Specifics */
+  .landing-page {
+    padding-bottom: 40px;
+  }
+
+  .hero-title {
+    font-size: 2.2rem !important;
+    padding: 0 10px;
+  }
+
+  .hero-p {
+    font-size: 1rem !important;
+    padding: 0 15px;
+  }
+
+  nav {
+    margin: 10px !important;
+    padding: 10px 15px !important;
+  }
+
+  nav .mobile-hide {
+    display: none !important;
+  }
+
+  .footer-links {
+    flex-direction: column !important;
+    gap: 15px !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -270,7 +299,23 @@ button:active {
 }
 
 @media (max-width: 1024px) {
-  .login-visual-desktop {
+  .footer-links {
+    flex-direction: column !important;
+    gap: 15px !important;
+  }
+
+  /* Specific overhaul for Login Page on Mobile */
+  .login-ultimate {
+    justify-content: center !important;
+    padding: 20px !important;
+  }
+
+  .login-card-mobile {
+    padding: 30px 20px !important;
+    border-radius: 30px !important;
+  }
+
+  .external-footer-mobile {
     display: none !important;
   }
 }
