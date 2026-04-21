@@ -179,39 +179,28 @@ const SupportDashboard = () => {
   };
 
   const loadData = () => {
-    setIsLoading(true);
-    
-    // Check and pre-fill companies if empty
-    if (!localStorage.getItem('centinela_companies')) {
-       const initial = [
-        { id: '1', name: "Pepelui SA", status: "activa", plan: "enterprise", guards: 15, expiryDate: '2026-12-31' },
-        { id: '2', name: "Security Force Ltd", status: "activa", plan: "enterprise", guards: 150, expiryDate: '2027-06-15' },
-        { id: '3', name: "Vigilancia Plus", status: "pendiente", plan: "basic", guards: 10, expiryDate: '2026-05-20' }
-       ];
-       localStorage.setItem('centinela_companies', JSON.stringify(initial));
-    }
+    // REGLA DE ORO: Sincronización Real vía API
+    const unsubTickets = db.subscribeToTickets(setTickets);
+    const unsubCompanies = db.subscribeToCompanies(setCompanies);
+    const unsubUsers = db.subscribeToAllUsers(setUsers);
 
-    const savedTickets = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
-    const savedCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
-    const savedUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    
-    // REMOVE DEMO/MOCK PEOPLE ONLY
-    const realUsers = savedUsers.filter(u => {
-      const isMockId = ['U-001', 'U-002', 'U-003', 'U-004', 'U-010', 'U-770', 'U-771', 'U-772'].includes(u.id);
-      const isDemoEmail = u.email?.includes('@empresa') || u.email?.includes('@demo.com');
-      return !isMockId && !isDemoEmail;
-    });
+    return () => {
+        unsubTickets();
+        unsubCompanies();
+        unsubUsers();
+    };
+  };
 
-    setTickets(savedTickets);
-    setCompanies(savedCompanies);
-    setUsers(realUsers);
-    
-    // SCAN FOR MASS INCIDENTS
+  useEffect(() => {
+    const unsub = loadData();
+    return () => unsub && unsub();
+  }, []);
+
+  // SCAN FOR MASS INCIDENTS (Simulado basado en tickets vivos)
+  useEffect(() => {
     const alerts = db.detectarIncidentesMasivos();
     setAutomationAlerts(alerts);
-    
-    setIsLoading(false);
-  };
+  }, [tickets.length]);
 
   const handleLogout = async () => {
     await logout();
@@ -551,7 +540,11 @@ const SupportDashboard = () => {
                           <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginBottom: '5px' }}>{t.id && `#${t.id}`}</div>
                           <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{t.asunto}</div>
                        </td>
-                       <td style={{ padding: '15px', fontSize: '0.85rem' }}>{t.empresaId || t.companyName || 'N/A'}</td>
+                                               <td style={{ padding: '15px', fontSize: '0.85rem' }}>
+                          <div style={{fontWeight: 'bold'}}>{t.nombreEmpresa || 'Empresa Local'}</div>
+                          <div style={{fontSize: '0.7rem', opacity: 0.5}}>ID: {t.empresaId || 'S/ID'}</div>
+                        </td>
+
                        <td style={{ padding: '15px' }}>
                           <span style={{ padding: '4px 10px', background: `${statusColor}20`, color: statusColor, borderRadius: '6px', fontSize: '0.7rem', fontWeight: 'bold', border: `1px solid ${statusColor}` }}>
                              {(t.status || 'Nuevo').toUpperCase()}

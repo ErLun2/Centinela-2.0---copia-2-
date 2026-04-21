@@ -86,6 +86,11 @@ const LoginPage = () => {
           [ROLES.GUARD]: '/staff'
         };
 
+        if (user.mustChangePassword) {
+          navigate('/change-password');
+          return;
+        }
+
         navigate(redirectMap[user.rol] || '/');
       } catch (err) {
         console.error(err);

@@ -47,21 +47,15 @@ export const registrarSolicitudDemo = async (data) => {
 // ========================
 // Esta función simula un "real-time" eficiente consultando solo novedades cada 30 segundos.
 const subscribeToResource = (endpoint, callback, interval = 30000) => {
-    let lastId = 0;
     const poll = async () => {
-        const url = lastId > 0 ? `${endpoint}?lastId=${lastId}` : endpoint;
-        const data = await apiRequest(url);
-        if (data && data.length > 0) {
-            // Si es la primera carga o no hay ID previo, guardamos el ID más alto
-            const currentMaxId = data && data.length > 0 ? Math.max(...data.map(i => i.id || 0)) : 0;
-            if (currentMaxId > lastId) lastId = currentMaxId;
+        const data = await apiRequest(endpoint);
+        if (data) {
             callback(data);
         }
     };
-
-    poll(); // Carga inicial inmediata
+    poll(); // Carga inicial
     const timer = setInterval(poll, interval);
-    return () => clearInterval(timer); // Retorna función para des-suscribirse
+    return () => clearInterval(timer);
 };
 
 // ========================
@@ -196,7 +190,9 @@ export const obtenerDiagnosticoDispositivo = async (userId) => ({ status: 'ok', 
 export const obtenerDiagnosticoGPS = async (userId) => ({ accuracy: '5m', status: 'connected' });
 export const obtenerLogsSistema = async (id) => [];
 export const ejecutarDiagnosticoAutomatico = async (u, t) => ({ summary: 'Sincronización OK' });
-export const ejecutarAccionSoporte = async (a, u, t) => ({ success: true, message: 'Acción ejecutada' });
+export const ejecutarAccionSoporte = async (actionId, userId, ticketId) => {
+    return await apiRequest('/soporte/ejecutar', 'POST', { actionId, userId, ticketId });
+};
 
 export const logAction = async (u, a, e, d = {}) => { console.log(`[API-LOG] ${u} -> ${a}`); };
 

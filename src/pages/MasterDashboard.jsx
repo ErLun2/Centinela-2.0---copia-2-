@@ -729,7 +729,7 @@ const MasterDashboard = () => {
   };
 
   const getStatusColor = (status) => {
-    const s = (status || 'abierto').toString().toLowerCase();
+    const s = (status || 'abierto').toString().toLowerCase().trim().replace(/\s+/g, '_');
     const map = {
       'activa': { bg: 'rgba(16,185,129,0.1)', text: '#10b981' },
       'activo': { bg: 'rgba(16,185,129,0.1)', text: '#10b981' },
@@ -742,6 +742,8 @@ const MasterDashboard = () => {
       'eliminado': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444' },
       'cancelada': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444' },
       'cerrado': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444' },
+      'nuevo': { bg: 'rgba(239,68,68,0.1)', text: '#ef4444' },
+      'urgente': { bg: 'rgba(239,68,68,0.2)', text: '#ff4d4d' },
       'prueba': { bg: 'rgba(56,189,248,0.1)', text: '#38bdf8' },
       'en_proceso': { bg: 'rgba(56,189,248,0.1)', text: '#38bdf8' }
     };
@@ -1648,7 +1650,7 @@ const MasterDashboard = () => {
                     
                     const ticketDate = t.fecha ? new Date(t.fecha) : new Date();
                     const diffHours = !isNaN(ticketDate.getTime()) && !isNaN(endTime.getTime()) ? Math.floor((endTime - ticketDate) / (1000 * 60 * 60)) : 0;
-                    const empresa = t.empresaNombre || companies.find(c => c.id === t.empresaId)?.name || 'S/N';
+                    const empresa = t.nombreEmpresa || t.empresaNombre || companies.find(c => c.id === t.empresaId)?.name || 'S/N';
                     const usuarioIniciador = t.usuarioNombre || 'Administrador';
                     const estadoLabel = t.status || t.estado || 'abierto';
 
