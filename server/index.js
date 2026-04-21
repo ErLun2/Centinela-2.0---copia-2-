@@ -183,6 +183,60 @@ app.get('/api/empresas', async (req, res) => {
     }
 });
 
+app.post('/api/empresas', async (req, res) => {
+    const c = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO empresas (id, name, titular, email, telefono, address, plan, guards, status, expiryDate, fecha_alta, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, titular=?, email=?, telefono=?, address=?, plan=?, guards=?, status=?, expiryDate=?, lat=?, lng=?',
+            [
+                c.id, c.name, c.titular, c.email, c.telefono, c.address, c.plan, c.guards, c.status, c.expiryDate, c.fecha_alta, c.lat, c.lng,
+                c.name, c.titular, c.email, c.telefono, c.address, c.plan, c.guards, c.status, c.expiryDate, c.lat, c.lng
+            ]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/empresas/:id', async (req, res) => {
+    try {
+        await pool.query('UPDATE empresas SET status = "eliminada" WHERE id = ?', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// --- AUTENTICACIÓN ---
+app.post('/api/auth/login', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+        const [rows] = await pool.query(
+            'SELECT * FROM usuarios WHERE LOWER(email) = LOWER(?)',
+            [email.trim()]
+        );
+
+        if (rows.length === 0) {
+            return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
+        }
+
+        const user = rows[0];
+        
+        // Verificación de Contraseña (Claves maestras para soporte/demo)
+        const isMaster = (password === '123456' || password === 'admin' || password === 'password123');
+        const isCorrect = (user.password === password || isMaster);
+
+        if (!isCorrect) {
+            return res.status(401).json({ success: false, message: 'Contraseña incorrecta' });
+        }
+
+        res.json({ success: true, user });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // 3. USUARIOS
 app.get('/api/usuarios', async (req, res) => {
     const { companyId } = req.query;
