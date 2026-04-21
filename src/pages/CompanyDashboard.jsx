@@ -1304,20 +1304,33 @@ const CompanyDashboard = () => {
     }));
   };
 
-  const saveSchedule = () => {
+  const saveSchedule = async () => {
+    if (!selectedUser) return;
     setIsSaving(true);
-    const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    const updated = allUsers.map(u => {
-      const isMatch = (selectedUser.id && u.id === selectedUser.id) ||
-        (selectedUser.uid && u.uid === selectedUser.uid);
-      return isMatch ? { ...u, schedule: scheduleUpdate } : u;
-    });
-    localStorage.setItem('centinela_users', JSON.stringify(updated));
-    setTimeout(() => {
-      loadData();
-      setShowShiftModal(false);
+    try {
+      const updatedUser = { 
+        ...selectedUser, 
+        schedule: scheduleUpdate,
+        personal_email: selectedUser.personal_email || selectedUser.emailPersonal,
+        birth_date: selectedUser.birth_date || selectedUser.fechaNacimiento,
+        phone: selectedUser.phone || selectedUser.telefono,
+        name: selectedUser.nombre || selectedUser.name,
+        surname: selectedUser.apellido || selectedUser.surname,
+        rol: selectedUser.rol || selectedUser.role
+      };
+      
+      await db.crearUsuarioSaaS(updatedUser, user.empresaId);
+      showToast("Agenda actualizada correctamente.");
+      
+      setTimeout(() => {
+        loadData();
+        setShowShiftModal(false);
+        setIsSaving(false);
+      }, 500);
+    } catch (error) {
+      showToast("Error al actualizar la agenda", "error");
       setIsSaving(false);
-    }, 1000);
+    }
   };
 
   const handleUpdateEventStatus = (status) => {
