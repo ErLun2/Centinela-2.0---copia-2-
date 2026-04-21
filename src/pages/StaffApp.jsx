@@ -892,6 +892,7 @@ const StaffApp = () => {
   }, [session, sessionKey]);
 
   const [loading, setLoading] = useState(false);
+  const [appReady, setAppReady] = useState(false); // Estado para evitar pantalla negra en inicio frío
   const [currentGps, setCurrentGps] = useState(null);
   const [companyName, setCompanyName] = useState('DASHBOARD');
   const [assignedObjectiveName, setAssignedObjectiveName] = useState('SIN ASIGNAR');
@@ -916,6 +917,8 @@ const StaffApp = () => {
   useEffect(() => {
     if (!user) return;
     
+    // Timeout de seguridad: Si en 5 segundos nada carga, forzar appReady
+    const timer = setTimeout(() => setAppReady(true), 5000);
     // Fetch Company Name
     const allCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
     const currentComp = allCompanies.find(c => c.id === user.empresaId);
@@ -965,8 +968,11 @@ const StaffApp = () => {
       );
     }
     
+    setAppReady(true);
+    
     return () => { 
       if(watchId) navigator.geolocation.clearWatch(watchId); 
+      clearTimeout(timer);
     };
   }, [user, session.isCheckedIn, assignedObjective]);
 
@@ -1092,6 +1098,15 @@ const StaffApp = () => {
 
   // Verificar si hay contenido multimedia o texto para habilitar envío
   const hasReportContent = reportData.text || capturedPhoto || capturedVideo || capturedAudio;
+
+  if (!appReady) {
+    return (
+      <div style={{ height: '100vh', width: '100vw', background: '#020617', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <Loader2 size={40} className="animate-spin" color="#00a8ff" />
+        <p style={{ marginTop: '20px', color: '#94a3b8', fontSize: '0.8rem', letterSpacing: '2px', fontWeight: 'bold' }}>SINCRONIZANDO CENTINELA...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={styles.container}>
