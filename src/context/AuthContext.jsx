@@ -121,77 +121,44 @@ export const AuthProvider = ({ children }) => {
   const login = async (emailInput, password) => {
     const email = emailInput.toLowerCase().trim();
 
-    // 0. ACCESO DE EMERGENCIA HARDCODEADO (PARA PRUEBAS)
-    if (email === 'pablo@stark.com' && password === 'password123') {
-      const mockPablo = {
-        uid: 'pablo_001',
-        nombre: 'Pablo Stark',
-        email: 'pablo@stark.com',
-        rol: ROLES.GUARD,
-        empresaId: user?.empresaId || 'demo_empresa',
-        mustChangePassword: true
-      };
-      setUser(mockPablo);
-      localStorage.setItem('centinela_current_user', JSON.stringify(mockPablo));
-      return mockPablo;
-    }
-    
-    // 1. Check LOCAL database (centinela_users)
-    let allUsers = [];
+    // 1. INTENTO DE LOGIN REMOTO (EL NUEVO ESTÁNDAR)
     try {
-      allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    } catch (e) {
-      console.error("Error parsing centinela_users:", e);
-      allUsers = [];
-    }
-    
-    let matchingUser = allUsers.find(u => u.email?.toLowerCase() === email && 
-      (u.password === password || password === '123456' || password === 'password123' || !u.password || password === 'admin')
-    );
-    
-    // 1b. Fallback: Si no está en memoria local (común en móviles), buscamos en el servidor por Red
-    if (!matchingUser) {
-      try {
-        const { obtenerUsuarios } = await import('../lib/dbServices');
-        const remoteUsers = await obtenerUsuarios();
-        if (remoteUsers && Array.isArray(remoteUsers)) {
-          matchingUser = remoteUsers.find(u => u.email?.toLowerCase() === email && 
-            (u.password === password || password === '123456' || password === 'password123' || !u.password || password === 'admin')
-          );
-          // Si lo encontramos por red, lo guardamos para la próxima vez
-          if (matchingUser) {
-            const updatedUsers = [...allUsers, matchingUser];
-            localStorage.setItem('centinela_users', JSON.stringify(updatedUsers));
-          }
-        }
-      } catch (e) {
-        console.warn("Remote user fetch failed:", e);
+      const { loginRemoto } = await import('../lib/dbServices');
+      const result = await loginRemoto(email, password);
+      
+      if (result && result.success && result.user) {
+        const u = result.user;
+        let finalRole = (u.role || u.rol || ROLES.GUARD).toUpperCase();
+        if (finalRole === 'ADMIN EMPRESA' || finalRole === 'ADMIN_EMPRESA') finalRole = ROLES.COMPANY_ADMIN;
+        if (finalRole === 'SUPER ADMIN') finalRole = ROLES.SUPER_ADMIN;
+        if (finalRole === 'GUARDIA') finalRole = ROLES.GUARD;
+        if (finalRole === 'SOPORTE') finalRole = ROLES.SUPPORT;
+
+        const normalizedUser = {
+          ...u,
+          rol: finalRole,
+          empresaId: u.companyId || u.empresaId,
+          nombre: u.name || u.nombre,
+          mustChangePassword: u.password === '123456' || u.password === 'password123' || !u.password
+        };
+
+        setUser(normalizedUser);
+        localStorage.setItem('centinela_current_user', JSON.stringify(normalizedUser));
+        return normalizedUser;
       }
-    }
-    
-    if (matchingUser) {
-      let finalRole = (matchingUser.role || matchingUser.rol || ROLES.GUARD).toUpperCase();
-      if (finalRole === 'ADMIN EMPRESA' || finalRole === 'ADMIN_EMPRESA') finalRole = ROLES.COMPANY_ADMIN;
-      if (finalRole === 'SUPER ADMIN') finalRole = ROLES.SUPER_ADMIN;
-      if (finalRole === 'GUARDIA') finalRole = ROLES.GUARD;
-      if (finalRole === 'SOPORTE') finalRole = ROLES.SUPPORT;
-      
-      // Regla de Oro: Identificar por dominio si es necesario
-      if (email.endsWith('@soporte.com')) finalRole = ROLES.SUPPORT;
-      
-      const normalizedUser = {
-        ...matchingUser,
-        rol: finalRole,
-        empresaId: matchingUser.companyId || matchingUser.empresaId,
-        nombre: matchingUser.name || matchingUser.nombre
-      };
-      
-      setUser(normalizedUser);
-      localStorage.setItem('centinela_current_user', JSON.stringify(normalizedUser));
-      return normalizedUser;
+    } catch (e) {
+      console.warn("Remote Login Failed, trying local/emergency fallback:", e);
     }
 
-    // 2. Mock/Real Hardcoded Users (Emergency Access & SuperAdmin)
+    // 2. Fallbacks de Emergencia Hardcodeados (Mantiene operatividad sin Red)
+    if (email === 'pablo@stark.com' && password === 'password123') {
+       const mockPablo = { uid: 'p_001', nombre: 'Pablo Stark', email: 'pablo@stark.com', rol: ROLES.GUARD, mustChangePassword: true };
+       setUser(mockPablo);
+       localStorage.setItem('centinela_current_user', JSON.stringify(mockPablo));
+       return mockPablo;
+    }
+
+    // 3. Mock/Real Hardcoded Users (Emergency Access & SuperAdmin)
     if (email === 'vidal@master.com' || email === 'master') {
       try {
         const { verificarAdmin } = await import('../lib/dbServices');

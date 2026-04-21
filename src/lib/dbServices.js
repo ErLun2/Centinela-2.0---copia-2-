@@ -221,4 +221,9 @@ export const registrarEventoAudit = async (data) => await apiRequest('/audit', '
 export const actualizarTicket = async (id, data) => await apiRequest(`/tickets/${id}`, 'POST', data);
 export const enviarPropuesta = async (proposalData) => await apiRequest('/send-proposal', 'POST', proposalData);
 export const verificarAdmin = async (password) => await apiRequest('/auth/verify-admin', 'POST', { password });
+
+export const loginRemoto = async (email, password) => {
+    return await apiRequest('/auth/login', 'POST', { email, password });
+};
+
 export const cambiarAdminPassword = async (currentPassword, newPassword) => await apiRequest('/auth/admin-password', 'POST', { currentPassword, newPassword });
