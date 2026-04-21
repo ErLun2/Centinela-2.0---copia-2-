@@ -773,7 +773,7 @@ const CompanyDashboard = () => {
       setNewUser({ 
         nombre: '', apellido: '', dni: '', legajo: '', 
         email: '', emailPersonal: '', fechaNacimiento: '', 
-          rol: 'GUARD', telefono: '', password: 'password123' 
+          rol: 'GUARDIA', telefono: '', password: 'password123' 
         });
         loadData();
     } catch (error) {
@@ -1177,6 +1177,7 @@ const CompanyDashboard = () => {
         personal_email: editingUser.emailPersonal,
         birth_date: editingUser.fechaNacimiento,
         phone: editingUser.telefono,
+        rol: editingUser.rol, // Asegurar que use el nuevo valor
         companyId: user.empresaId,
         status: editingUser.estado || editingUser.status || 'activo'
       };
@@ -1833,28 +1834,21 @@ const CompanyDashboard = () => {
 
                 <div style={{ marginTop: '20px', width: '100%', maxWidth: '200px' }}>
                   <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', textAlign: 'center', display: 'block', marginBottom: '8px', fontWeight: 'bold', letterSpacing: '1px' }}>ROL ASIGNADO</label>
-                  <select
-                    value={selectedUserForView.rol || 'GUARDIA'}
-                    onChange={(e) => handleUpdateUserRole(selectedUserForView.id || selectedUserForView.uid, e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '12px',
-                      borderRadius: '12px',
-                      background: 'rgba(255,255,255,0.05)',
-                      color: 'white',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      fontSize: '0.85rem',
-                      fontWeight: 'bold',
-                      textAlign: 'center',
-                      cursor: 'pointer',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value="ADMIN" style={{ background: '#0f172a' }}>ADMIN</option>
-                    <option value="OPERADOR" style={{ background: '#0f172a' }}>OPERADOR</option>
-                    <option value="SUPERVISOR" style={{ background: '#0f172a' }}>SUPERVISOR</option>
-                    <option value="GUARDIA" style={{ background: '#0f172a' }}>GUARDIA</option>
-                  </select>
+                  <div style={{
+                    width: '100%',
+                    padding: '12px',
+                    borderRadius: '12px',
+                    background: 'rgba(255,255,255,0.05)',
+                    color: 'white',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    fontSize: '0.85rem',
+                    fontWeight: '900',
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1px'
+                  }}>
+                    {selectedUserForView.rol || selectedUserForView.role || 'GUARDIA'}
+                  </div>
                 </div>
               </div>
 
@@ -1869,8 +1863,8 @@ const CompanyDashboard = () => {
                     <div style={{ fontWeight: '700', fontSize: '1rem', color: 'var(--primary)' }}>{selectedUserForView.legajo || 'S/L'}</div>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>TELÉFONO CORPORATIVO</label>
-                    <div style={{ fontWeight: '700', fontSize: '1rem' }}>{selectedUserForView.telefono || 'SIN REGISTRO'}</div>
+                    <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>TELÉFONO PERSONAL</label>
+                    <div style={{ fontWeight: '700', fontSize: '1rem' }}>{selectedUserForView.phone || selectedUserForView.telefono || 'SIN REGISTRO'}</div>
                   </div>
                   <div>
                     <label style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', display: 'block', marginBottom: '6px', fontWeight: 'bold' }}>EMAIL CORPORATIVO</label>
@@ -1909,7 +1903,21 @@ const CompanyDashboard = () => {
 
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <button
-                    onClick={() => { setEditingUser(selectedUserForView); setShowEditUserModal(true); setSelectedUserForView(null); }}
+                    onClick={() => { 
+                      // Mapear campos de DB a campos de Formulario para que no aparezcan vacíos
+                      const mappedUser = {
+                        ...selectedUserForView,
+                        nombre: selectedUserForView.nombre || selectedUserForView.name,
+                        apellido: selectedUserForView.apellido || selectedUserForView.surname,
+                        emailPersonal: selectedUserForView.emailPersonal || selectedUserForView.personal_email,
+                        fechaNacimiento: selectedUserForView.fechaNacimiento || selectedUserForView.birth_date,
+                        telefono: selectedUserForView.telefono || selectedUserForView.phone,
+                        rol: selectedUserForView.rol || selectedUserForView.role
+                      };
+                      setEditingUser(mappedUser); 
+                      setShowEditUserModal(true); 
+                      setSelectedUserForView(null); 
+                    }}
                     className="primary"
                     style={{ flex: 1, padding: '16px', borderRadius: '16px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
                   >
@@ -3639,7 +3647,7 @@ const CompanyDashboard = () => {
                    <div><label style={styles.modalLabel}>Teléfono</label><input type="tel" value={newUser.telefono} onChange={e => setNewUser({...newUser, telefono: e.target.value})} style={styles.input} /></div>
                    <div><label style={styles.modalLabel}>Rol / Rango</label>
                       <select value={newUser.rol} onChange={e => setNewUser({...newUser, rol: e.target.value})} style={styles.input}>
-                         <option value="GUARD">GUARDIA (App Móvil)</option>
+                         <option value="GUARDIA">GUARDIA (App Móvil)</option>
                          <option value="SUPERVISOR">SUPERVISOR (App Móvil)</option>
                          <option value="OPERADOR">OPERADOR (Panel Control)</option>
                          <option value="ADMIN">ADMINISTRADOR (Acceso Total)</option>
@@ -3685,7 +3693,7 @@ const CompanyDashboard = () => {
                    <div><label style={styles.modalLabel}>Teléfono</label><input type="tel" value={editingUser.telefono} onChange={e => setEditingUser({...editingUser, telefono: e.target.value})} style={styles.input} /></div>
                    <div><label style={styles.modalLabel}>Rol / Rango</label>
                       <select value={editingUser.rol || editingUser.role} onChange={e => setEditingUser({...editingUser, rol: e.target.value, role: e.target.value})} style={styles.input}>
-                         <option value="GUARD">GUARDIA (App Móvil)</option>
+                         <option value="GUARDIA">GUARDIA (App Móvil)</option>
                          <option value="SUPERVISOR">SUPERVISOR (App Móvil)</option>
                          <option value="OPERADOR">OPERADOR (Panel Control)</option>
                          <option value="ADMIN">ADMINISTRADOR (Acceso Total)</option>
