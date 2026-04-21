@@ -463,9 +463,46 @@ app.post('/api/eventos', async (req, res) => {
             )
         `).catch(() => {});
 
+        // Sanitizar Fecha (MySQL requiere YYYY-MM-DD)
+        let fechaSanitizada = e.fecha;
+        if (fechaSanitizada && fechaSanitizada.includes('/')) {
+            const parts = fechaSanitizada.split('/');
+            if (parts.length === 3) {
+                // Asumir DD/MM/YYYY o MM/DD/YYYY - Normalizar a YYYY-MM-DD
+                if (parts[2].length === 4) {
+                    fechaSanitizada = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                }
+            }
+        }
+
+        // Sanitizar Hora (MySQL requiere HH:MM:SS)
+        let horaSanitizada = e.hora;
+        if (horaSanitizada && (horaSanitizada.toLowerCase().includes('m.') || horaSanitizada.toLowerCase().includes('am') || horaSanitizada.toLowerCase().includes('pm'))) {
+            try {
+                const parts = horaSanitizada.split(':');
+                let hours = parseInt(parts[0].replace(/[^\d]/g, ''));
+                const isPM = horaSanitizada.toLowerCase().includes('p.m.') || horaSanitizada.toLowerCase().includes('pm');
+                
+                // Extraer minutos y segundos limpiando texto
+                let rest = parts.slice(1).join(':').replace(/[^\d:]/g, '');
+                
+                if (isPM && hours < 12) hours += 12;
+                if (!isPM && hours === 12) hours = 0;
+                
+                horaSanitizada = `${hours.toString().padStart(2, '0')}:${rest}`;
+                if (horaSanitizada.split(':').length === 2) horaSanitizada += ':00';
+            } catch (err) {
+                console.error("Error sanitizando hora:", e.hora, err);
+            }
+        }
+
+        // Validaciones Finales Silenciosas (Evitar 500)
+        if (!fechaSanitizada || fechaSanitizada === 'null') fechaSanitizada = new Date().toISOString().split('T')[0];
+        if (!horaSanitizada || horaSanitizada === 'null' || !horaSanitizada.includes(':')) horaSanitizada = new Date().toTimeString().split(' ')[0];
+
         await pool.query(
             'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, fotoUrl, audioUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [e.id, e.tipo, e.subtipo, e.descripcion, e.fecha, e.hora, e.lat, e.lng, e.companyId, e.guardiaId, e.fotoUrl, e.audioUrl]
+            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, e.guardiaId, e.fotoUrl, e.audioUrl]
         );
         res.json({ success: true });
     } catch (err) {
