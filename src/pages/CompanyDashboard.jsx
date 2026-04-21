@@ -963,11 +963,23 @@ const CompanyDashboard = () => {
     if (!user?.empresaId) return;
 
     const unsubUsers = db.subscribeToAllUsers((allUsers) => {
-      const normalized = allUsers.map(u => ({
-        ...u,
-        nombre: u.nombre || u.name || 'Usuario',
-        rol: u.rol || u.role || 'GUARDIA'
-      }));
+      const normalized = allUsers.map(u => {
+        let parsedSchedule = u.schedule;
+        if (typeof u.schedule === 'string') {
+          try {
+            parsedSchedule = JSON.parse(u.schedule);
+          } catch (e) {
+            console.error("Error parsing schedule for user", u.id, e);
+            parsedSchedule = null;
+          }
+        }
+        return {
+          ...u,
+          schedule: parsedSchedule,
+          nombre: u.nombre || u.name || 'Usuario',
+          rol: u.rol || u.role || 'GUARDIA'
+        };
+      });
       const filtered = normalized.filter(u => {
         // REGLA DE ORO: Un SUPER_ADMIN nunca es parte de la dotación operativa de una empresa
         if (u.rol === 'SUPER_ADMIN' || u.role === 'SUPER_ADMIN') return false;
@@ -2022,7 +2034,7 @@ const CompanyDashboard = () => {
                 )
                 .map((u, i) => {
                   const hasSchedule = u.schedule && u.schedule.workingDays?.length > 0;
-                  const obj = objectives.find(o => o.id === u.schedule?.objectiveId);
+                  const obj = objectives.find(o => String(o.id) === String(u.schedule?.objectiveId));
                   const USER_COLORS = ['#00d2ff', '#a855f7', '#10b981', '#f43f5e', '#fbbf24', '#3b82f6', '#ec4899', '#6366f1'];
                   const color = USER_COLORS[i % USER_COLORS.length];
 
@@ -2688,7 +2700,7 @@ const CompanyDashboard = () => {
                 })}
 
                 {objectives.filter(obj => obj.activo !== false).map(obj => {
-                  const assignedGuards = companyUsers.filter(u => u.schedule?.objectiveId === obj.id);
+                  const assignedGuards = companyUsers.filter(u => String(u.schedule?.objectiveId) === String(obj.id));
                   const totalCount = assignedGuards.length;
                   const currentCount = assignedGuards.filter(u => {
                     const getT = (e) => e?.fechaRegistro?.seconds ? e.fechaRegistro.seconds * 1000 : new Date(e?.fechaRegistro || 0).getTime();
