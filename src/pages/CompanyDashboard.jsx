@@ -763,20 +763,19 @@ const CompanyDashboard = () => {
         personal_email: newUser.emailPersonal,
         birth_date: newUser.fechaNacimiento,
         phone: newUser.telefono,
-        companyId: user.empresaId
+        companyId: user.empresaId,
+        status: 'activo'
       };
 
-      const result = await db.crearUsuarioSaaS(payload, user.empresaId);
-      if (result) {
-        showToast(newUser.id || newUser.uid ? "Usuario actualizado" : "Usuario registrado con éxito");
-        setShowUserModal(false);
-        setNewUser({ 
-          nombre: '', apellido: '', dni: '', legajo: '', 
-          email: '', emailPersonal: '', fechaNacimiento: '', 
+      await db.crearUsuarioSaaS(payload, user.empresaId);
+      showToast(newUser.id || newUser.uid ? "Usuario actualizado" : "Usuario registrado con éxito");
+      setShowUserModal(false);
+      setNewUser({ 
+        nombre: '', apellido: '', dni: '', legajo: '', 
+        email: '', emailPersonal: '', fechaNacimiento: '', 
           rol: 'GUARD', telefono: '', password: 'password123' 
         });
         loadData();
-      }
     } catch (error) {
       showToast("Error al guardar usuario", "error");
     } finally {
@@ -1159,47 +1158,6 @@ const CompanyDashboard = () => {
     }
   };
 
-
-  const handleAddGuard = async (e) => {
-    e.preventDefault();
-    if (!newUser.nombre || !newUser.apellido || !newUser.email) {
-      showToast("Nombre, Apellido y Email de Acceso son obligatorios", "error");
-      return;
-    }
-
-    setIsSaving(true);
-    try {
-      const uid = newUser.id || newUser.uid || `user_${Date.now()}`;
-      const payload = {
-        ...newUser,
-        id: uid,
-        uid: uid,
-        name: newUser.nombre,
-        surname: newUser.apellido,
-        dni: newUser.dni,
-        legajo: newUser.legajo,
-        personal_email: newUser.emailPersonal,
-        birth_date: newUser.fechaNacimiento,
-        phone: newUser.telefono,
-        companyId: user.empresaId,
-        status: 'activo'
-      };
-
-      await db.crearUsuarioSaaS(payload, user.empresaId);
-      showToast(newUser.id || newUser.uid ? "Usuario actualizado" : "Usuario registrado con éxito");
-      setShowUserModal(false);
-      setNewUser({ 
-        nombre: '', apellido: '', dni: '', legajo: '', 
-        email: '', emailPersonal: '', fechaNacimiento: '', 
-        rol: 'GUARD', telefono: '', password: 'password123' 
-      });
-      loadData();
-    } catch (error) {
-      showToast("Error al guardar usuario", "error");
-    } finally {
-      setIsSaving(false);
-    }
-  };
 
   const handleEditUserSave = async (e) => {
     e.preventDefault();
