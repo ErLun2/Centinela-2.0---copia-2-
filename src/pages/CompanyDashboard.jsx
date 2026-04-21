@@ -905,8 +905,16 @@ const CompanyDashboard = () => {
     });
 
     const unsubCompanies = db.subscribeToCompanies((allCompanies) => {
-      const currentComp = allCompanies.find(c => c.id === user.empresaId);
-      setCompanyData(currentComp);
+      const compId = user.empresaId || user.companyId;
+      const found = allCompanies.find(c => String(c.id || c.uid) === String(compId));
+      if (found) {
+        // NORMALIZACIÓN ESTRATÉGICA (Evitar 'PREMIUM'/'CLIENTE' fantasmas)
+        setCompanyData({
+          ...found,
+          nombre: found.nombre || found.name || user?.company || 'Empresa Cliente',
+          plan: (found.plan || found.planId || 'demo').toLowerCase() // Priorizamos 'demo' como fallback operativo
+        });
+      }
     });
 
     const unsubEvents = db.subscribeToAllEventsGroup((allEvents) => {
@@ -1512,7 +1520,7 @@ const CompanyDashboard = () => {
           <div>
             <h1 style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '2px', background: 'linear-gradient(to right, #00d2ff, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>CENTINELA</h1>
             <p style={{ fontSize: '0.6rem', color: 'rgba(148, 163, 184, 0.8)', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 'bold' }}>
-              {companyData?.nombre || companyData?.name || user?.company || 'CLIENTE'}
+              {(companyData?.nombre || companyData?.name || user?.company || 'CLIENTE').toUpperCase()}
             </p>
             <div style={{ marginTop: '5px' }}>
               <span style={{ 
@@ -1525,7 +1533,7 @@ const CompanyDashboard = () => {
                 fontWeight: '900',
                 letterSpacing: '1px'
               }}>
-                MODO: {companyData?.plan?.toUpperCase() || 'PREMIUM'}
+                MODO: {companyData?.plan?.toUpperCase() || 'SaaS'}
               </span>
             </div>
           </div>
@@ -4501,9 +4509,15 @@ const BillingPanel = ({ companyData, showToast, refreshData }) => {
     }
   };
 
-  const currentPlanInfo = PLANES[(companyData?.plan || 'basico').toUpperCase()] || PLANES.BASICO;
-  const isExpired = new Date(companyData?.expiryDate) < new Date();
-  const daysLeft = Math.max(0, Math.ceil((new Date(companyData?.expiryDate) - new Date()) / (1000 * 60 * 60 * 24)));
+  const currentPlanInfo = PLANES[(companyData?.plan || 'demo').toUpperCase()] || PLANES.DEMO;
+  const isExpired = companyData?.expiryDate ? (new Date(companyData.expiryDate) < new Date().setHours(0,0,0,0)) : false;
+  const daysLeft = (() => {
+    if (!companyData?.expiryDate) return 0;
+    const expiry = new Date(companyData.expiryDate);
+    if (isNaN(expiry.getTime())) return 0;
+    const diff = expiry - new Date();
+    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+  })();
 
   return (
     <div className="fade-in" style={{ color: 'white' }}>
@@ -4534,7 +4548,7 @@ const BillingPanel = ({ companyData, showToast, refreshData }) => {
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '8px' }}>
-              <h3 style={{ fontSize: '1.6rem', fontWeight: '900', margin: 0 }}>Plan {currentPlanInfo.nombre}</h3>
+              <h3 style={{ fontSize: '1.6rem', fontWeight: '900', margin: 0 }}>{currentPlanInfo.nombre}</h3>
               <span style={{ 
                 padding: '6px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '900',
                 background: isExpired ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
