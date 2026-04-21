@@ -177,7 +177,7 @@ app.post('/api/empresas', async (req, res) => {
 app.get('/api/usuarios', async (req, res) => {
     const { companyId } = req.query;
     try {
-        let sql = 'SELECT id, email, name, role, companyId, status FROM usuarios';
+        let sql = 'SELECT id, email, name, role, companyId, status, password FROM usuarios';
         let params = [];
         if (companyId) {
             sql += ' WHERE companyId = ?';
