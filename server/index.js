@@ -291,17 +291,31 @@ app.post('/api/auth/admin-password', async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     try {
         // Consultar contraseña actual (si no existe, la default es 123456)
-        const [rows] = await pool.query('SELECT value FROM sistema_config WHERE `key` = "admin_pass"');
-        const savedPass = rows.length > 0 ? JSON.parse(rows[0].value) : '123456';
+        const [rows] = await pool.query('SELECT value FROM sistema_config WHERE \`key\` = "admin_pass"');
+        let savedPass = '123456';
+        
+        try {
+            if (rows.length > 0) {
+                // Intentar parsear si es JSON, sino usar el valor directo
+                const val = rows[0].value;
+                savedPass = (val.startsWith('"') && val.endsWith('"')) ? JSON.parse(val) : val;
+            }
+        } catch (e) {
+            savedPass = rows[0].value;
+        }
 
-        if (currentPassword !== savedPass) {
+        // Aceptar la clave guardada O las de emergencia si es la primera vez
+        const isDefault = (rows.length === 0);
+        const isValid = (currentPassword === savedPass) || (isDefault && (currentPassword === '123456' || currentPassword === 'admin'));
+
+        if (!isValid) {
             return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
         }
 
-        // Guardar nueva contraseña
+        // Guardar nueva contraseña (como string plano para evitar líos de JSON)
         await pool.query(
-            'INSERT INTO sistema_config (`key`, value) VALUES ("admin_pass", ?) ON DUPLICATE KEY UPDATE value = ?',
-            [JSON.stringify(newPassword), JSON.stringify(newPassword)]
+            'INSERT INTO sistema_config (\`key\`, value) VALUES ("admin_pass", ?) ON DUPLICATE KEY UPDATE value = ?',
+            [newPassword, newPassword]
         );
 
         res.json({ success: true, message: 'Contraseña actualizada correctamente' });
@@ -324,7 +338,16 @@ app.post('/api/auth/verify-admin', async (req, res) => {
         `).catch(err => console.error("Error creando sistema_config:", err));
 
         const [rows] = await pool.query('SELECT value FROM sistema_config WHERE `key` = "admin_pass"');
-        const savedPass = rows.length > 0 ? JSON.parse(rows[0].value) : '123456';
+        let savedPass = '123456';
+        
+        if (rows.length > 0) {
+            const val = rows[0].value;
+            try {
+                savedPass = (val.startsWith('"') && val.endsWith('"')) ? JSON.parse(val) : val;
+            } catch (e) {
+                savedPass = val;
+            }
+        }
         
         if (password === savedPass || password === 'admin' || password === '123456') {
             res.json({ success: true });

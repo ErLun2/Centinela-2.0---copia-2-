@@ -883,24 +883,8 @@ const CompanyDashboard = () => {
     const currentComp = allCompanies.find(c => c.id === user.empresaId);
     setCompanyData(currentComp);
 
-    // Eventos y Novedades (Inyección de Demo si no hay novedades reales)
+    // Eventos y Novedades
     let allEvents = JSON.parse(localStorage.getItem('centinela_events') || '[]');
-    const currentCompEvents = allEvents.filter(e => e.empresaId === user.empresaId);
-
-    // Solo inyectamos demo si la empresa está TOTALMENTE vacía de registros
-    if (currentCompEvents.length === 0 && filtered.length > 0) {
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-      const dayBefore = new Date(); dayBefore.setDate(dayBefore.getDate() - 2);
-
-      const demoHistory = [
-        { id: 'ev_h1', tipo: 'novedad', mensaje: 'Fuga de agua en baños de Nave C reparada.', hora: '09:00', fechaRegistro: yesterday.toISOString(), usuario: filtered[0].id || filtered[0].uid, objetivoId: 'obj1', empresaId: user.empresaId, hasMedia: false, status: 'Cerrado' },
-        { id: 'ev_h2', tipo: 'recorrido', mensaje: 'Ronda perimetral nocturna sin novedades.', hora: '23:30', fechaRegistro: yesterday.toISOString(), usuario: filtered[0].id || filtered[0].uid, objetivoId: 'obj2', empresaId: user.empresaId, hasMedia: true, mediaType: 'image', status: 'Cerrado' },
-        { id: 'ev_h3', tipo: 'novedad', mensaje: 'Puerta Nave Central mal cerrada por personal externo.', hora: '11:20', fechaRegistro: dayBefore.toISOString(), usuario: filtered[0].id || filtered[0].uid, objetivoId: 'obj3', empresaId: user.empresaId, hasMedia: true, mediaType: 'image', status: 'Cerrado' },
-        { id: 'ev_h4', tipo: 'emergencia', mensaje: 'Falla eléctrica en transformador secundario.', hora: '02:15', fechaRegistro: dayBefore.toISOString(), usuario: filtered[0].id || filtered[0].uid, objetivoId: 'obj1', empresaId: user.empresaId, hasMedia: false, status: 'Cerrado' }
-      ];
-      allEvents = [...allEvents, ...demoHistory];
-      localStorage.setItem('centinela_events', JSON.stringify(allEvents));
-    }
     // DEPURACIÓN Y CARGA: Solo permitimos eventos con la nueva arquitectura de objetos embebidos
     const compEvents = allEvents.filter(e => e.empresaId === user.empresaId);
     let validEvents = compEvents.filter(e => typeof e.usuario === 'object' && e.usuario !== null);
@@ -927,14 +911,6 @@ const CompanyDashboard = () => {
     // Objetivos
     let allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
     let companyObjectives = allObjectives.filter(obj => obj.empresaId === user.empresaId);
-
-    // Si no hay objetivos para esta empresa, inyectamos los mock inicialmente
-    if (companyObjectives.length === 0) {
-      const mockInitial = OBJETIVOS_MOCK.map(o => ({ ...o, empresaId: user.empresaId }));
-      allObjectives = [...allObjectives, ...mockInitial];
-      localStorage.setItem('centinela_objectives', JSON.stringify(allObjectives));
-      companyObjectives = mockInitial;
-    }
     setObjectives(companyObjectives);
 
     // Resumen Filters: Actualizar si el objetivo seleccionado ya no existe (raro pero posible)
@@ -943,16 +919,7 @@ const CompanyDashboard = () => {
     // Soporte Tickets
     const allTickets = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
     const compTickets = allTickets.filter(t => t.empresaId === user.empresaId);
-
-    // Inyectar demo si está vacío
-    if (compTickets.length === 0) {
-      const demoTickets = [
-        { id: 'tk_1', asunto: 'Optimización de GPS', descripcion: 'Consultamos sobre la frecuencia de actualización del GPS.', fecha: new Date().toISOString(), status: 'Resuelto', respuestas: [{ autor: 'SOPORTE', texto: 'Se ha ajustado para mayor precisión.', fecha: new Date().toISOString() }], empresaId: user.empresaId, tipo: 'Consulta' }
-      ];
-      setTickets(demoTickets);
-    } else {
-      setTickets(compTickets);
-    }
+    setTickets(compTickets);
 
     // Ubicaciones Reales (GPS Precision)
     const allLocations = JSON.parse(localStorage.getItem('centinela_locations') || '[]');
@@ -1707,7 +1674,7 @@ const CompanyDashboard = () => {
               </div>
               <div className="glass" style={{ padding: '12px 25px', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(0,210,255,0.05)', border: '1px solid rgba(0,210,255,0.1)' }}>
                 <div style={{ width: '10px', height: '10px', background: '#00d2ff', borderRadius: '50%', boxShadow: '0 0 10px #00d2ff' }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.rol?.toUpperCase() !== 'ADMIN' && u.rol?.toUpperCase() !== 'OPERADOR').length} INTEGRANTES ACTIVOS</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase())).length} INTEGRANTES ACTIVOS</span>
               </div>
             </div>
 
@@ -1720,7 +1687,7 @@ const CompanyDashboard = () => {
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '25px' }}>
                 {companyUsers
-                  .filter(u => u.rol?.toUpperCase() !== 'ADMIN' && u.rol?.toUpperCase() !== 'OPERADOR')
+                  .filter(u => !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase()))
                   .filter(u =>
                     !searchTerm ||
                     u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -2021,13 +1988,13 @@ const CompanyDashboard = () => {
               </div>
               <div className="glass" style={{ padding: '12px 25px', borderRadius: '18px', display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(16,185,129,0.05)', border: '1px solid rgba(16,185,129,0.1)' }}>
                 <div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 10px #10b981' }} />
-                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => u.rol?.toUpperCase() !== 'ADMIN' && u.rol?.toUpperCase() !== 'OPERADOR').length} PERSONAS EN AGENDA</span>
+                <span style={{ fontSize: '0.9rem', fontWeight: 'bold', letterSpacing: '0.5px' }}>{companyUsers.filter(u => !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase())).length} PERSONAS EN AGENDA</span>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(380px, 1fr))', gap: '20px' }}>
               {companyUsers
-                .filter(u => u.rol?.toUpperCase() !== 'ADMIN' && u.rol?.toUpperCase() !== 'OPERADOR')
+                .filter(u => !['ADMIN', 'OPERADOR', 'SUPERADMIN'].includes(u.rol?.toUpperCase()))
                 .filter(u => 
                   !searchTerm ||
                   u.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -4337,8 +4304,8 @@ const BillingPanel = ({ companyData, showToast, refreshData }) => {
               
               <div class="receipt-info">
                 <div class="receipt-type">${denominacion}</div>
-                <div><b>Punto de Venta:</b> ${puntoVenta} &nbsp; <b>Comp. Nro:</b> ${nroComprobante}</div>
-                <div><b>Fecha de Emisión:</b> ${new Date(p.fecha).toLocaleDateString()}</div>
+                <div><b>Comp. Nro:</b> ${nroComprobante}</div>
+                <div><b>Fecha de Emisión:</b> ${p.fecha && !isNaN(new Date(p.fecha).getTime()) ? new Date(p.fecha).toLocaleDateString() : 'Pendiente'}</div>
                 <div style="margin-top: 15px"><b>CUIT:</b> ${emisorCuit}</div>
                 <div><b>Ingresos Brutos:</b> ${billingConfig?.ingresos_brutos || 'Exento'}</div>
                 <div><b>Inicio de Actividades:</b> ${billingConfig?.inicio_actividades || '01/01/2024'}</div>
@@ -4818,9 +4785,13 @@ const BillingPanel = ({ companyData, showToast, refreshData }) => {
               </tr>
             </thead>
             <tbody>
-              {history.map(p => (
+              {Array.isArray(history) && history.map(p => (
                 <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.01)' }}>
-                  <td style={{ padding: '20px', fontSize: '0.85rem' }}>{new Date(p.fecha).toLocaleDateString()}</td>
+                  <td style={{ padding: '20px', fontSize: '0.85rem' }}>
+                    {p.fecha && !isNaN(new Date(p.fecha).getTime()) 
+                      ? new Date(p.fecha).toLocaleDateString() 
+                      : 'Pendiente'}
+                  </td>
                   <td>
                     <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>Suscripción {PLANES[p.planId?.toUpperCase()]?.nombre || p.planId}</div>
                   </td>
@@ -4850,9 +4821,9 @@ const BillingPanel = ({ companyData, showToast, refreshData }) => {
                   </td>
                 </tr>
               ))}
-              {history.length === 0 && (
+              {(!history || history.length === 0) && (
                 <tr>
-                  <td colSpan="6" style={{ padding: '50px', textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '0.9rem' }}>
+                  <td colSpan="7" style={{ padding: '50px', textAlign: 'center', color: 'rgba(255,255,255,0.2)', fontSize: '0.9rem' }}>
                     No se registran transacciones previas.
                   </td>
                 </tr>

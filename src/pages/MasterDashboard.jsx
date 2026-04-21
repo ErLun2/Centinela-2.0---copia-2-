@@ -2969,7 +2969,7 @@ const SubscriptionsPanel = ({ companies, getStatusColor }) => {
                </tr>
             </thead>
             <tbody>
-               {subs.map(s => {
+               {Array.isArray(subs) && subs.map(s => {
                   const companyName = companies.find(c => c.id === s.empresaId)?.name || 'S/E';
                   const planName = PLANES[s.planId?.toUpperCase()]?.nombre || s.planId;
                   return (
@@ -2981,14 +2981,18 @@ const SubscriptionsPanel = ({ companies, getStatusColor }) => {
                         <td style={{ padding: '20px' }}>
                            <span style={{ color: getStatusColor(s.estado).text }}>{s.estado?.toUpperCase()}</span>
                         </td>
-                        <td style={{ padding: '20px', color: '#cbd5e1', fontSize: '0.85rem' }}>{s.fechaProximoPago ? new Date(s.fechaProximoPago).toLocaleDateString() : 'N/A'}</td>
+                        <td style={{ padding: '20px', color: '#cbd5e1', fontSize: '0.85rem' }}>
+                           {s.fechaProximoPago && !isNaN(new Date(s.fechaProximoPago).getTime()) 
+                              ? new Date(s.fechaProximoPago).toLocaleDateString() 
+                              : 'Pendiente'}
+                        </td>
                         <td style={{ padding: '20px', textAlign: 'right' }}>
                            <button className="secondary" style={{ padding: '5px 10px', fontSize: '0.7rem' }}>Gestionar</button>
                         </td>
                      </tr>
                   );
                })}
-               {subs.length === 0 && <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No hay suscripciones activas en el sistema.</td></tr>}
+               {(!subs || subs.length === 0) && <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No hay suscripciones activas en el sistema.</td></tr>}
             </tbody>
          </table>
       </div>
@@ -3112,38 +3116,42 @@ const PaymentHistoryPanel = ({ companies }) => {
                </tr>
             </thead>
             <tbody>
-               {history.map(p => {
+               {Array.isArray(history) && history.map(p => {
                   const company = companies.find(c => c.id === p.empresaId);
                   return (
                      <tr key={p.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
-                        <td style={{ padding: '20px', fontSize: '0.8rem' }}>{new Date(p.fecha).toLocaleString()}</td>
+                        <td style={{ padding: '20px', fontSize: '0.8rem' }}>
+                           {p.fecha && !isNaN(new Date(p.fecha).getTime()) 
+                              ? new Date(p.fecha).toLocaleString() 
+                              : 'Fecha pendiente'}
+                        </td>
                         <td style={{ padding: '20px' }}><b>{company?.name || 'S/E'}</b></td>
                         <td style={{ padding: '20px' }}><span style={{ color: '#10b981', fontWeight: 'bold' }}>${p.monto}</span></td>
                         <td style={{ padding: '20px', fontFamily: 'monospace', fontSize: '0.75rem', color: '#94a3b8' }}>
-                          {p.metodo === 'Mercado Pago' ? (p.mp_payment_id || 'Online') : (p.numero_operacion || 'Transferencia Doc.')}
+                           {p.metodo === 'Mercado Pago' ? (p.mp_payment_id || 'Online') : (p.numero_operacion || 'Transferencia Doc.')}
                         </td>
                         <td style={{ padding: '20px' }}>
                            <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                               <span style={{ 
-                                fontSize: '0.65rem', fontWeight: 'bold', padding: '3px 8px', borderRadius: '4px',
-                                background: p.estado === 'approved' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                color: p.estado === 'approved' ? '#10b981' : '#f59e0b'
+                                 fontSize: '0.65rem', fontWeight: 'bold', padding: '3px 8px', borderRadius: '4px',
+                                 background: p.estado === 'approved' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                 color: p.estado === 'approved' ? '#10b981' : '#f59e0b'
                               }}>
                                  {p.estado?.toUpperCase() || 'PENDIENTE'}
                               </span>
                               {p.estado === 'approved' && (
-                                <button 
-                                  onClick={() => handleDownloadReceipt(p)}
-                                  style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                  <Download size={12} /> Ver Factura
-                                </button>
-                              )}
+                                 <button 
+                                   onClick={() => handleDownloadReceipt(p)}
+                                   style={{ background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.2)', padding: '5px 10px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                   <Download size={12} /> Ver Factura
+                                 </button>
+                               )}
                            </div>
                         </td>
                      </tr>
                   );
                })}
-               {history.length === 0 && <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No hay transacciones registradas.</td></tr>}
+               {(!history || history.length === 0) && <tr><td colSpan="5" style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No hay transacciones registradas.</td></tr>}
             </tbody>
          </table>
       </div>
@@ -3269,7 +3277,7 @@ const PaymentsValidationPanel = ({ companies }) => {
             </tr>
           </thead>
           <tbody>
-            {filteredPayments.map(p => {
+            {Array.isArray(filteredPayments) && filteredPayments.map(p => {
               const company = companies.find(c => c.id === p.empresaId);
               const planId = (p.planId || 'basico').toUpperCase();
               const plan = PLANES[planId] || { nombre: p.planId };
@@ -3284,7 +3292,11 @@ const PaymentsValidationPanel = ({ companies }) => {
                   </td>
                   <td style={{ padding: '20px' }}><b style={{ color: '#10b981' }}>${p.monto} USD</b></td>
                   <td style={{ padding: '20px', fontSize: '0.85rem' }}>{p.metodo}</td>
-                  <td style={{ padding: '20px', fontSize: '0.8rem' }}>{new Date(p.fecha).toLocaleDateString()}</td>
+                  <td style={{ padding: '20px', fontSize: '0.8rem' }}>
+                    {p.fecha && !isNaN(new Date(p.fecha).getTime()) 
+                      ? new Date(p.fecha).toLocaleDateString() 
+                      : 'Pendiente'}
+                  </td>
                   <td style={{ padding: '20px' }}>
                     <span style={{ 
                       padding: '4px 12px', borderRadius: '20px', fontSize: '0.7rem', fontWeight: 'bold',
@@ -3314,7 +3326,7 @@ const PaymentsValidationPanel = ({ companies }) => {
                 </tr>
               );
             })}
-            {filteredPayments.length === 0 && (
+            {(!filteredPayments || filteredPayments.length === 0) && (
               <tr>
                 <td colSpan="7" style={{ padding: '40px', textAlign: 'center', color: 'rgba(255,255,255,0.2)' }}>No se encontraron pagos con los filtros seleccionados.</td>
               </tr>

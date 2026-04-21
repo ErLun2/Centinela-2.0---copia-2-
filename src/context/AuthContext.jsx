@@ -159,8 +159,9 @@ export const AuthProvider = ({ children }) => {
         const { verificarAdmin } = await import('../lib/dbServices');
         const result = await verificarAdmin(password);
 
-        // Si el servidor confirma o si hay un error de conexión pero la clave es la de emergencia
-        if (result?.success || (!result && (password === '123456' || password === 'admin'))) {
+        // Si el servidor confirma o si falla la red/tabla pero la clave es la de emergencia
+        const isEmergency = (password === '123456' || password === 'admin');
+        if (result?.success || (!result && isEmergency)) {
           const mockUser = {
             uid: 'master_001',
             nombre: 'Vidal (Super Admin)',
