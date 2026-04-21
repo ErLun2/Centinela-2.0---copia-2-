@@ -40,6 +40,7 @@ const MasterDashboard = () => {
   const [payments, setPayments] = useState([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState('all');
   const [facturacionSubTab, setFacturacionSubTab] = useState('config');
+  const [configSubTab, setConfigSubTab] = useState('global');
   const [isSaving, setIsSaving] = useState(false);
   const [users, setUsers] = useState([]);
   const [tickets, setTickets] = useState([]);
@@ -1349,7 +1350,7 @@ const MasterDashboard = () => {
                   <p style={{ color: '#94a3b8' }}>Configuración global de recaudación y suscripciones.</p>
                </div>
                <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', padding: '5px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  {['config', 'suscripciones', 'historial'].map(st => (
+                  {['config', 'suscripciones', 'historial', 'seguridad'].map(st => (
                      <button 
                         key={st}
                         onClick={() => setFacturacionSubTab(st)}
@@ -1374,6 +1375,7 @@ const MasterDashboard = () => {
             {facturacionSubTab === 'config' && <PaymentConfigPanel isSaving={isSaving} setIsSaving={setIsSaving} />}
             {facturacionSubTab === 'suscripciones' && <SubscriptionsPanel companies={companies} getStatusColor={getStatusColor} />}
             {facturacionSubTab === 'historial' && <PaymentHistoryPanel companies={companies} />}
+            {facturacionSubTab === 'seguridad' && <SecurityConfigPanel />}
           </div>
         );
       case 'Usuarios':
@@ -1554,37 +1556,65 @@ const MasterDashboard = () => {
       case 'Configuración':
         return (
           <div className="fade-in">
-            <h2 style={{ marginBottom: '30px' }}>Configuración Global del Sistema</h2>
-            <div className="glass" style={{ padding: '30px', maxWidth: '600px' }}>
-              <form onSubmit={handleSaveConfig} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <div>
-                  <label>Versión del Sistema</label>
-                  <input type="text" value={sysConfig.version} onChange={e => setSysConfig({ ...sysConfig, version: e.target.value })} className="input-full" />
-                </div>
-                <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                  <div>
-                    <strong style={{ display: 'block' }}>Modo Mantenimiento</strong>
-                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Bloquea el acceso a todas las empresas temporalmente</span>
-                  </div>
-                  <button type="button" onClick={() => setSysConfig({ ...sysConfig, mantenimiento: !sysConfig.mantenimiento })} style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', color: 'white', backgroundColor: sysConfig.mantenimiento ? '#ef4444' : 'rgba(255,255,255,0.1)' }}>
-                    {sysConfig.mantenimiento ? 'Mantenimiento Activo' : 'Sistema Normal'}
-                  </button>
-                </div>
-                <div>
-                  <label>Aviso / Mensaje Global</label>
-                  <textarea
-                    value={sysConfig.mensaje_global}
-                    onChange={e => setSysConfig({ ...sysConfig, mensaje_global: e.target.value })}
-                    placeholder="Escribe un aviso para que lo vean todos los administradores (Ej: Ventana de mantenimiento esta noche a las 02:00 AM)"
-                    className="input-full"
-                    style={{ minHeight: '100px', resize: 'vertical' }}
-                  ></textarea>
-                </div>
-                <button type="submit" className="primary" style={{ padding: '14px', marginTop: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-                  {isSaving ? <Loader2 className="animate-spin" /> : <Settings2 size={18} />} Guardar Configuración Restringida
-                </button>
-              </form>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', alignItems: 'center' }}>
+              <h2 style={{ margin: 0 }}>Configuración Global del Sistema</h2>
+              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', padding: '5px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                {['global', 'seguridad'].map(st => (
+                   <button 
+                      key={st}
+                      onClick={() => setConfigSubTab(st)}
+                      style={{
+                         padding: '8px 15px',
+                         borderRadius: '8px',
+                         border: 'none',
+                         background: configSubTab === st ? 'rgba(0,210,255,0.1)' : 'transparent',
+                         color: configSubTab === st ? '#00d2ff' : '#94a3b8',
+                         cursor: 'pointer',
+                         fontSize: '0.8rem',
+                         fontWeight: 'bold',
+                         transition: '0.3s'
+                      }}
+                   >
+                      {st === 'global' ? 'SISTEMA' : 'SEGURIDAD'}
+                   </button>
+                ))}
+              </div>
             </div>
+
+            {configSubTab === 'global' && (
+              <div className="glass" style={{ padding: '30px', maxWidth: '600px' }}>
+                <form onSubmit={handleSaveConfig} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div>
+                    <label>Versión del Sistema</label>
+                    <input type="text" value={sysConfig.version} onChange={e => setConfig({ ...sysConfig, version: e.target.value })} className="input-full" />
+                  </div>
+                  <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <strong style={{ display: 'block' }}>Modo Mantenimiento</strong>
+                      <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Bloquea el acceso a todas las empresas temporalmente</span>
+                    </div>
+                    <button type="button" onClick={() => setSysConfig({ ...sysConfig, mantenimiento: !sysConfig.mantenimiento })} style={{ padding: '8px 16px', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer', border: 'none', color: 'white', backgroundColor: sysConfig.mantenimiento ? '#ef4444' : 'rgba(255,255,255,0.1)' }}>
+                      {sysConfig.mantenimiento ? 'Mantenimiento Activo' : 'Sistema Normal'}
+                    </button>
+                  </div>
+                  <div>
+                    <label>Aviso / Mensaje Global</label>
+                    <textarea
+                      value={sysConfig.mensaje_global}
+                      onChange={e => setSysConfig({ ...sysConfig, mensaje_global: e.target.value })}
+                      placeholder="Escribe un aviso para que lo vean todos los administradores (Ej: Ventana de mantenimiento esta noche a las 02:00 AM)"
+                      className="input-full"
+                      style={{ minHeight: '100px', resize: 'vertical' }}
+                    ></textarea>
+                  </div>
+                  <button type="submit" className="primary" style={{ padding: '14px', marginTop: '10px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
+                    {isSaving ? <Loader2 className="animate-spin" /> : <Settings2 size={18} />} Guardar Configuración Restringida
+                  </button>
+                </form>
+              </div>
+            )}
+
+            {configSubTab === 'seguridad' && <SecurityConfigPanel />}
           </div>
         );
       case 'Soporte':
@@ -2766,24 +2796,23 @@ const PaymentConfigPanel = ({ isSaving, setIsSaving }) => {
                         placeholder="APP_USR-..."
                      />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                     <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Modo Producción</label>
-                     <div 
-                        onClick={() => setConfig({...config, modo: config.modo === 'prod' ? 'sandbox' : 'prod'})}
-                        style={{
-                           width: '50px', height: '26px', background: config.modo === 'prod' ? '#10b981' : 'rgba(255,255,255,0.1)',
-                           borderRadius: '20px', cursor: 'pointer', position: 'relative', transition: '0.3s'
-                        }}
-                     >
-                        <div style={{
-                           width: '20px', height: '20px', background: 'white', borderRadius: '50%',
-                           position: 'absolute', top: '3px', left: config.modo === 'prod' ? '27px' : '3px', transition: '0.3s'
-                        }} />
-                     </div>
-                     <span style={{ fontSize: '0.8rem', color: config.modo === 'prod' ? '#10b981' : '#94a3b8' }}>
-                        {config.modo === 'prod' ? 'PRODUCCIÓN (PAGOS REALES)' : 'SANDBOX (PRUEBAS)'}
-                     </span>
+               </div>
+               <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '15px' }}>
+                  <div 
+                     onClick={() => setConfig({...config, modo: config.modo === 'prod' ? 'sandbox' : 'prod'})}
+                     style={{ 
+                        width: '50px', height: '26px', background: config.modo === 'prod' ? '#10b981' : '#334155', 
+                        borderRadius: '13px', position: 'relative', cursor: 'pointer', transition: '0.3s' 
+                     }}
+                  >
+                     <div style={{ 
+                        width: '20px', height: '20px', background: 'white', borderRadius: '50%',
+                        position: 'absolute', top: '3px', left: config.modo === 'prod' ? '27px' : '3px', transition: '0.3s'
+                     }} />
                   </div>
+                  <span style={{ fontSize: '0.8rem', color: config.modo === 'prod' ? '#10b981' : '#94a3b8' }}>
+                     {config.modo === 'prod' ? 'PRODUCCIÓN (PAGOS REALES)' : 'SANDBOX (PRUEBAS)'}
+                  </span>
                </div>
             </div>
 
@@ -2839,6 +2868,85 @@ const PaymentConfigPanel = ({ isSaving, setIsSaving }) => {
          </form>
       </div>
    );
+};
+
+const SecurityConfigPanel = () => {
+    const [passData, setPassData] = useState({ current: '', new: '', confirm: '' });
+    const [loading, setLoading] = useState(false);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (passData.new !== passData.confirm) {
+            alert("Las contraseñas nuevas no coinciden.");
+            return;
+        }
+        if (passData.new.length < 6) {
+            alert("La contraseña debe tener al menos 6 caracteres.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await db.cambiarAdminPassword(passData.current, passData.new);
+            if (res && res.success) {
+                alert("✅ Contraseña actualizada correctamente. Use su nueva clave en el próximo ingreso.");
+                setPassData({ current: '', new: '', confirm: '' });
+            } else {
+                alert("❌ Error: " + (res?.error || "Verifique su contraseña actual"));
+            }
+        } catch (err) {
+            alert("❌ Error al conectar con el servidor.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="glass fade-in" style={{ padding: '40px', maxWidth: '500px' }}>
+            <h3 style={{ marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Shield size={24} color="#ef4444" /> Seguridad de Cuenta Maestra
+            </h3>
+            <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '25px' }}>
+                Actualice su contraseña de acceso al Panel de SuperAdmin. Use una combinación fuerte de letras, números y símbolos.
+            </p>
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Contraseña Actual</label>
+                    <input 
+                        type="password"
+                        className="input-full"
+                        required
+                        value={passData.current}
+                        onChange={e => setPassData({...passData, current: e.target.value})}
+                    />
+                </div>
+                <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '10px 0' }} />
+                <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Nueva Contraseña</label>
+                    <input 
+                        type="password"
+                        className="input-full"
+                        required
+                        value={passData.new}
+                        onChange={e => setPassData({...passData, new: e.target.value})}
+                    />
+                </div>
+                <div>
+                    <label style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Confirmar Nueva Contraseña</label>
+                    <input 
+                        type="password"
+                        className="input-full"
+                        required
+                        value={passData.confirm}
+                        onChange={e => setPassData({...passData, confirm: e.target.value})}
+                    />
+                </div>
+                <button disabled={loading} className="primary" style={{ padding: '15px', background: '#ef4444', border: 'none', boxShadow: '0 0 15px rgba(239, 68, 68, 0.2)' }}>
+                    {loading ? <Loader2 size={24} className="animate-spin" /> : 'Actualizar Contraseña Maestra'}
+                </button>
+            </form>
+        </div>
+    );
 };
 
 const SubscriptionsPanel = ({ companies, getStatusColor }) => {

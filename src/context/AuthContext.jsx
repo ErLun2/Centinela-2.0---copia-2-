@@ -153,18 +153,40 @@ export const AuthProvider = ({ children }) => {
       return normalizedUser;
     }
 
-    // 2. Mock Hardcoded Users (Emergency Access)
+    // 2. Mock/Real Hardcoded Users (Emergency Access & SuperAdmin)
+    if (email === 'vidal@master.com' || email === 'master') {
+      try {
+        const { verificarAdmin } = await import('../lib/dbServices');
+        const result = await verificarAdmin(password);
+
+        // Si el servidor confirma o si hay un error de conexión pero la clave es la de emergencia
+        if (result?.success || (!result && (password === '123456' || password === 'admin'))) {
+          const mockUser = {
+            uid: 'master_001',
+            nombre: 'Vidal (Super Admin)',
+            email: 'vidal@master.com',
+            rol: ROLES.SUPER_ADMIN,
+            estado: 'Activo'
+          };
+          setUser(mockUser);
+          localStorage.setItem('centinela_current_user', JSON.stringify(mockUser));
+          return mockUser;
+        }
+      } catch (err) {
+        console.error("Auth Emergency Fallback:", err);
+        if (password === '123456' || password === 'admin') {
+           // Permitir entrada si falla la red pero la clave es correcta
+           const mockUser = { uid: 'master_001', nombre: 'Vidal (Super Admin)', email: 'vidal@master.com', rol: ROLES.SUPER_ADMIN, estado: 'Activo' };
+           setUser(mockUser);
+           localStorage.setItem('centinela_current_user', JSON.stringify(mockUser));
+           return mockUser;
+        }
+      }
+    }
+
     if (password === '123456' || password === 'admin') {
       let mockUser = null;
-      if (email === 'vidal@master.com' || email === 'master') {
-        mockUser = {
-          uid: 'master_001',
-          nombre: 'Vidal (Super Admin)',
-          email: 'vidal@master.com',
-          rol: ROLES.SUPER_ADMIN,
-          estado: 'Activo'
-        };
-      } else if (email === 'soporte@centinela.com' || email === 'soporte') {
+      if (email === 'soporte@centinela.com' || email === 'soporte') {
         mockUser = {
           uid: 'support_001',
           nombre: 'Centinela Staff (Soporte)',
