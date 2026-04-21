@@ -46,10 +46,56 @@ const pool = mysql.createPool({
   connectTimeout: 10000 // 10 segundos de timeout
 });
 
-// Probar conexión al iniciar
+// Probar conexión e Inicializar Tablas automáticamente (Regla de Oro para estabilidad)
 pool.getConnection()
-  .then(conn => {
+  .then(async conn => {
     console.log('✅ Conectado a MySQL en IlimitadoHosting');
+    
+    // --- INICIALIZACIÓN DE ESQUEMA (Auto-reparación) ---
+    try {
+        // 1. Usuarios (Asegurar columna password)
+        await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT "password123"`);
+        console.log('  - Estructura de usuarios verificada');
+
+        // 2. Tickets
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS tickets (
+                id VARCHAR(50) PRIMARY KEY,
+                titulo VARCHAR(255),
+                descripcion TEXT,
+                estado VARCHAR(50) DEFAULT 'abierto',
+                fecha DATETIME,
+                usuarioId VARCHAR(100),
+                respuestas TEXT
+            )
+        `);
+        console.log('  - Tabla de tickets verificada');
+
+        // 3. Sistema Config
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS sistema_config (
+                \`key\` VARCHAR(100) PRIMARY KEY,
+                value TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('  - Tabla de configuración verificada');
+
+        // 4. Payments
+        await conn.query(`
+            CREATE TABLE IF NOT EXISTS payments (
+                id VARCHAR(100) PRIMARY KEY,
+                data TEXT,
+                status VARCHAR(50),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
+        console.log('  - Tabla de pagos verificada');
+
+    } catch (schemaErr) {
+        console.error('⚠️ Error inicializando esquema:', schemaErr.message);
+    }
+
     conn.release();
   })
   .catch(err => {
