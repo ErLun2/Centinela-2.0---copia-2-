@@ -747,23 +747,34 @@ const CompanyDashboard = () => {
 
   // Validación de Licencia Estratégica
   const isLicenseDisabled = useMemo(() => {
-    if (!companyData) return true; // Bloqueo preventivo si no hay datos cargados
+    // REGLA DE ORO: El Super Admin tiene inmunidad total de acceso
+    if (user?.role === 'SUPERADMIN' || (user?.role || '').toUpperCase() === 'SUPERADMIN' || user?.email === 'vidal@master.com') return false;
     
-    // 1. Verificar existencia de licencia definida
+    if (!companyData) return false; // No bloqueamos mientras carga
+    
+    // 1. Si el estado es activa y no hay fecha, permitimos el paso preventivamente
+    const currentStatus = (companyData.status || '').toLowerCase();
+    if (currentStatus === 'activa' && !companyData.expiryDate) return false;
+
+    // 2. Verificar existencia de licencia definida
     if (!companyData.expiryDate) return true; 
     
-    // 2. Verificar que el estado sea explícitamente 'activa'
-    if (companyData.status !== 'activa') return true;
+    // 3. Verificar que el estado sea explícitamente 'activa'
+    if (currentStatus !== 'activa') return true;
     
-    // 3. Verificar vigencia temporal
-    const expiry = new Date(companyData.expiryDate);
-    const today = new Date();
-    // Normalizar a medianoche para evitar discrepancias horarias
-    expiry.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    
-    return expiry < today;
-  }, [companyData]);
+    // 4. Verificar vigencia temporal (Parsing seguro de fecha)
+    try {
+        const expiry = new Date(companyData.expiryDate);
+        if (isNaN(expiry.getTime())) return false; // Si la fecha es inválida, no bloqueamos preventivamente
+        
+        const today = new Date();
+        expiry.setHours(23, 59, 59, 999);
+        
+        return expiry < today;
+    } catch(e) {
+        return false;
+    }
+  }, [companyData, user]);
   const [selectedUserForView, setSelectedUserForView] = useState(null);
   const [fullscreenMedia, setFullscreenMedia] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');

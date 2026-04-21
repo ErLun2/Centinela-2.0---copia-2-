@@ -381,9 +381,19 @@ const MasterDashboard = () => {
         }
 
         const finalId = editingCompany ? editingCompany.id : Date.now().toString();
+        
+        // REGLA DE ORO: Si no hay fecha de vencimiento, asignamos 30 días por defecto
+        let finalExpiry = newCompany.expiryDate;
+        if (!finalExpiry) {
+           const d = new Date();
+           d.setMonth(d.getMonth() + 1);
+           finalExpiry = d.toISOString().split('T')[0];
+        }
+
         const finalCompanyData = {
             ...newCompany,
             id: finalId,
+            expiryDate: finalExpiry,
             lat: coords.lat,
             lng: coords.lng
         };
