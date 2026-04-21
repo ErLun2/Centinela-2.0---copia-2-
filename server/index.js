@@ -98,9 +98,12 @@ pool.getConnection()
             await conn.query(`
                 INSERT INTO usuarios (id, email, name, role, status, password) 
                 VALUES (?, ?, ?, ?, ?, ?)`,
-                ['admin_001', 'vidal@master.com', 'Vidal (Super Admin)', 'admin', 'activo', 'admin']
+                ['admin_001', 'vidal@master.com', 'Vidal (Super Admin)', 'SUPER_ADMIN', 'activo', 'admin']
             );
             console.log('  - Usuario maestro recreado con éxito');
+        } else {
+            // Actualizar rol por si acaso quedó truncado antes
+            await conn.query('UPDATE usuarios SET role = "SUPER_ADMIN" WHERE email = "vidal@master.com"');
         }
 
     } catch (schemaErr) {
