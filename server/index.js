@@ -58,7 +58,12 @@ pool.getConnection()
         await conn.query(`ALTER TABLE usuarios MODIFY COLUMN role VARCHAR(50)`);
         console.log('  - Estructura de usuarios verificada y role ampliado');
 
-        // 2. Tickets
+        // 2. Empresas (Asegurar columnas faltantes)
+        await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
+        await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS appEmail VARCHAR(100)`);
+        console.log('  - Estructura de empresas verificada');
+
+        // 3. Tickets
         await conn.query(`
             CREATE TABLE IF NOT EXISTS tickets (
                 id VARCHAR(50) PRIMARY KEY,
@@ -202,10 +207,10 @@ app.post('/api/empresas', async (req, res) => {
     const c = req.body;
     try {
         await pool.query(
-            'INSERT INTO empresas (id, name, titular, email, telefono, address, plan, guards, status, expiryDate, fecha_alta, lat, lng) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, titular=?, email=?, telefono=?, address=?, plan=?, guards=?, status=?, expiryDate=?, lat=?, lng=?',
+            'INSERT INTO empresas (id, name, titular, email, telefono, address, plan, guards, status, expiryDate, fecha_alta, lat, lng, dni, appEmail) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, titular=?, email=?, telefono=?, address=?, plan=?, guards=?, status=?, expiryDate=?, lat=?, lng=?, dni=?, appEmail=?',
             [
-                c.id, c.name, c.titular, c.email, c.telefono, c.address, c.plan, c.guards, c.status, c.expiryDate, c.fecha_alta, c.lat, c.lng,
-                c.name, c.titular, c.email, c.telefono, c.address, c.plan, c.guards, c.status, c.expiryDate, c.lat, c.lng
+                c.id, c.name, c.titular, c.email, c.telefono, c.address, c.plan, c.guards, c.status, c.expiryDate, c.fecha_alta, c.lat, c.lng, c.dni, c.appEmail,
+                c.name, c.titular, c.email, c.telefono, c.address, c.plan, c.guards, c.status, c.expiryDate, c.lat, c.lng, c.dni, c.appEmail
             ]
         );
         res.json({ success: true });

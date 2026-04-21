@@ -517,19 +517,18 @@ const MasterDashboard = () => {
     }
   };
 
-  const handleSoftDeleteCompany = (compId) => {
+  const handleSoftDeleteCompany = async (compId) => {
     const compToMove = companies.find(c => c.id === compId);
     if (!compToMove) return;
-    if (!window.confirm(`¿Mover empresa "${compToMove.name}" a la papelera? Esto no borrará sus usuarios inmediatamente.`)) return;
+    if (!window.confirm(`¿Está seguro de eliminar definitivamente la empresa "${compToMove.name}" del servidor?`)) return;
 
-    const allTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-    const trashItem = { ...compToMove, deletedAt: new Date().toISOString(), originalType: 'company' };
-    localStorage.setItem('centinela_trash', JSON.stringify([...allTrash, trashItem]));
-
-    const filtered = companies.filter(c => c.id !== compId);
-    setCompanies(filtered);
-    localStorage.setItem('centinela_companies', JSON.stringify(filtered));
-    loadData();
+    try {
+        await db.eliminarEmpresa(compId);
+        alert("✅ Empresa eliminada correctamente del servidor.");
+        loadData();
+    } catch (err) {
+        alert("Error al eliminar la empresa: " + err.message);
+    }
   };
 
   const handleRestoreFromTrash = (item) => {
@@ -1198,7 +1197,13 @@ const MasterDashboard = () => {
                         <button
                           className="primary"
                           style={{ flex: 1, fontSize: '0.75rem', padding: '10px', background: planInfo.color, borderColor: 'transparent' }}
-                          onClick={() => { setEditingCompany(c); setNewCompany(c); setShowModal(true); }}
+                          onClick={() => { 
+                            setEditingCompany(c); 
+                            // Asegurar que la fecha esté en formato YYYY-MM-DD para el input type="date"
+                            const formattedExpiry = c.expiryDate ? new Date(c.expiryDate).toISOString().split('T')[0] : '';
+                            setNewCompany({ ...c, expiryDate: formattedExpiry }); 
+                            setShowModal(true); 
+                          }}
                         >Editar</button>
                         <button
                           onClick={() => handleSoftDeleteCompany(c.id)}
