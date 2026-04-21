@@ -4,9 +4,22 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, signOut as signOutAuth } from "firebase/auth";
 
 // ========================
-// CONFIGURACIÓN API (RENDER)
+// CONFIGURACIÓN API (RENDER / PRODUCCIÓN)
 // ========================
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const getApiUrl = () => {
+    // Si ya tenemos una variable de entorno, la usamos
+    if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+    
+    // Si estamos en el dominio de producción, usamos el backend de Render
+    if (typeof window !== 'undefined' && window.location.hostname.includes('centinela-security.com')) {
+        return 'https://centinela-backend.onrender.com/api'; // URL de tu servidor en Render
+    }
+    
+    // Por defecto para desarrollo local
+    return 'http://localhost:3001/api';
+};
+
+const API_URL = getApiUrl();
 
 const apiRequest = async (endpoint, method = 'GET', body = null) => {
     try {

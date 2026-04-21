@@ -120,6 +120,21 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (emailInput, password) => {
     const email = emailInput.toLowerCase().trim();
+
+    // 0. ACCESO DE EMERGENCIA HARDCODEADO (PARA PRUEBAS)
+    if (email === 'pablo@stark.com' && password === 'password123') {
+      const mockPablo = {
+        uid: 'pablo_001',
+        nombre: 'Pablo Stark',
+        email: 'pablo@stark.com',
+        rol: ROLES.GUARD,
+        empresaId: user?.empresaId || 'demo_empresa',
+        mustChangePassword: true
+      };
+      setUser(mockPablo);
+      localStorage.setItem('centinela_current_user', JSON.stringify(mockPablo));
+      return mockPablo;
+    }
     
     // 1. Check LOCAL database (centinela_users)
     let allUsers = [];
