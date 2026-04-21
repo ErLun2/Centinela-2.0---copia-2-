@@ -207,8 +207,11 @@ app.post('/api/usuarios', async (req, res) => {
     const u = req.body;
     try {
         await pool.query(
-            'INSERT INTO usuarios (id, email, name, role, companyId, status) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email=?, name=?, role=?, companyId=?, status=?',
-            [u.id, u.email, u.name, u.role, u.companyId, u.status || 'activo', u.email, u.name, u.role, u.companyId, u.status || 'activo']
+            'INSERT INTO usuarios (id, email, name, role, companyId, status, password) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE email=?, name=?, role=?, companyId=?, status=?, password=?',
+            [
+              u.id, u.email, u.name, u.role, u.companyId, u.status || 'activo', u.password || 'password123',
+              u.email, u.name, u.role, u.companyId, u.status || 'activo', u.password || 'password123'
+            ]
         );
         res.json({ success: true });
     } catch (err) {
