@@ -441,13 +441,14 @@ app.post('/api/auth/login', async (req, res) => {
 app.get('/api/usuarios', async (req, res) => {
     const { companyId } = req.query;
     try {
-        let sql = 'SELECT id, email, name, surname, role, companyId, status, password, dni, legajo, personal_email, birth_date, phone FROM usuarios';
+        let sql = 'SELECT * FROM usuarios';
         let params = [];
         if (companyId) {
             sql += ' WHERE companyId = ?';
             params.push(companyId);
         }
         const [rows] = await pool.query(sql, params);
+        console.log(`[DB-FETCH] Se obtuvieron ${rows.length} usuarios. Fotos detectadas: ${rows.filter(r => r.foto).length}`);
         res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -489,6 +490,7 @@ app.post('/api/usuarios', async (req, res) => {
             return res.status(400).json({ error: "El email es obligatorio" });
         }
 
+        console.log(`[DB-SAVE] Guardando usuario ${userEmail} (Foto: ${userFoto ? 'SI' : 'NO'})`);
         await pool.query(
             `INSERT INTO usuarios 
                 (id, email, name, surname, role, companyId, status, password, dni, legajo, personal_email, birth_date, phone, schedule, foto) 
