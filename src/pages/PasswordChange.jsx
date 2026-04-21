@@ -64,10 +64,10 @@ const PasswordChange = () => {
   }
 
   return (
-    <div style={containerStyle}>
-      <div style={cardStyle}>
+    <div style={containerStyle} key="pw-change-root">
+      <div style={cardStyle} key="pw-card">
         {isSuccess ? (
-          <div style={{ padding: '20px 0', textAlign: 'center' }}>
+          <div style={{ padding: '20px 0', textAlign: 'center' }} key="success-view">
             <div style={successCircleStyle}>
               <CheckCircle size={50} color="#10b981" />
             </div>
@@ -78,7 +78,7 @@ const PasswordChange = () => {
             </div>
           </div>
         ) : (
-          <>
+          <div key="form-view">
             <div style={iconBadgeStyle}>
               <ShieldAlert size={34} color="#ef4444" />
             </div>
@@ -87,7 +87,7 @@ const PasswordChange = () => {
             <p style={descriptionStyle}>Establezca su contraseña personal para continuar.</p>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <div style={inputWrapperStyle}>
+              <div style={inputWrapperStyle} key="input-1">
                 <KeyRound size={20} style={inputIconStyle} />
                 <input 
                   type="password" 
@@ -99,7 +99,7 @@ const PasswordChange = () => {
                 />
               </div>
 
-              <div style={inputWrapperStyle}>
+              <div style={inputWrapperStyle} key="input-2">
                 <Lock size={20} style={inputIconStyle} />
                 <input 
                   type="password" 
@@ -112,14 +112,14 @@ const PasswordChange = () => {
               </div>
 
               <div style={legalBoxStyle}>
-                <div onClick={() => setAcceptedTerms(!acceptedTerms)} style={checkboxLabelStyle}>
+                <div onClick={() => setAcceptedTerms(!acceptedTerms)} style={checkboxLabelStyle} key="check-1">
                   <div style={{ ...customCheckboxStyle, background: acceptedTerms ? '#00a8ff' : 'rgba(255,255,255,0.05)', borderColor: acceptedTerms ? '#00a8ff' : 'rgba(255,255,255,0.2)' }}>
                     {acceptedTerms && <ShieldCheck size={14} color="#020617" />}
                   </div>
                   <span style={legalTextStyle}>Acepto <button type="button" onClick={(e) => { e.stopPropagation(); setShowTerms(true); }} style={linkStyle}>Términos y condiciones</button></span>
                 </div>
                 
-                <div onClick={() => setAcceptedPrivacy(!acceptedPrivacy)} style={checkboxLabelStyle}>
+                <div onClick={() => setAcceptedPrivacy(!acceptedPrivacy)} style={checkboxLabelStyle} key="check-2">
                   <div style={{ ...customCheckboxStyle, background: acceptedPrivacy ? '#00a8ff' : 'rgba(255,255,255,0.05)', borderColor: acceptedPrivacy ? '#00a8ff' : 'rgba(255,255,255,0.2)' }}>
                     {acceptedPrivacy && <Shield size={14} color="#020617" />}
                   </div>
@@ -127,19 +127,20 @@ const PasswordChange = () => {
                 </div>
               </div>
 
-              {error && <div style={errorBoxStyle}>{error}</div>}
+              {error ? <div style={errorBoxStyle} key="error-msg">{error}</div> : null}
 
               <button 
                 type="submit" 
+                key="submit-btn"
                 disabled={isSaving || !acceptedTerms || !acceptedPrivacy} 
                 style={{ ...submitButtonStyle, opacity: (isSaving || !acceptedTerms || !acceptedPrivacy) ? 0.3 : 1 }}
               >
                 {isSaving ? <Loader2 size={24} className="animate-spin" /> : (
-                  <>ACTIVAR MI CUENTA <ArrowRight size={20} style={{marginLeft: 8}} /></>
+                  <span style={{ display: 'flex', alignItems: 'center' }}>ACTIVAR MI CUENTA <ArrowRight size={20} style={{marginLeft: 8}} /></span>
                 )}
               </button>
             </form>
-          </>
+          </div>
         )}
       </div>
 
@@ -150,12 +151,6 @@ const PasswordChange = () => {
       {showPrivacy && <Modal title="Privacidad" onClose={() => setShowPrivacy(false)}>
         <p>Sus datos están protegidos. No compartimos información con terceros externos a la operación de seguridad.</p>
       </Modal>}
-
-      <style>{`
-        @keyframes load { from { width: 0%; } to { width: 100%; } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .animate-spin { animation: spin 1s linear infinite; }
-      `}</style>
     </div>
   );
 };

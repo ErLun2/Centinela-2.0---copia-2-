@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "host": "vite --host --port 5271",
-    "build": "vite build",
+    "build": "vite build --outDir dist_final",
     "preview": "vite preview",
     "server": "node server/index.js"
   },
