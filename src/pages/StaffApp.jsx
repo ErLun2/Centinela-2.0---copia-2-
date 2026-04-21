@@ -17,51 +17,52 @@ import {
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 
-// Leaflet Icon Fix (CDN)
-const DefaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
-});
-L.Marker.prototype.options.icon = DefaultIcon;
+// Helper para inicializar iconos de forma segura (solo cuando se necesita)
+const getLeafletIcons = () => {
+  if (typeof window === 'undefined' || !L) return {};
+  
+  const DefaultIcon = L.icon({
+    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41]
+  });
+  
+  if (L.Marker.prototype.options) {
+    L.Marker.prototype.options.icon = DefaultIcon;
+  }
 
-// Custom Marker for Guards (Classic Pointer)
-const guardIcon = L.divIcon({
-  className: 'custom-pointer-marker',
-  html: `
-    <svg width="30" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">
-      <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#ef4444" stroke="white"/>
-      <circle cx="12" cy="10" r="3" fill="white"/>
-    </svg>
-  `,
-  iconSize: [30, 40],
-  iconAnchor: [15, 40]
-});
+  const guardIcon = L.divIcon({
+    className: 'custom-pointer-marker',
+    html: `<svg width="30" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#ef4444" stroke="white"/>
+            <circle cx="12" cy="10" r="3" fill="white"/>
+          </svg>`,
+    iconSize: [30, 40],
+    iconAnchor: [15, 40]
+  });
 
-// Classic Pointer for Current User (Blue)
-const userLocationIcon = L.divIcon({
-  className: 'user-location-marker',
-  html: `
-    <div style="position:relative; display: flex; flex-direction: column; align-items: center;">
-      <svg width="34" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">
-        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#3b82f6" stroke="white"/>
-        <circle cx="12" cy="10" r="3" fill="white"/>
-      </svg>
-      <div style="position:absolute; top:8px; width:10px; height:10px; background:white; border-radius:50%; animation:ping 2s infinite; opacity:0.6;"></div>
-    </div>
-    <style>@keyframes ping { 0% { transform: scale(1); opacity: 0.6; } 100% { transform: scale(4); opacity: 0; } }</style>
-  `,
-  iconSize: [34, 42],
-  iconAnchor: [17, 42]
-});
+  const userLocationIcon = L.divIcon({
+    className: 'user-location-marker',
+    html: `<div style="position:relative; display: flex; flex-direction: column; align-items: center;">
+            <svg width="34" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5));">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="#3b82f6" stroke="white"/>
+              <circle cx="12" cy="10" r="3" fill="white"/>
+            </svg>
+            <div style="position:absolute; top:8px; width:10px; height:10px; background:white; border-radius:50%; animation:ping 2s infinite; opacity:0.6;"></div>
+          </div>`,
+    iconSize: [34, 42],
+    iconAnchor: [17, 42]
+  });
 
-// Custom Marker for Objectives
-const objectiveIcon = L.icon({
-  iconUrl: 'https://cdn-icons-png.flaticon.com/512/4812/4812397.png',
-  iconSize: [40, 40],
-  iconAnchor: [20, 40]
-});
+  const objectiveIcon = L.icon({
+    iconUrl: 'https://cdn-icons-png.flaticon.com/512/4812/4812397.png',
+    iconSize: [40, 40],
+    iconAnchor: [20, 40]
+  });
+
+  return { DefaultIcon, guardIcon, userLocationIcon, objectiveIcon };
+};
 
 // Componente para centrar el mapa dinámicamente
 function ChangeView({ center, zoom = 15 }) {
@@ -1107,6 +1108,8 @@ const StaffApp = () => {
       </div>
     );
   }
+
+  const { userLocationIcon } = getLeafletIcons();
 
   return (
     <div style={styles.container}>
