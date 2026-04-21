@@ -12,7 +12,8 @@ import { useNavigate } from 'react-router-dom';
 import { 
   crearEvento, logAction, actualizarUbicacionGPS,
   iniciarRonda, finalizarRonda, registrarPuntoRuta, 
-  registrarEventoAudit 
+  registrarEventoAudit, 
+  subscribeToCompanies, subscribeToAllUsers, subscribeToObjectives, subscribeToQrPoints
 } from '../lib/dbServices';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -919,47 +920,85 @@ const StaffApp = () => {
   const [capturedAudio, setCapturedAudio] = useState(null);     // base64 data URL
   const [activeMediaPanel, setActiveMediaPanel] = useState(null); // 'photo' | 'video' | 'audio' | null
 
-  // 2. Localización Real de Alta Precisión
+  // 2. Sincronización en Tiempo Real (REGLA DE ORO)
+  useEffect(() => {
+    if (!user) return;
+
+    const unsubCompanies = subscribeToCompanies((data) => {
+      if (data) localStorage.setItem('centinela_companies', JSON.stringify(data));
+    });
+
+    const unsubUsers = subscribeToAllUsers((data) => {
+      if (data) {
+        localStorage.setItem('centinela_users', JSON.stringify(data));
+        // Actualizar datos del usuario actual si cambian
+        const current = data.find(u => u.id === (user.uid || user.id) || u.email === user.email);
+        if (current) setFullUserData(current);
+      }
+    });
+
+    const unsubObjectives = subscribeToObjectives((data) => {
+      if (data) localStorage.setItem('centinela_objectives', JSON.stringify(data));
+    });
+
+    const unsubQr = subscribeToQrPoints((data) => {
+      if (data) localStorage.setItem('centinela_qr_points', JSON.stringify(data));
+    });
+
+    return () => {
+      unsubCompanies();
+      unsubUsers();
+      unsubObjectives();
+      unsubQr();
+    };
+  }, [user]);
+
+  // 3. Localización Real de Alta Precisión
   useEffect(() => {
     if (!user) return;
     
     // Timeout de seguridad: Si en 5 segundos nada carga, forzar appReady
     const timer = setTimeout(() => setAppReady(true), 5000);
-    // Fetch Company Name
-    try {
-      const allCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
-      const currentComp = allCompanies.find(c => c.id === user.empresaId);
-      if (currentComp) setCompanyName(currentComp.nombre || currentComp.name || user.company || 'DASHBOARD');
-      else if (user.company) setCompanyName(user.company);
-    } catch (e) {
-      console.warn("Storage error (companies):", e);
-      if (user.company) setCompanyName(user.company);
-    }
-
-    // Fetch Assigned Objective
-    try {
-      const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-      const currentUserData = allUsers.find(u => 
-        (user.uid && (u.uid === user.uid || u.id === user.uid)) ||
-        (user.id && (u.id === user.id || u.uid === user.id)) ||
-        (user.email && u.email?.toLowerCase() === user.email?.toLowerCase())
-      );
-      setFullUserData(currentUserData);
-      if (currentUserData && currentUserData.schedule && currentUserData.schedule.objectiveId) {
-        const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
-        const companyObjectives = [...OBJETIVOS_MOCK, ...allObjectives.filter(obj => obj.empresaId === user.empresaId)];
-        const obj = companyObjectives.find(o => o.id === currentUserData.schedule.objectiveId);
-        if (obj) {
-            setAssignedObjectiveName(obj.nombre);
-            setAssignedObjective(obj);
+    
+    const refreshLocalData = () => {
+        // Fetch Company Name
+        try {
+          const allCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
+          const currentComp = allCompanies.find(c => c.id === user.empresaId);
+          if (currentComp) setCompanyName(currentComp.nombre || currentComp.name || user.company || 'DASHBOARD');
+          else if (user.company) setCompanyName(user.company);
+        } catch (e) {
+          if (user.company) setCompanyName(user.company);
         }
 
-        const allQr = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
-        setQrPointsList(allQr.filter(p => p.objectiveId === currentUserData.schedule.objectiveId));
-      }
-    } catch (e) {
-      console.warn("Storage error (users/objectives):", e);
-    }
+        // Fetch Assigned Objective
+        try {
+          const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
+          const currentUserData = allUsers.find(u => 
+            (user.uid && (u.uid === user.uid || u.id === user.uid)) ||
+            (user.id && (u.id === user.id || u.uid === user.id)) ||
+            (user.email && u.email?.toLowerCase() === user.email?.toLowerCase())
+          ) || fullUserData;
+
+          if (currentUserData && currentUserData.schedule && currentUserData.schedule.objectiveId) {
+            const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
+            const companyObjectives = [...OBJETIVOS_MOCK, ...allObjectives.filter(obj => obj.empresaId === user.empresaId)];
+            const obj = companyObjectives.find(o => o.id === currentUserData.schedule.objectiveId);
+            if (obj) {
+                setAssignedObjectiveName(obj.nombre);
+                setAssignedObjective(obj);
+            }
+
+            const allQr = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
+            setQrPointsList(allQr.filter(p => p.objectiveId === currentUserData.schedule.objectiveId));
+          }
+        } catch (e) {
+          console.warn("Sync local error:", e);
+        }
+    };
+
+    refreshLocalData();
+    const syncInterval = setInterval(refreshLocalData, 5000); // Refrescar UI cada 5s con datos de store
 
     // Geolocation API (Real Tracking)
     let watchId;
@@ -970,8 +1009,6 @@ const StaffApp = () => {
           const lng = position.coords.longitude.toFixed(6);
           setCurrentGps({ lat, lng });
           
-          // REGLA DE ORO: Siempre mostrar ubicación real.
-          // Enviamos al backend si hay usuario, sin importar el isCheckedIn para visibilidad total.
           if (user?.uid || user?.id) {
             await actualizarUbicacionGPS(user.empresaId, user.uid || user.id, lat, lng);
           }
@@ -987,9 +1024,10 @@ const StaffApp = () => {
     
     return () => { 
       if(watchId) navigator.geolocation.clearWatch(watchId); 
+      clearInterval(syncInterval);
       clearTimeout(timer);
     };
-  }, [user, session.isCheckedIn, assignedObjective]);
+  }, [user, session.isCheckedIn, assignedObjective, fullUserData]);
 
   // 3. Handlers
   const handleToggleTurno = async () => {

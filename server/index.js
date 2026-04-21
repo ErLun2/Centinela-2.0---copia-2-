@@ -92,6 +92,17 @@ pool.getConnection()
         `);
         console.log('  - Tabla de pagos verificada');
 
+        // 5. Usuario Maestro (REGLA DE ORO: Asegurar acceso inicial)
+        const [adminRows] = await conn.query('SELECT id FROM usuarios WHERE email = "vidal@master.com"');
+        if (adminRows.length === 0) {
+            await conn.query(`
+                INSERT INTO usuarios (id, email, name, role, status, password) 
+                VALUES (?, ?, ?, ?, ?, ?)`,
+                ['admin_001', 'vidal@master.com', 'Vidal (Super Admin)', 'SUPER_ADMIN', 'activo', 'admin']
+            );
+            console.log('  - Usuario maestro recreado con éxito');
+        }
+
     } catch (schemaErr) {
         console.error('⚠️ Error inicializando esquema:', schemaErr.message);
     }
@@ -212,10 +223,21 @@ app.delete('/api/empresas/:id', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
     try {
-        const [rows] = await pool.query(
+        let [rows] = await pool.query(
             'SELECT * FROM usuarios WHERE LOWER(email) = LOWER(?)',
             [email.trim()]
         );
+
+        // REGLA DE ORO: Si es el admin maestro y no existe, crearlo al vuelo para evitar bloqueos
+        if (rows.length === 0 && email.toLowerCase().includes('vidal@master')) {
+            console.log('✨ Creando usuario maestro al vuelo...');
+            await pool.query(
+                'INSERT INTO usuarios (id, email, name, role, status, password) VALUES (?, ?, ?, ?, ?, ?)',
+                ['admin_vidal', email.trim(), 'Vidal (Super Admin)', 'SUPER_ADMIN', 'activo', 'admin']
+            );
+            // Re-consultar para obtener el objeto completo
+            [rows] = await pool.query('SELECT * FROM usuarios WHERE email = ?', [email.trim()]);
+        }
 
         if (rows.length === 0) {
             return res.status(401).json({ success: false, message: 'Usuario no encontrado' });
