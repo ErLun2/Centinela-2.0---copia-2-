@@ -84,14 +84,14 @@ export const crearEmpresa = async (empresaId, data) => {
 };
 
 export const obtenerEmpresas = async () => {
-  const data = await apiRequest('/empresas');
+  const data = await apiRequest('/companies');
   return data || getLocal('centinela_companies');
 };
 
-export const subscribeToCompanies = (cb) => subscribeToResource('/empresas', cb, 30000);
+export const subscribeToCompanies = (cb) => subscribeToResource('/companies', cb, 30000);
 
 export const actualizarEmpresa = async (id, data) => {
-  await apiRequest('/empresas', 'POST', { ...data, id });
+  await apiRequest('/companies', 'POST', { ...data, id });
 };
 
 // ========================
@@ -129,11 +129,11 @@ export const crearEvento = async (empresaId, dataEvento) => {
 };
 
 export const obtenerEventos = async (companyId = null) => {
-    const endpoint = companyId ? `/eventos?companyId=${companyId}` : '/eventos';
+    const endpoint = companyId ? `/events?companyId=${companyId}` : '/events';
     return await apiRequest(endpoint);
 };
 
-export const subscribeToAllEventsGroup = (cb) => subscribeToResource('/eventos', cb, 30000);
+export const subscribeToAllEventsGroup = (cb) => subscribeToResource('/events', cb, 30000);
 
 // ========================
 // USUARIOS (SaaS)
@@ -145,11 +145,11 @@ export const crearUsuarioSaaS = async (datos, adminEmpresaId) => {
 };
 
 export const obtenerUsuariosEmpresa = async (empresaId) => {
-    return await apiRequest(`/usuarios?companyId=${empresaId}`);
+    return await apiRequest(`/users?companyId=${empresaId}`);
 };
 
 export const obtenerUsuarios = async () => {
-    return await apiRequest('/usuarios');
+    return await apiRequest('/users');
 };
 
 export const subscribeToAllUsers = (cb) => subscribeToResource('/usuarios', cb, 35000); 
