@@ -11,7 +11,7 @@ const getApiUrl = () => {
     return 'https://centinela-backend.onrender.com/api';
 };
 
-const API_URL = getApiUrl();
+export const API_URL = getApiUrl();
 
 const apiRequest = async (endpoint, method = 'GET', body = null) => {
     try {
@@ -23,13 +23,13 @@ const apiRequest = async (endpoint, method = 'GET', body = null) => {
         
         const response = await fetch(`${API_URL}${endpoint}`, options);
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            console.error(`API Error in ${endpoint}:`, response.status, errorData);
+            const errorText = await response.text();
+            alert(`⚠️ ERROR DE SERVIDOR (${response.status}): ${endpoint}\n${errorText.substring(0, 100)}`);
             return null;
         }
         return await response.json();
     } catch (error) {
-        console.error(`Error en API (${endpoint}):`, error);
+        alert(`❌ ERROR DE RED: No se pudo conectar con el servidor.\nVerifica que ${API_URL} sea correcto.\nDetalle: ${error.message}`);
         return null;
     }
 };
@@ -68,16 +68,12 @@ const subscribeToResource = (endpoint, callback, interval = 30000) => {
 // EMPRESAS
 // ========================
 export const crearEmpresa = async (empresaId, data) => {
-  const result = await apiRequest('/empresas', 'POST', { ...data, id: empresaId, fecha_alta: new Date().toISOString().split('T')[0] });
-  if (!result) {
-    const companies = getLocal('centinela_companies');
-    setLocal('centinela_companies', [{ ...data, id: empresaId }, ...companies]);
-  }
+  await apiRequest('/empresas', 'POST', { ...data, id: empresaId, fecha_alta: new Date().toISOString().split('T')[0] });
 };
 
 export const obtenerEmpresas = async () => {
   const data = await apiRequest('/empresas');
-  return data || getLocal('centinela_companies');
+  return data || [];
 };
 
 export const subscribeToCompanies = (cb) => subscribeToResource('/empresas', cb, 30000);

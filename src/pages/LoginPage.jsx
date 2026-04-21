@@ -6,7 +6,7 @@ import {
   HelpCircle, MessageCircle, LifeBuoy, X
 } from 'lucide-react';
 import { useAuth, ROLES } from '../context/AuthContext';
-import { registrarSolicitudDemo } from '../lib/dbServices';
+import { registrarSolicitudDemo, API_URL } from '../lib/dbServices';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
