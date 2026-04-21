@@ -395,15 +395,35 @@ const TermsModal = ({ isOpen, onClose }) => {
            </div>
            <div style={modalStyles.section}>
              <h3 style={modalStyles.sectionTitle}>3. Responsabilidad del Usuario</h3>
-             <p style={modalStyles.text}>El usuario es responsable de mantener la confidencialidad de sus credenciales de acceso y de todas las actividades que ocurran bajo su cuenta. Se compromete a utilizar el servicio de manera lícita y profesional, cumpliendo con las regulaciones locales de seguridad privada.</p>
+             <p style={modalStyles.text}>El usuario es responsable de mantener la confidencialidad de sus credenciales de acceso y de todas las actividades que ocurran bajo su cuenta. Se compromete a utilizar el servicio de manera lícita y profesional.</p>
            </div>
            <div style={modalStyles.section}>
              <h3 style={modalStyles.sectionTitle}>4. Propiedad Intelectual</h3>
-             <p style={modalStyles.text}>Todos los derechos de propiedad intelectual sobre el software, diseño, logotipos y algoritmos de Centinela son propiedad exclusiva de Centinela Security. Queda prohibida la reproducción, ingeniería inversa o distribución no autorizada.</p>
+             <p style={modalStyles.text}>Todos los derechos de propiedad intelectual sobre el software, diseño, logotipos y algoritmos de Centinela son propiedad exclusiva de Centinela Security. Queda prohibida la reproducción o distribución no autorizada.</p>
            </div>
            <div style={modalStyles.section}>
              <h3 style={modalStyles.sectionTitle}>5. Modificaciones del Servicio</h3>
-             <p style={modalStyles.text}>Nos reservamos el derecho de actualizar, modificar o discontinuar cualquier aspecto del servicio en cualquier momento. Los términos comerciales se regirán por el plan de suscripción activo contratado por el cliente.</p>
+             <p style={modalStyles.text}>Nos reservamos el derecho de actualizar, modificar o discontinuar cualquier aspecto del servicio en cualquier momento. Los cambios sustanciales serán notificados a los administradores.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>6. Pagos y Suscripciones</h3>
+             <p style={modalStyles.text}>El acceso al servicio está sujeto al pago puntual del plan seleccionado. El incumplimiento en el pago resultará en la suspensión temporal de la plataforma hasta la regularización del mismo.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>7. Cancelación y Terminación</h3>
+             <p style={modalStyles.text}>El cliente puede cancelar su suscripción en cualquier momento. Centinela se reserva el derecho de terminar el servicio por uso indebido o violación de las normas de seguridad del software.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>8. Limitación de Responsabilidad</h3>
+             <p style={modalStyles.text}>Centinela provee herramientas de gestión, pero no es responsable por fallas externas de conectividad, hardware del usuario o decisiones operativas tomadas basadas en los reportes del sistema.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>9. Indemnización</h3>
+             <p style={modalStyles.text}>El usuario acepta defender e indemnizar a Centinela ante cualquier reclamación derivada de su uso negligente o ilegal del software o de la violación de estos términos.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={modalStyles.sectionTitle}>10. Ley Aplicable y Jurisdicción</h3>
+             <p style={modalStyles.text}>Estos términos se rigen por las leyes vigentes del país de operación principal de Centinela Security. Cualquier disputa se resolverá ante los tribunales competentes de dicha jurisdicción.</p>
            </div>
            <div style={{ textAlign: 'center', marginTop: '40px', padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
              <button onClick={onClose} className="primary" style={{ padding: '10px 30px', borderRadius: '10px' }}>Entendido</button>
@@ -567,19 +587,47 @@ const PrivacyModal = ({ isOpen, onClose }) => {
         <div className="custom-scrollbar" style={modalStyles.content}>
            <div style={modalStyles.section}>
              <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>1. Recopilación de Información</h3>
-             <p style={modalStyles.text}>Recopilamos información necesaria para la prestación del servicio, incluyendo datos de geolocalización en tiempo real (GPS) mientras la aplicación de personal está en uso, registros de actividad (logs), imágenes y videos cargados como evidencia operativa.</p>
+             <p style={modalStyles.text}>Recopilamos información necesaria para la prestación del servicio, incluyendo datos de geolocalización en tiempo real (GPS) mientras la aplicación de personal está en uso, registros de actividad y evidencia operativa.</p>
            </div>
            <div style={modalStyles.section}>
              <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>2. Uso de los Datos</h3>
-             <p style={modalStyles.text}>Los datos recopilados se utilizan exclusivamente para: supervisión de seguridad, generación de reportes automáticos, auditoría de cumplimiento de rondas y mejora de la seguridad operativa de nuestros clientes.</p>
+             <p style={modalStyles.text}>Los datos se utilizan para: supervisión de seguridad, generación de reportes automáticos, auditoría de cumplimiento y mejora de la seguridad operativa de nuestros clientes.</p>
            </div>
            <div style={modalStyles.section}>
              <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>3. Protección de Datos</h3>
-             <p style={modalStyles.text}>Implementamos medidas de seguridad de grado industrial para proteger la información contra accesos no autorizados, incluyendo cifrado SSL en tránsito y almacenamiento seguro de datos bajo estándares internacionales.</p>
+             <p style={modalStyles.text}>Implementamos cifrado SSL y medidas de seguridad industrial para proteger la información contra accesos no autorizados y garantizar la integridad de los datos almacenados.</p>
            </div>
            <div style={modalStyles.section}>
              <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>4. Confidencialidad</h3>
-             <p style={modalStyles.text}>Centinela Security no vende ni comercializa datos personales o corporativos a terceros. El acceso a la información está estrictamente limitado a los usuarios autorizados definidos por la empresa cliente.</p>
+             <p style={modalStyles.text}>Centinela Security no vende ni comercializa datos personales o corporativos a terceros. El acceso está limitado exclusivamente a los usuarios autorizados por la empresa cliente.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>5. Cookies y Seguimiento</h3>
+             <p style={modalStyles.text}>Utilizamos cookies técnicas necesarias para mantener la sesión activa y mejorar la experiencia de navegación en nuestros paneles administrativos.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>6. Derechos del Usuario (ARCO)</h3>
+             <p style={modalStyles.text}>Los usuarios tienen derecho a Acceder, Rectificar, Cancelar u Oponerse al tratamiento de sus datos. Estas solicitudes deben gestionarse a través del administrador de la empresa cliente.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>7. Retención de Datos</h3>
+             <p style={modalStyles.text}>Los datos operativos se mantienen durante el tiempo que dure la relación contractual, tras la cual podrán ser eliminados o anonimizados según el plan contratado.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>8. Transferencia de Datos</h3>
+             <p style={modalStyles.text}>En caso de utilizar servidores de terceros (Cloud), garantizamos que estos cumplan con normativas internacionales de protección de datos personales.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>9. Menores de Edad</h3>
+             <p style={modalStyles.text}>Nuestros servicios están dirigidos exclusivamente a mayores de edad involucrados en actividades profesionales de seguridad privada.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>10. Cambios en la Política</h3>
+             <p style={modalStyles.text}>Nos reservamos el derecho de actualizar esta política para reflejar cambios legales o ajustes en la operativa del software.</p>
+           </div>
+           <div style={modalStyles.section}>
+             <h3 style={{ ...modalStyles.sectionTitle, color: '#38bdf8' }}>11. Contacto</h3>
+             <p style={modalStyles.text}>Para cualquier consulta relacionada con la privacidad de sus datos, puede contactarnos a través de los canales oficiales de soporte técnico de Centinela.</p>
            </div>
            <div style={{ textAlign: 'center', marginTop: '40px', padding: '20px', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
              <button onClick={onClose} className="secondary" style={{ padding: '10px 30px', borderRadius: '10px', border: '1px solid #38bdf8', color: '#38bdf8' }}>Cerrar</button>
