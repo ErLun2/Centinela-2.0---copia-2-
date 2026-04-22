@@ -531,18 +531,28 @@ app.post('/api/usuarios', async (req, res) => {
 });
 
 app.post('/api/usuarios/update-password', async (req, res) => {
-    const { id, email, newPassword } = req.body;
+    const { id, userId, email, newPassword } = req.body;
+    const finalId = id || userId;
+    
+    if (!newPassword || (!finalId && !email)) {
+        return res.status(400).json({ success: false, error: 'Datos insuficientes para actualizar' });
+    }
+
     try {
-        // Actualizamos por ID (más preciso) o por Email como fallback
-        await pool.query(
+        const [result] = await pool.query(
             'UPDATE usuarios SET password = ?, password_changed = 1 WHERE id = ? OR (email IS NOT NULL AND LOWER(email) = LOWER(?))',
-            [newPassword, id, email]
+            [newPassword, finalId || '___NOT_FOUND___', email || '___NOT_FOUND___']
         );
-        console.log(`[AUTH] Password updated for: ${email || id}`);
+
+        if (result.affectedRows === 0) {
+            console.log(`[AUTH] No records found for update: id=${finalId}, email=${email}`);
+        }
+        
+        console.log(`[AUTH] Password updated for: ${email || finalId}`);
         res.json({ success: true });
-    } catch (err) {
-        console.error("[AUTH-ERROR] Update Password:", err);
-        res.status(500).json({ error: err.message });
+    } catch (error) {
+        console.error('[AUTH-ERROR] Password update:', error.message);
+        res.status(500).json({ success: false, error: 'Error interno del servidor' });
     }
 });
 

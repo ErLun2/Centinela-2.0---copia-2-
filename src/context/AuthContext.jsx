@@ -241,32 +241,40 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updatePasswordDemo = async (newPassword) => {
-    if (!user) return;
-    
-    // 1. REMOTE SYNC (MySQL Persistence) - MUST HAPPEN FIRST
     try {
-      const { apiRequest } = await import('../lib/dbServices');
-      const result = await apiRequest('/usuarios/update-password', 'POST', {
-        id: user.uid || user.id,
-        email: user.email,
-        newPassword: newPassword
-      });
-      
-      if (!result) {
-        throw new Error("El servidor no confirmó el cambio. Intente nuevamente.");
+      if (!user) {
+        console.error("[AUTH] No user in state for password update");
+        throw new Error("Sesión no válida. Cierre sesión e intente nuevamente.");
       }
 
-      console.log("Password synchronized with server.");
+      const { apiRequest } = await import('../lib/dbServices');
       
-      // 2. Update local state ONLY IF SERVER SUCCEEDED
-      const updatedUser = { ...user, password: newPassword, mustChangePassword: false };
+      const payload = {
+        userId: user.uid || user.id,
+        email: user.email || user.appEmail,
+        newPassword: newPassword
+      };
+
+      console.log("[AUTH] Syncing password change:", { ...payload, newPassword: '***' });
+
+      // Sincronizar con MySQL via API segura de Render
+      const result = await apiRequest('/usuarios/update-password', 'POST', payload);
+
+      if (!result || result.success !== true) {
+        throw new Error(result?.error || "El servidor no confirmó el cambio.");
+      }
+
+      console.log("[AUTH] Password synchronized with server.");
+
+      // Actualizar estado local solo tras éxito en servidor
+      const updatedUser = { ...user, mustChangePassword: false, password: newPassword };
       setUser(updatedUser);
       localStorage.setItem('centinela_current_user', JSON.stringify(updatedUser));
-      
+
       return true;
-    } catch (e) {
-      console.error("Auth Update Error:", e);
-      throw e; // Relaunch to UI catches it
+    } catch (error) {
+      console.error("[AUTH] Update password error:", error.message);
+      throw error;
     }
   };
 
