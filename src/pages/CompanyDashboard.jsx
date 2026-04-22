@@ -171,7 +171,17 @@ const getARDateStr = (dateInput) => {
 
 
 //// ======== ENTERPRISE CONFIG COMPONENT ========
-const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToast, refreshData, setSelectedUserForView }) => {
+const EnterpriseConfigPanel = ({ 
+  companyData, 
+  companyUsers, 
+  objectives, 
+  showToast, 
+  refreshData, 
+  setSelectedUserForView,
+  setNewObjective,
+  setNewObjectiveCoords,
+  setShowNewObjectiveModal
+}) => {
   const { user } = useAuth();
   const { settings, saveSettings, testSound, stopPanic, isPanicActive } = useSound();
   const [activeSubTab, setActiveSubTab] = React.useState('Empresa');
@@ -179,8 +189,8 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
   // Local state for company data to handle editing
   const [localCompany, setLocalCompany] = React.useState({
     id: companyData?.id || companyData?.uid || '',
-    nombre: companyData?.nombre || companyData?.name || user?.company || '',
-    email: companyData?.email || companyData?.appEmail || 'admin@centinela.com',
+    nombre: companyData?.nombre || companyData?.name || user?.company || 'STARK INDUSTRIES',
+    email: companyData?.email || companyData?.appEmail || user?.email || 'admin@centinela.com',
     timezone: companyData?.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
     logo: companyData?.logo || ''
   });
@@ -190,13 +200,13 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
     if (companyData) {
       setLocalCompany({
         id: companyData.id || companyData.uid || '',
-        nombre: companyData.nombre || companyData.name || user?.company || '',
-        email: companyData.email || companyData.appEmail || 'admin@centinela.com',
+        nombre: companyData.nombre || companyData.name || user?.company || 'STARK INDUSTRIES',
+        email: companyData.email || companyData.appEmail || user?.email || 'admin@centinela.com',
         timezone: companyData.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
         logo: companyData.logo || ''
       });
     }
-  }, [companyData]);
+  }, [companyData, user]);
 
   const [isSaving, setIsSaving] = React.useState(false);
 
@@ -1009,8 +1019,9 @@ const CompanyDashboard = () => {
         // NORMALIZACIÓN ESTRATÉGICA (Evitar 'PREMIUM'/'CLIENTE' fantasmas)
         setCompanyData({
           ...found,
-          nombre: found.nombre || found.name || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'CENTINELA'),
-          plan: (found.plan || found.planId || 'demo').toLowerCase() // Priorizamos 'demo' como fallback operativo
+          nombre: found.nombre || found.name || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'STARK INDUSTRIES'),
+          email: found.email || user?.email || 'admin@centinela.com',
+          plan: (found.plan || found.planId || 'demo').toLowerCase()
         });
       }
     });
@@ -4244,6 +4255,9 @@ const CompanyDashboard = () => {
               showToast={showToast} 
               refreshData={loadData}
               setSelectedUserForView={setSelectedUserForView}
+              setNewObjective={setNewObjective}
+              setNewObjectiveCoords={setNewObjectiveCoords}
+              setShowNewObjectiveModal={setShowNewObjectiveModal}
            />
         )}
 
