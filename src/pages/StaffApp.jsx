@@ -982,15 +982,20 @@ const StaffApp = () => {
 
           if (currentUserData && currentUserData.schedule && currentUserData.schedule.objectiveId) {
             const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
-            const companyObjectives = [...OBJETIVOS_MOCK, ...allObjectives.filter(obj => obj.empresaId === user.empresaId)];
+            const companyObjectives = [
+                ...OBJETIVOS_MOCK, 
+                ...allObjectives.filter(obj => (obj.companyId === user.empresaId || obj.empresaId === user.empresaId))
+            ];
             const obj = companyObjectives.find(o => o.id === currentUserData.schedule.objectiveId);
             if (obj) {
-                setAssignedObjectiveName(obj.nombre);
+                setAssignedObjectiveName(obj.nombre || obj.name || 'Sin nombre');
                 setAssignedObjective(obj);
             }
 
             const allQr = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
             setQrPointsList(allQr.filter(p => p.objectiveId === currentUserData.schedule.objectiveId));
+          } else if (currentUserData) {
+            setAssignedObjectiveName('SIN ASIGNAR');
           }
         } catch (e) {
           console.warn("Sync local error:", e);

@@ -129,6 +129,7 @@ pool.getConnection()
                     lng FLOAT,
                     companyId VARCHAR(100),
                     guardiaId VARCHAR(100),
+                    objetivoId VARCHAR(100),
                     fotoUrl LONGTEXT,
                     videoUrl LONGTEXT,
                     audioUrl LONGTEXT,
@@ -139,6 +140,7 @@ pool.getConnection()
                 )
             `);
             // Intentar añadir columnas una a una (silencioso si ya existen)
+            try { await conn.query(`ALTER TABLE eventos ADD COLUMN objetivoId VARCHAR(100)`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN status VARCHAR(50) DEFAULT 'Abierto'`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN resolution TEXT`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN history LONGTEXT`); } catch(e){}
@@ -499,8 +501,15 @@ app.get('/api/usuarios', async (req, res) => {
             params.push(companyId);
         }
         const [rows] = await pool.query(sql, params);
-        console.log(`[DB-FETCH] Se obtuvieron ${rows.length} usuarios. Fotos detectadas: ${rows.filter(r => r.foto).length}`);
-        res.json(rows);
+        console.log(`[DB-FETCH] Se obtuvieron ${rows.length} usuarios.`);
+        
+        // REGLA DE ORO: Asegurar que los campos JSON se devuelvan como objetos
+        const normalized = rows.map(u => ({
+            ...u,
+            schedule: typeof u.schedule === 'string' ? JSON.parse(u.schedule) : u.schedule
+        }));
+        
+        res.json(normalized);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -620,7 +629,15 @@ app.get('/api/eventos', async (req, res) => {
         }
         sql += ' ORDER BY id DESC LIMIT 500';
         const [rows] = await pool.query(sql, params);
-        res.json(rows);
+        
+        // REGLA DE ORO: Normalizar para el Dashboard (guardiaId -> usuarioId)
+        const normalized = rows.map(evt => ({
+            ...evt,
+            usuarioId: evt.guardiaId, // Compatibilidad con dashboard
+            userId: evt.guardiaId
+        }));
+        
+        res.json(normalized);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -667,12 +684,17 @@ app.post('/api/eventos', async (req, res) => {
         if (!fechaSanitizada || fechaSanitizada === 'null') fechaSanitizada = new Date().toISOString().split('T')[0];
         if (!horaSanitizada || horaSanitizada === 'null' || !horaSanitizada.includes(':')) horaSanitizada = new Date().toTimeString().split(' ')[0];
 
+        // Mapeo Robusto de ID de Usuario (Regla de Oro: Compatibilidad App/Dashboard)
+        const finalGuardiaId = e.guardiaId || e.usuarioId || e.userId;
+        const finalObjetivoId = e.objetivoId || 'base';
+
         await pool.query(
-            'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, fotoUrl, videoUrl, audioUrl, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, e.guardiaId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto']
+            'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, objetivoId, fotoUrl, videoUrl, audioUrl, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, finalGuardiaId, finalObjetivoId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto']
         );
         res.json({ success: true });
     } catch (err) {
+        console.error("Error al crear evento:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -1026,7 +1048,12 @@ app.post('/api/audit', async (req, res) => {
 app.get('/api/objectives', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM objectives');
-        res.json(rows);
+        // Normalizar nombres de campos para compatibilidad (companyId <-> empresaId)
+        const normalized = rows.map(obj => ({
+            ...obj,
+            empresaId: obj.companyId || obj.empresaId
+        }));
+        res.json(normalized);
     } catch (err) { res.json([]); }
 });
 
@@ -1052,7 +1079,15 @@ app.get('/api/rondas', async (req, res) => {
             params.push(companyId);
         }
         const [rows] = await pool.query(sql, params);
-        res.json(rows);
+        
+        // Parsear campos JSON
+        const normalized = rows.map(r => ({
+            ...r,
+            days: typeof r.days === 'string' ? JSON.parse(r.days) : (r.days || []),
+            assignedQrIds: typeof r.assignedQrIds === 'string' ? JSON.parse(r.assignedQrIds) : (r.assignedQrIds || [])
+        }));
+        
+        res.json(normalized);
     } catch (err) { res.json([]); }
 });
 

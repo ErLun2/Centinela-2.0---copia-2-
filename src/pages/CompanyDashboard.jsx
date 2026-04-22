@@ -921,15 +921,21 @@ const CompanyDashboard = () => {
 
   const exportToCSV = (data, filename) => {
     const headers = ['FECHA', 'HORA', 'USUARIO', 'TIPO', 'OBJETIVO', 'DESCRIPCION', 'ESTADO'];
-    const rows = data.map(e => [
-      new Date(e.fechaRegistro).toLocaleDateString(),
-      e.hora || '',
-      companyUsers.find(u => u.id === e.usuario || u.uid === e.usuario)?.nombre || 'S/N',
-      e.tipo || '',
-      objectives.find(o => o.id === e.objetivoId)?.nombre || 'Puesto General',
-      (e.mensaje || e.descripcion || '').replace(/,/g, ';').replace(/\n/g, ' '),
-      e.status || 'Abierto'
-    ]);
+    const rows = data.map(e => {
+      const uId = e.usuarioId || e.guardiaId || (typeof e.usuario === 'object' ? (e.usuario.id || e.usuario.uid) : e.usuario);
+      const u = companyUsers.find(cu => (cu.id === uId || cu.uid === uId));
+      const obj = objectives.find(o => String(o.id) === String(e.objetivoId || (u?.schedule?.objectiveId)));
+      
+      return [
+        new Date(e.fechaRegistro || e.fecha || 0).toLocaleDateString(),
+        e.hora || '',
+        u ? `${u.nombre || u.name} ${u.apellido || u.surname || ''}` : 'S/N',
+        e.tipo || '',
+        obj?.nombre || 'Puesto General',
+        (e.mensaje || e.descripcion || '').replace(/,/g, ';').replace(/\n/g, ' '),
+        e.status || 'Abierto'
+      ];
+    });
 
     const csvContent = "\uFEFF" + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -971,15 +977,21 @@ const CompanyDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              ${data.map(e => `
-                <tr>
-                  <td>${new Date(e.fechaRegistro).toLocaleDateString()} ${e.hora || ''}</td>
-                  <td>${companyUsers.find(u => u.id === e.usuario || u.uid === e.usuario)?.nombre || 'S/N'}</td>
-                  <td>${e.tipo?.toUpperCase()}</td>
-                  <td>${objectives.find(o => o.id === e.objetivoId)?.nombre || 'General'}</td>
-                  <td>${(e.mensaje || e.descripcion || '').replace(/\(Archivos adjuntos:.*?\)/gi, '')}</td>
-                </tr>
-              `).join('')}
+              ${data.map(e => {
+                const uId = e.usuarioId || e.guardiaId || (typeof e.usuario === 'object' ? (e.usuario.id || e.usuario.uid) : e.usuario);
+                const u = companyUsers.find(cu => (cu.id === uId || cu.uid === uId));
+                const obj = objectives.find(o => String(o.id) === String(e.objetivoId || (u?.schedule?.objectiveId)));
+                
+                return `
+                  <tr>
+                    <td>${new Date(e.fechaRegistro || e.fecha || 0).toLocaleDateString()} ${e.hora || ''}</td>
+                    <td>${u ? `${u.nombre || u.name} ${u.apellido || u.surname || ''}` : 'S/N'}</td>
+                    <td>${e.tipo?.toUpperCase()}</td>
+                    <td>${obj?.nombre || 'General'}</td>
+                    <td>${(e.mensaje || e.descripcion || '').replace(/\(Archivos adjuntos:.*?\)/gi, '')}</td>
+                  </tr>
+                `;
+              }).join('')}
             </tbody>
           </table>
           <div class="footer">Este documento es un registro oficial generado automÃ¡ticamente por la plataforma Centinela.</div>
@@ -1426,7 +1438,7 @@ const CompanyDashboard = () => {
 
       const updatedHistory = [...currentHistory, historyEntry];
 
-      await actualizarEvento(mediaModal.event.id, {
+      await db.actualizarEvento(mediaModal.event.id, {
         status,
         resolution: resolutionText,
         history: updatedHistory
@@ -2806,10 +2818,11 @@ const CompanyDashboard = () => {
                     const getT = (e) => e?.fechaRegistro?.seconds ? e.fechaRegistro.seconds * 1000 : new Date(e?.fechaRegistro || 0).getTime();
                     const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                     const userEvents = events.filter(e => {
-                      const eKey = String(e.usuarioId || e.userId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
+                      const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
                       return eKey !== '' && uKeys.includes(eKey);
                     });
-                    const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                    // Filtrar por el ingreso más reciente a ESTE objetivo específico
+                    const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
                     const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                     return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                   }).length;
@@ -2843,10 +2856,10 @@ const CompanyDashboard = () => {
                                 const getT = (e) => e?.fechaRegistro?.seconds ? e.fechaRegistro.seconds * 1000 : new Date(e?.fechaRegistro || 0).getTime();
                                 const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                                 const userEvents = events.filter(e => {
-                                  const eKey = String(e.usuarioId || e.userId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
+                                  const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
                                   return eKey !== '' && uKeys.includes(eKey);
                                 });
-                                const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                                const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
                                 const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
 
@@ -3302,11 +3315,31 @@ const CompanyDashboard = () => {
                           style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.85rem' }}
                         >
                           <td style={{ padding: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>{event.hora || '--:--'}</td>
-                          <td>{event.usuario?.nombre}</td>
+                          <td>
+                            {(() => {
+                              const uId = event.usuarioId || event.guardiaId || (typeof event.usuario === 'object' ? (event.usuario.id || event.usuario.uid) : event.usuario);
+                              const u = companyUsers.find(cu => (cu.id === uId || cu.uid === uId));
+                              return u ? `${u.nombre || u.name} ${u.apellido || u.surname || ''}` : 'Sin datos';
+                            })()}
+                          </td>
                           <td>
                             <span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.6rem', fontWeight: 'bold', background: event.tipo === 'emergencia' ? '#ef444420' : '#ffffff05', color: event.tipo === 'emergencia' ? '#ef4444' : 'white' }}>{event.tipo?.toUpperCase()}</span>
                           </td>
-                          <td style={{ fontSize: '0.8rem' }}>{objectives.find(o => o.id === event.objetivoId)?.nombre || 'General'}</td>
+                          <td style={{ fontSize: '0.8rem' }}>
+                            {(() => {
+                               if (event.objetivoId) {
+                                 const obj = objectives.find(o => String(o.id) === String(event.objetivoId));
+                                 if (obj) return obj.nombre;
+                               }
+                               const uId = event.usuarioId || event.guardiaId || (typeof event.usuario === 'object' ? (event.usuario.id || event.usuario.uid) : event.usuario);
+                               const u = companyUsers.find(cu => (cu.id === uId || cu.uid === uId));
+                               if (u?.schedule?.objectiveId) {
+                                 const obj = objectives.find(o => String(o.id) === String(u.schedule.objectiveId));
+                                 if (obj) return obj.nombre;
+                               }
+                               return 'General';
+                            })()}
+                          </td>
                           <td style={{ maxWidth: '250px', fontSize: '0.8rem', opacity: 0.7 }}>
                              {event.mensaje || event.descripcion || (event.tipo === 'qr_scan' ? `Escaneo de Punto: ${event.puntoNombre || 'S/N'}` : 'Sin descripción')}
                           </td>
@@ -3577,19 +3610,17 @@ const CompanyDashboard = () => {
                     .filter(e => {
                       if (!resumenFilters.objetivo) return true;
                       let objId = e.objetivoId;
-                      if (!objId && typeof e.usuario === 'object' && e.usuario !== null) {
-                        const guardUser = companyUsers.find(u => (e.usuario.legajo && u.legajo === e.usuario.legajo) || (e.usuario.nombre && e.usuario.apellido && u.nombre === e.usuario.nombre && u.apellido === e.usuario.apellido));
+                      if (!objId) {
+                        const uId = e.usuarioId || e.guardiaId || (typeof e.usuario === 'object' ? (e.usuario.id || e.usuario.uid) : null);
+                        const guardUser = companyUsers.find(u => (u.id === uId || u.uid === uId));
                         objId = guardUser?.schedule?.objectiveId;
                       }
                       return objId === resumenFilters.objetivo;
                     })
                     .filter(e => {
                       if (!resumenFilters.guardia) return true;
-                      if (typeof e.usuario === 'object' && e.usuario !== null) {
-                        const targetGuard = companyUsers.find(cu => (cu.id || cu.uid) === resumenFilters.guardia);
-                        return e.usuario.id === resumenFilters.guardia || e.usuario.uid === resumenFilters.guardia || e.usuario.id === targetGuard?.id || (targetGuard && e.usuario.legajo && e.usuario.legajo === targetGuard.legajo);
-                      }
-                      return e.usuario === resumenFilters.guardia || e.usuarioId === resumenFilters.guardia;
+                      const uId = e.usuarioId || e.guardiaId || (typeof e.usuario === 'object' ? (e.usuario.id || e.usuario.uid) : null);
+                      return uId === resumenFilters.guardia;
                     })
                     .filter(e => {
                       if (!resumenFilters.tipo) {
@@ -3631,23 +3662,31 @@ const CompanyDashboard = () => {
                           className="guard-link"
                           onClick={(e) => {
                             e.stopPropagation();
-                            const u = event.usuario;
-                            if (typeof u === 'object' && u !== null) {
+                            const u = (typeof event.usuario === 'object' && event.usuario !== null) 
+                                ? event.usuario 
+                                : companyUsers.find(cu => (cu.id === event.usuarioId || cu.uid === event.usuarioId || cu.id === event.guardiaId));
+                            if (u) {
                               setSelectedUserForView(u);
                             }
                           }}
                           style={{ cursor: 'pointer', color: 'var(--primary)' }}
                         >
-                          <div style={{ fontWeight: '900', textDecoration: 'underline' }}>
-                            {(typeof event.usuario === 'object' && event.usuario !== null)
-                              ? `${event.usuario.nombre} ${event.usuario.apellido}`
-                              : 'Sin datos'}
-                          </div>
-                          <div style={{ fontSize: '0.65rem', color: 'rgba(0,168,255,0.5)' }}>
-                            ID: {(typeof event.usuario === 'object' && event.usuario !== null)
-                              ? (event.usuario.legajo || 'S/L')
-                              : 'Sin datos'}
-                          </div>
+                          {(() => {
+                             const u = (typeof event.usuario === 'object' && event.usuario !== null) 
+                                 ? event.usuario 
+                                 : companyUsers.find(cu => (cu.id === event.usuarioId || cu.uid === event.usuarioId || cu.id === event.guardiaId));
+                             
+                             return (
+                                <>
+                                  <div style={{ fontWeight: '900', textDecoration: 'underline' }}>
+                                    {u ? `${u.nombre || u.name} ${u.apellido || u.surname || ''}` : 'Sin datos'}
+                                  </div>
+                                  <div style={{ fontSize: '0.65rem', color: 'rgba(0,168,255,0.5)' }}>
+                                    ID: {u ? (u.legajo || 'S/L') : 'Sin datos'}
+                                  </div>
+                                </>
+                             );
+                          })()}
                         </td>
                         <td>
                           <span style={{
@@ -3662,23 +3701,24 @@ const CompanyDashboard = () => {
                           </span>
                           <div style={{ fontSize: '0.7rem', marginTop: '5px', fontWeight: event.tipo === 'emergencia' ? '900' : 'normal', color: event.tipo === 'emergencia' ? '#ef4444' : 'rgba(255,255,255,0.3)' }}>
                             {(() => {
-                              // Prioridad 1: Nombre guardado directamente en el evento
+                              // Prioridad 1: ID de Objetivo directo (Nuevo en MySQL)
+                              if (event.objetivoId) {
+                                const obj = objectives.find(o => String(o.id) === String(event.objetivoId));
+                                if (obj) return obj.nombre;
+                              }
+
+                              // Prioridad 2: Nombre guardado directamente en el evento
                               if (event.objetivoNombre) return event.objetivoNombre;
                               
-                              // Prioridad 2: Buscar por usuario asignado (Schedule)
-                              if (typeof event.usuario === 'object' && event.usuario !== null) {
-                                const leg = event.usuario.legajo;
-                                const nom = event.usuario.nombre;
-                                const ape = event.usuario.apellido;
-                                const guardUser = companyUsers.find(u =>
-                                  (leg && u.legajo === leg) ||
-                                  (nom && ape && u.nombre === nom && u.apellido === ape)
-                                );
-                                if (guardUser?.schedule?.objectiveId) {
-                                  const obj = objectives.find(o => o.id === guardUser.schedule.objectiveId);
-                                  if (obj) return obj.nombre;
-                                }
+                              // Prioridad 3: Buscar por usuario asignado (Schedule)
+                              const uId = event.usuarioId || event.guardiaId || (typeof event.usuario === 'object' ? (event.usuario.id || event.usuario.uid) : null);
+                              const guardUser = companyUsers.find(u => (u.id === uId || u.uid === uId));
+                              
+                              if (guardUser?.schedule?.objectiveId) {
+                                const obj = objectives.find(o => String(o.id) === String(guardUser.schedule.objectiveId));
+                                if (obj) return obj.nombre;
                               }
+                              
                               return 'General / Base';
                             })()}
                           </div>
