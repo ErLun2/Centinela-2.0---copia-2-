@@ -1,4 +1,4 @@
-// Centinela Dashboard - Enterprise Edition
+// Centinela Dashboard - Enterprise Edition [STABILITY_V2.1_SYNC]
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   BarChart, Wallet, Fingerprint, Code, Server, Webhook, FileText, ToggleLeft, GitBranch, Share2, Layers, Map,
