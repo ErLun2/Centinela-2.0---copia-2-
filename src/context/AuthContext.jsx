@@ -138,9 +138,9 @@ export const AuthProvider = ({ children }) => {
           if (finalRole === 'ADMIN EMPRESA' || finalRole === 'ADMIN_EMPRESA' || finalRole === 'ADMIN') finalRole = ROLES.COMPANY_ADMIN;
           if (finalRole === 'SUPER ADMIN' || finalRole === 'SUPER_ADMIN') finalRole = ROLES.SUPER_ADMIN;
           if (finalRole === 'GUARDIA' || finalRole === 'VIGILADOR') finalRole = ROLES.GUARD;
-          if (finalRole === 'SOPORTE') finalRole = ROLES.SUPPORT;
-          if (finalRole === 'OPERADOR' || finalRole === 'OPERARIO' || finalRole === 'OPERADOR_SISTEMA' || finalRole === 'MONITOREO') finalRole = ROLES.OPERADOR;
-          if (finalRole === 'SUPERVISOR' || finalRole === 'SUP') finalRole = ROLES.SUPERVISOR;
+          if (finalRole === 'SOPORTE' || finalRole === 'SUPPORT') finalRole = ROLES.SUPPORT;
+          if (finalRole.includes('OPERADOR') || finalRole === 'OPERARIO' || finalRole === 'MONITOREO' || finalRole === 'CONTROL') finalRole = ROLES.OPERADOR;
+          if (finalRole === 'SUPERVISOR' || finalRole === 'SUP' || finalRole === 'COORDINADOR') finalRole = ROLES.SUPERVISOR;
         }
 
         const normalizedUser = {
