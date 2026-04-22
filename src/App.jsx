@@ -68,19 +68,19 @@ const ProtectedRoute = ({ children, allowedRoles, isSecurityPage = false }) => {
   // Prevent back-loop from security page
   if (!user.mustChangePassword && isSecurityPage) {
     const dest = 
-      [ROLES.SUPER_ADMIN, 'SUPERADMIN'].includes(user.rol) ? '/master' : 
-      ([ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR].includes(user.rol) ? '/staff' : '/company');
+      ['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol) ? '/master' : 
+      (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol) ? '/staff' : '/company');
     return <Navigate to={dest} replace />;
   }
 
   // Role validation
   if (allowedRoles && !allowedRoles.includes(user.rol)) {
-    if ([ROLES.SUPER_ADMIN, 'SUPERADMIN'].includes(user.rol)) return <Navigate to="/master" replace />;
-    if ([ROLES.SUPPORT, 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
-    if ([ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR].includes(user.rol)) return <Navigate to="/staff" replace />;
+    if (['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol)) return <Navigate to="/master" replace />;
+    if (['SUPPORT', 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
+    if (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol)) return <Navigate to="/staff" replace />;
 
-    // Forzamos que OPERADOR y ADMIN de empresa caigan aquí
-    if ([ROLES.OPERADOR, ROLES.COMPANY_ADMIN, 'ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
+    // Evitar loop infinito si ya estamos en /company o si el rol no coincide con nada
+    if (['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
 
     return <Navigate to="/login" replace />;
   }
@@ -95,11 +95,11 @@ const LoginGuard = ({ children }) => {
   if (user) {
     if (user.mustChangePassword) return <Navigate to="/password-change" replace />;
 
-    if ([ROLES.SUPER_ADMIN, 'SUPERADMIN'].includes(user.rol)) return <Navigate to="/master" replace />;
-    if ([ROLES.SUPPORT, 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
-    if ([ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR].includes(user.rol)) return <Navigate to="/staff" replace />;
+    if (['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol)) return <Navigate to="/master" replace />;
+    if (['SUPPORT', 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
+    if (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol)) return <Navigate to="/staff" replace />;
 
-    if ([ROLES.OPERADOR, ROLES.COMPANY_ADMIN, 'ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
+    if (['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
 
     // Si el rol es desconocido/inconsistente, forzar cierre de sesión o ir al inicio
     return children;
@@ -126,25 +126,25 @@ function App() {
                 } />
 
                 <Route path="/master/*" element={
-                  <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
+                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
                     <MasterDashboard />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/support/*" element={
-                  <ProtectedRoute allowedRoles={[ROLES.SUPPORT, 'SOPORTE', ROLES.SUPER_ADMIN]}>
+                  <ProtectedRoute allowedRoles={['SUPPORT', 'SOPORTE', 'SUPER_ADMIN']}>
                     <SupportDashboard />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/company/*" element={
-                  <ProtectedRoute allowedRoles={[ROLES.OPERADOR, ROLES.COMPANY_ADMIN, 'ADMIN', ROLES.SUPER_ADMIN]}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT']}>
                     <CompanyDashboard />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/staff/*" element={
-                  <ProtectedRoute allowedRoles={[ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR]}>
+                  <ProtectedRoute allowedRoles={['GUARD', 'GUARDIA', 'SUPERVISOR']}>
                     <StaffApp />
                   </ProtectedRoute>
                 } />

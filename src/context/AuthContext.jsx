@@ -127,7 +127,29 @@ export const AuthProvider = ({ children }) => {
       const result = await loginRemoto(email, password);
       
       if (result && result.success && result.user) {
-        const normalizedUser = normalizeUser(result.user, email);
+        const u = result.user;
+        let finalRole = (u.role || u.rol || ROLES.GUARD).toUpperCase();
+        
+        // REGLA DE ORO: El usuario Master ÚNICO es vidal@master.com
+        if (email.toLowerCase() === 'vidal@master.com') {
+          finalRole = ROLES.SUPER_ADMIN;
+        } else {
+          // Mapeo normal para el resto
+          if (finalRole === 'ADMIN EMPRESA' || finalRole === 'ADMIN_EMPRESA' || finalRole === 'ADMIN') finalRole = ROLES.COMPANY_ADMIN;
+          if (finalRole === 'SUPER ADMIN' || finalRole === 'SUPER_ADMIN') finalRole = ROLES.SUPER_ADMIN;
+          if (finalRole === 'GUARDIA' || finalRole === 'VIGILADOR') finalRole = ROLES.GUARD;
+          if (finalRole === 'SOPORTE') finalRole = ROLES.SUPPORT;
+          if (finalRole === 'OPERADOR' || finalRole === 'OPERARIO' || finalRole === 'OPERADOR_SISTEMA' || finalRole === 'MONITOREO') finalRole = ROLES.OPERADOR;
+          if (finalRole === 'SUPERVISOR' || finalRole === 'SUP') finalRole = ROLES.SUPERVISOR;
+        }
+
+        const normalizedUser = {
+          ...u,
+          rol: finalRole,
+          empresaId: u.companyId || u.empresaId,
+          nombre: u.name || u.nombre,
+          mustChangePassword: u.password === '123456' || u.password === 'password123' || !u.password
+        };
 
         setUser(normalizedUser);
         localStorage.setItem('centinela_current_user', JSON.stringify(normalizedUser));

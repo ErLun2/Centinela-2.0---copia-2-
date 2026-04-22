@@ -45,7 +45,7 @@ const PasswordChange = () => {
       await updatePasswordDemo(passwords.new);
       setIsSuccess(true);
       setTimeout(() => {
-        const dest = user?.rol === ROLES.SUPER_ADMIN ? '/master' : ([ROLES.GUARD, ROLES.SUPERVISOR].includes(user?.rol) ? '/staff' : '/company');
+        const dest = user?.rol === 'SUPER_ADMIN' ? '/master' : (['GUARD', 'SUPERVISOR'].includes(user?.rol) ? '/staff' : '/company');
         navigate(dest, { replace: true });
       }, 2000);
     } catch (err) {
