@@ -134,13 +134,14 @@ export const AuthProvider = ({ children }) => {
         if (email.toLowerCase() === 'vidal@master.com') {
           finalRole = ROLES.SUPER_ADMIN;
         } else {
-          // Mapeo normal para el resto
-          if (finalRole === 'ADMIN EMPRESA' || finalRole === 'ADMIN_EMPRESA' || finalRole === 'ADMIN') finalRole = ROLES.COMPANY_ADMIN;
-          if (finalRole === 'SUPER ADMIN' || finalRole === 'SUPER_ADMIN') finalRole = ROLES.SUPER_ADMIN;
-          if (finalRole === 'GUARDIA' || finalRole === 'VIGILADOR') finalRole = ROLES.GUARD;
-          if (finalRole === 'SOPORTE') finalRole = ROLES.SUPPORT;
-          if (finalRole === 'OPERADOR' || finalRole === 'OPERARIO' || finalRole === 'OPERADOR_SISTEMA' || finalRole === 'MONITOREO') finalRole = ROLES.OPERADOR;
-          if (finalRole === 'SUPERVISOR' || finalRole === 'SUP') finalRole = ROLES.SUPERVISOR;
+          // Mapeo ultra-robusto (Regla de Oro: Estabilidad de Roles)
+          const r = finalRole;
+          if (r.includes('SUPER') && r.includes('ADMIN')) finalRole = ROLES.SUPER_ADMIN;
+          else if (r.includes('SOPORTE') || r.includes('SUPPORT')) finalRole = ROLES.SUPPORT;
+          else if (r.includes('ADMIN')) finalRole = ROLES.COMPANY_ADMIN;
+          else if (r.includes('OPERADOR') || r.includes('OPERARIO') || r.includes('MONITOREO')) finalRole = ROLES.OPERADOR;
+          else if (r.includes('SUPERVISOR') || r === 'SUP') finalRole = ROLES.SUPERVISOR;
+          else if (r.includes('GUARD') || r.includes('VIGILADOR') || r.includes('SERENO')) finalRole = ROLES.GUARD;
         }
 
         const normalizedUser = {

@@ -68,19 +68,19 @@ const ProtectedRoute = ({ children, allowedRoles, isSecurityPage = false }) => {
   // Prevent back-loop from security page
   if (!user.mustChangePassword && isSecurityPage) {
     const dest = 
-      ['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol) ? '/master' : 
-      (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol) ? '/staff' : '/company');
+      user.rol === ROLES.SUPER_ADMIN ? '/master' : 
+      ([ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR].includes(user.rol) ? '/staff' : '/company');
     return <Navigate to={dest} replace />;
   }
 
   // Role validation
   if (allowedRoles && !allowedRoles.includes(user.rol)) {
-    if (['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol)) return <Navigate to="/master" replace />;
-    if (['SUPPORT', 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
-    if (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol)) return <Navigate to="/staff" replace />;
+    if (user.rol === ROLES.SUPER_ADMIN) return <Navigate to="/master" replace />;
+    if ([ROLES.SUPPORT, 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
+    if ([ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR].includes(user.rol)) return <Navigate to="/staff" replace />;
 
     // Evitar loop infinito si ya estamos en /company o si el rol no coincide con nada
-    if (['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
+    if ([ROLES.COMPANY_ADMIN, ROLES.OPERADOR, 'ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
 
     return <Navigate to="/login" replace />;
   }
@@ -95,11 +95,11 @@ const LoginGuard = ({ children }) => {
   if (user) {
     if (user.mustChangePassword) return <Navigate to="/password-change" replace />;
 
-    if (['SUPER_ADMIN', 'SUPERADMIN'].includes(user.rol)) return <Navigate to="/master" replace />;
-    if (['SUPPORT', 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
-    if (['GUARD', 'GUARDIA', 'SUPERVISOR'].includes(user.rol)) return <Navigate to="/staff" replace />;
+    if (user.rol === ROLES.SUPER_ADMIN) return <Navigate to="/master" replace />;
+    if ([ROLES.SUPPORT, 'SOPORTE', 'ADMIN_SOPORTE'].includes(user.rol)) return <Navigate to="/support" replace />;
+    if ([ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR].includes(user.rol)) return <Navigate to="/staff" replace />;
 
-    if (['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
+    if ([ROLES.COMPANY_ADMIN, ROLES.OPERADOR, 'ADMIN', 'COMPANY_CLIENT'].includes(user.rol)) return <Navigate to="/company" replace />;
 
     // Si el rol es desconocido/inconsistente, forzar cierre de sesión o ir al inicio
     return children;
