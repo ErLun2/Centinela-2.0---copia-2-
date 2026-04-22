@@ -13,7 +13,7 @@ const getApiUrl = () => {
 
 export const API_URL = getApiUrl();
 
-const apiRequest = async (endpoint, method = 'GET', body = null) => {
+export const apiRequest = async (endpoint, method = 'GET', body = null) => {
     try {
         const options = {
             method,
