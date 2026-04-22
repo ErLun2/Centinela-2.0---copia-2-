@@ -2866,7 +2866,12 @@ const CompanyDashboard = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '900', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '2px' }}>Personal Asignado</div>
                               {assignedGuards.map(u => {
-                                const getT = (e) => e?.fechaRegistro?.seconds ? e.fechaRegistro.seconds * 1000 : new Date(e?.fechaRegistro || 0).getTime();
+                                  const getT = (e) => {
+                                    if (!e) return 0;
+                                    if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
+                                    const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                                    return isNaN(d.getTime()) ? 0 : d.getTime();
+                                  };
                                 const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                                 const userEvents = events.filter(e => {
                                   const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
@@ -3067,7 +3072,12 @@ const CompanyDashboard = () => {
                       const assignedGuards = companyUsers.filter(u => u.schedule?.objectiveId === obj.id);
                       const totalCount = assignedGuards.length;
                       const currentCount = assignedGuards.filter(u => {
-                        const getT = (e) => e?.fechaRegistro?.seconds ? e.fechaRegistro.seconds * 1000 : new Date(e?.fechaRegistro || 0).getTime();
+                        const getT = (e) => {
+                          if (!e) return 0;
+                          if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
+                          const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                          return isNaN(d.getTime()) ? 0 : d.getTime();
+                        };
                         const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                         const userEvents = events.filter(e => {
                           const eKey = String(e.usuarioId || e.userId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
@@ -3420,7 +3430,12 @@ const CompanyDashboard = () => {
               const monthNames = ['ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'];
 
               const totalActiveGuards = companyUsers.filter(u => {
-                const getT = (e) => e?.fechaRegistro?.seconds ? e.fechaRegistro.seconds * 1000 : new Date(e?.fechaRegistro || 0).getTime();
+                const getT = (e) => {
+                  if (!e) return 0;
+                  if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
+                  const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                  return isNaN(d.getTime()) ? 0 : d.getTime();
+                };
                 const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                 const userEvents = events.filter(e => {
                   const eKey = String(e.usuarioId || e.userId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
