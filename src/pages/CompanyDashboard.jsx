@@ -2848,9 +2848,9 @@ const CompanyDashboard = () => {
                       return eKeys.some(ek => uKeys.includes(ek));
                     });
                     
-                    // Filtrar por el ingreso más reciente a ESTE objetivo específico
-                    const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
-                    const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                    // Lógica Flexible: El último ingreso vs último egreso (sin importar el puesto exacto para la presencia global)
+                    const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                    const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                     
                     return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                   }).length;
@@ -2907,8 +2907,10 @@ const CompanyDashboard = () => {
                                   
                                   return eKeys.some(ek => uKeys.includes(ek));
                                 });
-                                const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
-                                const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+
+                                // Lógica Flexible: Detección por último movimiento de entrada/salida
+                                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                                const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
 
                                 return (
@@ -3128,8 +3130,9 @@ const CompanyDashboard = () => {
                           
                           return eKeys.some(ek => uKeys.includes(ek));
                         });
-                        const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                        const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                        
+                        const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                        const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                         return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                       }).length;
 
@@ -3501,8 +3504,9 @@ const CompanyDashboard = () => {
                   
                   return eKeys.some(ek => uKeys.includes(ek));
                 });
-                const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                
+                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                 return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
               }).length;
 
