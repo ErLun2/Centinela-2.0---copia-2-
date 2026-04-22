@@ -2827,10 +2827,25 @@ const CompanyDashboard = () => {
                       return isNaN(d.getTime()) ? 0 : d.getTime();
                     };
                     
-                    const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
+                    const uKeys = [
+                      String(u.id || '').toLowerCase(), 
+                      String(u.uid || '').toLowerCase(), 
+                      String(u.legajo || '').toLowerCase(),
+                      String(u.email || '').toLowerCase()
+                    ].filter(k => k !== '');
+                    
                     const userEvents = events.filter(e => {
-                      const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
-                      return eKey !== '' && uKeys.includes(eKey);
+                      const eUserObj = typeof e.usuario === 'string' ? JSON.parse(e.usuario || '{}') : (e.usuario || {});
+                      const eKeys = [
+                        String(e.usuarioId || '').toLowerCase(),
+                        String(e.userId || '').toLowerCase(),
+                        String(e.guardiaId || '').toLowerCase(),
+                        String(eUserObj.id || '').toLowerCase(),
+                        String(eUserObj.uid || '').toLowerCase(),
+                        String(eUserObj.email || '').toLowerCase()
+                      ].filter(k => k !== '');
+                      
+                      return eKeys.some(ek => uKeys.includes(ek));
                     });
                     
                     // Filtrar por el ingreso más reciente a ESTE objetivo específico
@@ -2872,10 +2887,25 @@ const CompanyDashboard = () => {
                                     const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
                                     return isNaN(d.getTime()) ? 0 : d.getTime();
                                   };
-                                const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
+                                const uKeys = [
+                                  String(u.id || '').toLowerCase(), 
+                                  String(u.uid || '').toLowerCase(), 
+                                  String(u.legajo || '').toLowerCase(),
+                                  String(u.email || '').toLowerCase()
+                                ].filter(k => k !== '');
+                                
                                 const userEvents = events.filter(e => {
-                                  const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
-                                  return eKey !== '' && uKeys.includes(eKey);
+                                  const eUserObj = typeof e.usuario === 'string' ? JSON.parse(e.usuario || '{}') : (e.usuario || {});
+                                  const eKeys = [
+                                    String(e.usuarioId || '').toLowerCase(),
+                                    String(e.userId || '').toLowerCase(),
+                                    String(e.guardiaId || '').toLowerCase(),
+                                    String(eUserObj.id || '').toLowerCase(),
+                                    String(eUserObj.uid || '').toLowerCase(),
+                                    String(eUserObj.email || '').toLowerCase()
+                                  ].filter(k => k !== '');
+                                  
+                                  return eKeys.some(ek => uKeys.includes(ek));
                                 });
                                 const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
                                 const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
@@ -3078,10 +3108,25 @@ const CompanyDashboard = () => {
                           const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
                           return isNaN(d.getTime()) ? 0 : d.getTime();
                         };
-                        const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
+                        const uKeys = [
+                          String(u.id || '').toLowerCase(), 
+                          String(u.uid || '').toLowerCase(), 
+                          String(u.legajo || '').toLowerCase(),
+                          String(u.email || '').toLowerCase()
+                        ].filter(k => k !== '');
+                        
                         const userEvents = events.filter(e => {
-                          const eKey = String(e.usuarioId || e.userId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
-                          return eKey !== '' && uKeys.includes(eKey);
+                          const eUserObj = typeof e.usuario === 'string' ? JSON.parse(e.usuario || '{}') : (e.usuario || {});
+                          const eKeys = [
+                            String(e.usuarioId || '').toLowerCase(),
+                            String(e.userId || '').toLowerCase(),
+                            String(e.guardiaId || '').toLowerCase(),
+                            String(eUserObj.id || '').toLowerCase(),
+                            String(eUserObj.uid || '').toLowerCase(),
+                            String(eUserObj.email || '').toLowerCase()
+                          ].filter(k => k !== '');
+                          
+                          return eKeys.some(ek => uKeys.includes(ek));
                         });
                         const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
                         const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
@@ -3436,10 +3481,25 @@ const CompanyDashboard = () => {
                   const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
                   return isNaN(d.getTime()) ? 0 : d.getTime();
                 };
-                const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
+                const uKeys = [
+                  String(u.id || '').toLowerCase(), 
+                  String(u.uid || '').toLowerCase(), 
+                  String(u.legajo || '').toLowerCase(),
+                  String(u.email || '').toLowerCase()
+                ].filter(k => k !== '');
+                
                 const userEvents = events.filter(e => {
-                  const eKey = String(e.usuarioId || e.userId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
-                  return eKey !== '' && uKeys.includes(eKey);
+                  const eUserObj = typeof e.usuario === 'string' ? JSON.parse(e.usuario || '{}') : (e.usuario || {});
+                  const eKeys = [
+                    String(e.usuarioId || '').toLowerCase(),
+                    String(e.userId || '').toLowerCase(),
+                    String(e.guardiaId || '').toLowerCase(),
+                    String(eUserObj.id || '').toLowerCase(),
+                    String(eUserObj.uid || '').toLowerCase(),
+                    String(eUserObj.email || '').toLowerCase()
+                  ].filter(k => k !== '');
+                  
+                  return eKeys.some(ek => uKeys.includes(ek));
                 });
                 const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
                 const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
@@ -3933,7 +3993,7 @@ const CompanyDashboard = () => {
         {/* Modal: Planificación de Turnos (Shift) */}
         {showShiftModal && selectedUser && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-             <div className="glass fade-up" style={{ width: '550px', padding: '40px', borderRadius: '32px', border: '1px solid #10b981' }}>
+             <div className="glass fade-up" style={{ width: '550px', maxHeight: '90vh', overflowY: 'auto', padding: '40px', borderRadius: '32px', border: '1px solid #10b981' }} className="custom-scrollbar">
                 <h3 style={{ margin: '0 0 25px', display: 'flex', alignItems: 'center', gap: '15px' }}><Calendar size={24} color="#10b981" /> Agenda Operativa: {selectedUser.nombre}</h3>
                 
                 <div style={{ marginBottom: '20px' }}>
@@ -4039,9 +4099,9 @@ const CompanyDashboard = () => {
         {/* Modal: Visor Multimedia de Eventos */}
         {mediaModal.show && (
             <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1500 }}>
-               <div className="glass fade-up" style={{ width: '900px', display: 'grid', gridTemplateColumns: '1fr 350px', gap: '0', borderRadius: '32px', border: '1px solid rgba(0,168,255,0.3)', overflow: 'hidden' }}>
+                <div className="glass fade-up" style={{ width: '950px', maxHeight: '90vh', display: 'grid', gridTemplateColumns: '1fr 380px', gap: '0', borderRadius: '32px', border: '1px solid rgba(0,168,255,0.3)', overflow: 'hidden' }}>
                   {/* Lado Izquierdo: Evidencia Visual y Geográfica */}
-                  <div style={{ padding: '30px', background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div style={{ padding: '30px', background: 'rgba(0,0,0,0.5)', display: 'flex', flexDirection: 'column', gap: '20px', overflowY: 'auto', maxHeight: '90vh' }} className="custom-scrollbar">
                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                            <h3 style={{ margin: 0, textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--primary)', fontSize: '1rem' }}>Evidencia del Evento</h3>
@@ -4213,7 +4273,7 @@ const CompanyDashboard = () => {
                    </div>
 
                   {/* Lado Derecho: Gestión y Resolución */}
-                  <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px', borderLeft: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ padding: '30px', display: 'flex', flexDirection: 'column', gap: '25px', borderLeft: '1px solid rgba(255,255,255,0.05)', overflowY: 'auto', maxHeight: '90vh' }} className="custom-scrollbar">
                      <div>
                         <label style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '8px' }}>DETALLE DEL EVENTO</label>
                         <div style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'rgba(255,255,255,0.8)', background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '15px' }}>
