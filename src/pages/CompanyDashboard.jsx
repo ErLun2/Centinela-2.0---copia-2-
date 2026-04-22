@@ -406,8 +406,12 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
 
              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                 <h3 style={{ margin: 0, fontSize: '1.4rem', fontWeight: '800' }}>Sucursales</h3>
-                <button 
-                  onClick={() => showToast("Funcionalidad para crear sucursal abierta (simulada)")}
+                 <button 
+                  onClick={() => {
+                    setNewObjective({ nombre: '', address: '' });
+                    setNewObjectiveCoords(null);
+                    setShowNewObjectiveModal(true);
+                  }}
                   style={{ background: 'transparent', border: '1px solid #3b82f6', color: '#3b82f6', padding: '8px 20px', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 'bold', cursor: 'pointer' }}
                 >
                    + NUEVA SUCURSAL
@@ -429,8 +433,8 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
                          </div>
                       </div>
                       <div style={{ fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                         <span style={{ color: 'rgba(255,255,255,0.4)' }}>Dispositivos Asociados:</span>
-                         <span style={{ fontWeight: 'bold' }}>{obj.deviceCount || (obj.nombre.length % 5) + 2}</span>
+                         <span style={{ color: 'rgba(255,255,255,0.4)' }}>Personal Asignado:</span>
+                         <span style={{ fontWeight: 'bold' }}>{Array.isArray(companyUsers) ? companyUsers.filter(u => u.schedule?.objectiveId === obj.id).length : 0}</span>
                       </div>
                    </div>
                 ))}
@@ -650,6 +654,7 @@ const CompanyDashboard = () => {
   const [objectives, setObjectives] = useState([]);
   const [newObjective, setNewObjective] = useState({ nombre: '', address: '' });
   const [newObjectiveCoords, setNewObjectiveCoords] = useState(null);
+  const [showNewObjectiveModal, setShowNewObjectiveModal] = useState(false);
 
   // Rondas QR States
   const [qrPoints, setQrPoints] = useState([]);
@@ -1179,6 +1184,7 @@ const CompanyDashboard = () => {
         showToast("✅ Objetivo guardado en servidor.");
         setNewObjective({ nombre: '', address: '' });
         setNewObjectiveCoords(null);
+        loadData();
     } catch (err) {
         alert("Error al guardar objetivo: " + err.message);
     } finally {
@@ -2987,7 +2993,7 @@ const CompanyDashboard = () => {
               <div style={{ marginTop: '30px' }}>
                 <div style={{ maxHeight: '350px', overflowY: 'auto', paddingRight: '10px' }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '15px' }}>
-                    {Array.isArray(objectives) && objectives.map(obj => {
+                    {Array.isArray(objectives) && objectives.filter(obj => obj.activo !== false).map(obj => {
                       const assignedGuards = companyUsers.filter(u => u.schedule?.objectiveId === obj.id);
                       const totalCount = assignedGuards.length;
                       const currentCount = assignedGuards.filter(u => {
@@ -4250,6 +4256,119 @@ const CompanyDashboard = () => {
            />
         )}
       </div>
+
+       {/* MODAL: NUEVA SUCURSAL / OBJETIVO */}
+       {showNewObjectiveModal && (
+         <div style={{ position: 'fixed', inset: 0, background: 'rgba(2, 6, 23, 0.9)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5000 }}>
+           <div className="glass fade-up" style={{ width: '100%', maxWidth: '900px', borderRadius: '32px', border: '1px solid var(--primary)', overflow: 'hidden', boxShadow: '0 0 100px rgba(0,210,255,0.15)' }}>
+             <div style={{ display: 'flex', height: '600px' }}>
+               {/* Left Side: Form */}
+               <div style={{ flex: '0 0 350px', padding: '40px', background: 'rgba(15, 23, 42, 0.9)', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
+                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '30px' }}>
+                   <div style={{ padding: '10px', background: 'rgba(0,210,255,0.1)', borderRadius: '12px', color: '#00d2ff' }}>
+                     <Building2 size={24} />
+                   </div>
+                   <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '900' }}>Nuevo Puesto</h3>
+                 </div>
+
+                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
+                   <div>
+                     <label style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', display: 'block', marginBottom: '10px' }}>NOMBRE DEL PUESTO</label>
+                     <input 
+                       type="text" 
+                       placeholder="Ej: Planta Industrial Sur"
+                       value={newObjective.nombre}
+                       onChange={e => setNewObjective({ ...newObjective, nombre: e.target.value })}
+                       style={{ width: '100%', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '15px', borderRadius: '12px', color: 'white', outline: 'none' }}
+                     />
+                   </div>
+
+                   <div>
+                     <label style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', display: 'block', marginBottom: '10px' }}>DIRECCIÓN (CALLE Y NRO)</label>
+                     <div style={{ display: 'flex', gap: '10px' }}>
+                       <input 
+                         type="text" 
+                         placeholder="Av. Corrientes 1200, CABA"
+                         value={newObjective.address}
+                         onChange={e => setNewObjective({ ...newObjective, address: e.target.value })}
+                         style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', padding: '15px', borderRadius: '12px', color: 'white', outline: 'none' }}
+                       />
+                       <button 
+                         onClick={geocodeObjectiveAddress}
+                         style={{ padding: '0 15px', borderRadius: '12px', background: 'rgba(0,210,255,0.1)', border: '1px solid rgba(0,210,255,0.3)', color: '#00d2ff', cursor: 'pointer' }}
+                         title="Localizar en Mapa"
+                       >
+                         {isSaving ? <Loader2 size={18} className="spin" /> : <Search size={18} />}
+                       </button>
+                     </div>
+                   </div>
+
+                   <div style={{ marginTop: 'auto', padding: '20px', background: 'rgba(245, 158, 11, 0.05)', borderRadius: '15px', border: '1px solid rgba(245, 158, 11, 0.1)' }}>
+                     <div style={{ display: 'flex', gap: '10px', color: '#f59e0b' }}>
+                       <AlertCircle size={18} />
+                       <span style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>Nota:</span>
+                     </div>
+                     <p style={{ margin: '8px 0 0', fontSize: '0.7rem', color: 'rgba(255,255,255,0.5)', lineHeight: '1.4' }}>
+                       Debe localizar la dirección en el mapa (botón Lupa) antes de poder guardar el nuevo objetivo.
+                     </p>
+                   </div>
+                 </div>
+
+                 <div style={{ display: 'flex', gap: '15px', marginTop: '30px' }}>
+                   <button 
+                     onClick={async () => {
+                       await handleSaveObjective();
+                       if (!newObjective.nombre && !newObjectiveCoords) {
+                         // No cerramos si falló validación
+                       } else {
+                         setShowNewObjectiveModal(false);
+                       }
+                     }}
+                     disabled={isSaving || !newObjectiveCoords}
+                     style={{ flex: 1, background: !newObjectiveCoords ? 'rgba(255,255,255,0.1)' : '#3b82f6', color: 'white', border: 'none', padding: '15px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                   >
+                     {isSaving ? <Loader2 size={18} className="spin" /> : 'GUARDAR'}
+                   </button>
+                   <button 
+                     onClick={() => setShowNewObjectiveModal(false)}
+                     style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '15px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' }}
+                   >
+                     CANCELAR
+                   </button>
+                 </div>
+               </div>
+
+               {/* Right Side: Map */}
+               <div style={{ flex: 1, position: 'relative', background: '#0f172a' }}>
+                 <MapContainer
+                   center={[-34.6037, -58.3816]}
+                   zoom={13}
+                   style={{ height: '100%', width: '100%' }}
+                   zoomControl={false}
+                 >
+                   <TileLayer
+                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                   />
+                   {newObjectiveCoords && (
+                     <>
+                        <Marker position={[newObjectiveCoords.lat, newObjectiveCoords.lng]}>
+                          <Popup><div style={{ color: 'black' }}>Ubicación para: {newObjective.nombre}</div></Popup>
+                        </Marker>
+                        <RecenterMap pos={[newObjectiveCoords.lat, newObjectiveCoords.lng]} />
+                     </>
+                   )}
+                 </MapContainer>
+                 <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 1000 }}>
+                    <div style={{ background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(10px)', padding: '8px 15px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                       VISTA TÁCTICA DEL PUESTO
+                    </div>
+                 </div>
+               </div>
+             </div>
+           </div>
+         </div>
+       )}
 
       {/* NOTIFICACIONES TOAST */}
       {toast.show && (
