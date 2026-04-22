@@ -484,7 +484,7 @@ const EnterpriseConfigPanel = ({
                    </thead>
                    <tbody>
                       {companyUsers
-                        .filter(u => ['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'SUPERVISOR', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
+                        .filter(u => ['ADMIN', 'OPERADOR', 'SUPERADMIN', 'ADMIN EMPRESA', 'DUEÑO'].includes((u.rol || u.role || '').trim().toUpperCase()))
                         .filter(u => (u.email || '').toLowerCase() !== 'vidal@master.com')
                         .map(u => (
                          <tr key={u.id || u.uid} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>

@@ -137,8 +137,10 @@ export const AuthProvider = ({ children }) => {
           // Mapeo normal para el resto
           if (finalRole === 'ADMIN EMPRESA' || finalRole === 'ADMIN_EMPRESA' || finalRole === 'ADMIN') finalRole = ROLES.COMPANY_ADMIN;
           if (finalRole === 'SUPER ADMIN' || finalRole === 'SUPER_ADMIN') finalRole = ROLES.SUPER_ADMIN;
-          if (finalRole === 'GUARDIA') finalRole = ROLES.GUARD;
+          if (finalRole === 'GUARDIA' || finalRole === 'VIGILADOR') finalRole = ROLES.GUARD;
           if (finalRole === 'SOPORTE') finalRole = ROLES.SUPPORT;
+          if (finalRole === 'OPERADOR' || finalRole === 'OPERARIO' || finalRole === 'OPERADOR_SISTEMA' || finalRole === 'MONITOREO') finalRole = ROLES.OPERADOR;
+          if (finalRole === 'SUPERVISOR' || finalRole === 'SUP') finalRole = ROLES.SUPERVISOR;
         }
 
         const normalizedUser = {

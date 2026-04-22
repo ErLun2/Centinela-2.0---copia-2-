@@ -138,7 +138,7 @@ function App() {
                 } />
 
                 <Route path="/company/*" element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT', 'SUPERVISOR']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'OPERADOR', 'COMPANY_ADMIN', 'COMPANY_CLIENT']}>
                     <CompanyDashboard />
                   </ProtectedRoute>
                 } />
