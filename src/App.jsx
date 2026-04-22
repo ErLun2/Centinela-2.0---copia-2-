@@ -126,13 +126,13 @@ function App() {
                 } />
 
                 <Route path="/master/*" element={
-                  <ProtectedRoute allowedRoles={['SUPER_ADMIN']}>
+                  <ProtectedRoute allowedRoles={[ROLES.SUPER_ADMIN]}>
                     <MasterDashboard />
                   </ProtectedRoute>
                 } />
 
                 <Route path="/support/*" element={
-                  <ProtectedRoute allowedRoles={['SUPPORT', 'SOPORTE', 'SUPER_ADMIN']}>
+                  <ProtectedRoute allowedRoles={[ROLES.SUPPORT, 'SOPORTE', ROLES.SUPER_ADMIN]}>
                     <SupportDashboard />
                   </ProtectedRoute>
                 } />
@@ -144,7 +144,7 @@ function App() {
                 } />
 
                 <Route path="/staff/*" element={
-                  <ProtectedRoute allowedRoles={['GUARD', 'GUARDIA', 'SUPERVISOR']}>
+                  <ProtectedRoute allowedRoles={[ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR]}>
                     <StaffApp />
                   </ProtectedRoute>
                 } />
