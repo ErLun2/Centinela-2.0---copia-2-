@@ -177,8 +177,9 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
 
   // Local state for company data to handle editing
   const [localCompany, setLocalCompany] = React.useState({
-    nombre: companyData?.nombre || '',
-    email: companyData?.email || 'admin@' + (companyData?.nombre?.toLowerCase().replace(/\s/g, '') || 'empresa') + '.com',
+    id: companyData?.id || companyData?.uid || '',
+    nombre: companyData?.nombre || companyData?.name || user?.company || '',
+    email: companyData?.email || companyData?.appEmail || 'admin@centinela.com',
     timezone: companyData?.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
     logo: companyData?.logo || ''
   });
@@ -187,8 +188,9 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
   React.useEffect(() => {
     if (companyData) {
       setLocalCompany({
-        nombre: companyData.nombre || '',
-        email: companyData.email || 'admin@' + (companyData.nombre?.toLowerCase().replace(/\s/g, '') || 'empresa') + '.com',
+        id: companyData.id || companyData.uid || '',
+        nombre: companyData.nombre || companyData.name || user?.company || '',
+        email: companyData.email || companyData.appEmail || 'admin@centinela.com',
         timezone: companyData.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
         logo: companyData.logo || ''
       });
@@ -204,27 +206,26 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
     { id: 'Sonido', icon: <Volume2 size={22}/>, title: 'Sonido', description: 'Alertas y notificaciones' },
 ];
 
-  const handleSaveCompany = () => {
+  const handleSaveCompany = async () => {
     if (!localCompany.nombre.trim()) {
       showToast("El nombre de la empresa es obligatorio", "error");
       return;
     }
     setIsSaving(true);
-    setTimeout(() => {
-      try {
-        const allCompanies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
-        const updated = allCompanies.map(c => (c.id === companyData?.id || c.id === companyData?.uid) ? { ...c, ...localCompany } : c);
-        localStorage.setItem('centinela_companies', JSON.stringify(updated));
-        
-        // Also update the current user's session if necessary (optional, but good for UX)
-        showToast("Información de empresa actualizada.");
-        setIsSaving(false);
-        refreshData();
-      } catch (error) {
-        showToast("Error al guardar los cambios", "error");
-        setIsSaving(false);
-      }
-    }, 800);
+    try {
+      const dataToSave = {
+        ...localCompany,
+        id: companyData?.id || companyData?.uid,
+        name: localCompany.nombre,
+      };
+      await db.actualizarEmpresa(dataToSave);
+      showToast("Información de empresa actualizada.");
+      refreshData();
+    } catch (error) {
+      showToast("Error al guardar los cambios", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleLogoUpload = (e) => {
@@ -243,12 +244,17 @@ const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToas
     }
   };
 
-  const toggleBranchStatus = (branchId) => {
-    const allObjectives = JSON.parse(localStorage.getItem('centinela_objectives') || '[]');
-    const updated = allObjectives.map(o => o.id === branchId ? { ...o, activo: o.activo === false ? true : false } : o);
-    localStorage.setItem('centinela_objectives', JSON.stringify(updated));
-    showToast("Estado de sucursal actualizado.");
-    refreshData();
+   const toggleBranchStatus = async (branchId) => {
+    const obj = objectives.find(o => o.id === branchId);
+    if (!obj) return;
+    try {
+      const updatedObj = { ...obj, activo: obj.activo === false ? true : false };
+      await db.crearObjective(updatedObj);
+      showToast("Estado de sucursal actualizado.");
+      refreshData();
+    } catch (e) {
+      showToast("Error al actualizar sucursal", "error");
+    }
   };
 
   const toggleUserStatus = async (userId, currentStatus) => {
@@ -2338,15 +2344,45 @@ const CompanyDashboard = () => {
             <style>
               {`
                   @media print { /* Centinela Print Fix */
-                    @page { margin: 1cm; size: portrait; }
-                    body { background: white !important; color: black !important; }
-                    .sidebar, .navbar, .noprint, button { display: none !important; }
-                    .printable-qr-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; width: 100% !important; }
-                    .qr-card { page-break-inside: avoid; background: white !important; border: 2px solid #000 !important; padding: 25px !important; display: flex !important; flex-direction: column !important; alignItems: center !important; text-align: center !important; color: black !important; opacity: 1 !important; visibility: visible !important; animation: none !important; }
-                    .qr-card h4 { color: #000 !important; font-size: 1.4rem !important; margin-bottom: 5px !important; font-weight: bold !important; visibility: visible !important; }
-                    .qr-card div { color: #000 !important; font-weight: bold !important; visibility: visible !important; }
-                    .qr-card svg { width: 220px !important; height: 220px !important; display: block !important; margin-top: 10px !important; visibility: visible !important; }
-                    .noprint { display: none !important; }
+                    @page { margin: 0; size: A4 portrait; }
+                    body { background: white !important; margin: 0 !important; padding: 0 !important; }
+                    
+                    /* Resetear el Flexbox del Dashboard para Impresión */
+                    body > div { display: block !important; background: white !important; padding: 0 !important; margin: 0 !important; }
+                    
+                    /* Ocultar Sidebar (primer hijo) y Header */
+                    body > div > div:first-child { display: none !important; }
+                    header, nav, .noprint, button { display: none !important; }
+                    
+                    /* Forzar que el contenido principal ocupe todo */
+                    body > div > div:last-child { 
+                      padding: 0 !important; 
+                      margin: 0 !important; 
+                      width: 100% !important; 
+                      display: block !important;
+                    }
+                    
+                    .printable-qr-grid { 
+                      display: block !important; 
+                      width: 100% !important; 
+                    }
+                    
+                    /* 2 QR por página A4 */
+                    .qr-card { 
+                      display: flex !important;
+                      flex-direction: column !important;
+                      align-items: center !important;
+                      justify-content: center !important;
+                      height: 50vh !important; /* Exactamente media página */
+                      border-bottom: 2px dashed #000 !important;
+                      page-break-inside: avoid;
+                      padding: 40px !important;
+                      box-sizing: border-box;
+                    }
+                    
+                    .qr-card h4 { color: black !important; font-size: 2.5rem !important; margin: 0 0 10px 0 !important; font-weight: 900 !important; }
+                    .qr-card div { color: #333 !important; font-size: 1.5rem !important; margin-bottom: 20px !important; }
+                    .qr-card svg { width: 400px !important; height: 400px !important; }
                   }
                `}
             </style>

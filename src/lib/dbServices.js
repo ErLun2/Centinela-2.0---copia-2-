@@ -161,6 +161,9 @@ export const obtenerRondas = async (companyId) => await apiRequest(`/rondas?comp
 export const eliminarRonda = async (id) => await apiRequest(`/rondas/${id}`, 'DELETE');
 export const subscribeToRondas = (cb) => subscribeToResource('/rondas', cb, 45000);
 
+// Empresas
+export const actualizarEmpresa = async (data) => await apiRequest('/empresas', 'POST', data);
+
 // ========================
 // TICKETS DE SOPORTE
 // ========================
