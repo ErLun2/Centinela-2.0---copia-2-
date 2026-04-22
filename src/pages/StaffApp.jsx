@@ -1046,7 +1046,7 @@ const StaffApp = () => {
       clearInterval(syncInterval);
       clearTimeout(timer);
     };
-  }, [user, session.isCheckedIn, assignedObjective, fullUserData]);
+  }, [user?.uid, user?.id, session.isCheckedIn, user?.empresaId]);
 
   // 3. Handlers
   const handleToggleTurno = async () => {
