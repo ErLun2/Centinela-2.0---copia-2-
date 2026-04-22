@@ -1027,8 +1027,14 @@ const CompanyDashboard = () => {
     });
 
     const unsubEvents = db.subscribeToAllEventsGroup((allEvents) => {
-      const compEvents = allEvents.filter(e => e.empresaId === user.empresaId || e.companyId === user.empresaId);
-      compEvents.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+      // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro para los filtros
+      const normalizedEvents = allEvents.map(e => ({
+        ...e,
+        fechaRegistro: e.fechaRegistro || e.created_at || e.fecha || new Date().toISOString()
+      }));
+
+      const compEvents = normalizedEvents.filter(e => e.empresaId === user.empresaId || e.companyId === user.empresaId);
+      compEvents.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
       setEvents(compEvents);
 
       // TRIGGER SOUNDS FOR NEW EVENTS
@@ -3532,7 +3538,11 @@ const CompanyDashboard = () => {
                 </thead>
                 <tbody>
                   {events
-                    .filter(e => e.fechaRegistro && getARDateStr(e.fechaRegistro) === getARDateStr(new Date()))
+                    .filter(e => {
+                      const eventDate = getARDateStr(e.fechaRegistro || e.fecha || e.created_at);
+                      const today = getARDateStr(new Date());
+                      return eventDate === today;
+                    })
                     .filter(e => {
                       if (!resumenFilters.objetivo) return true;
                       let objId = e.objetivoId;
