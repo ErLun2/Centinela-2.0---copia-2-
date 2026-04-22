@@ -302,6 +302,16 @@ pool.getConnection()
             await conn.query('UPDATE usuarios SET role = "SUPER_ADMIN", id = "admin_vidal" WHERE email = "vidal@master.com"');
         }
 
+        // 6. AUTO-MIGRACIÓN: Asegurar columnas críticas (Regla de Oro)
+        try {
+            await conn.query('ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_changed TINYINT DEFAULT 0');
+            await conn.query('ALTER TABLE objectives ADD COLUMN IF NOT EXISTS activo TINYINT DEFAULT 1');
+            console.log('  [DB] Migraciones OK');
+        } catch (migErr) {
+            try { await conn.query('ALTER TABLE usuarios ADD COLUMN password_changed TINYINT DEFAULT 0'); } catch(e){}
+            try { await conn.query('ALTER TABLE objectives ADD COLUMN activo TINYINT DEFAULT 1'); } catch(e){}
+        }
+
     } catch (schemaErr) {
         console.error('⚠️ Error inicializando esquema:', schemaErr.message);
     }

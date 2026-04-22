@@ -49,7 +49,7 @@ const PasswordChange = () => {
         navigate(dest, { replace: true });
       }, 2000);
     } catch (err) {
-      setError('Error de actualización. Reintente.');
+      setError(err.message || 'Error de actualización. Reintente.');
     } finally {
       setIsSaving(false);
     }
