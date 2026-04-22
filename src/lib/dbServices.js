@@ -72,10 +72,6 @@ export const obtenerEmpresas = async () => {
 
 export const subscribeToCompanies = (cb) => subscribeToResource('/empresas', cb, 30000);
 
-export const actualizarEmpresa = async (id, data) => {
-  await apiRequest('/empresas', 'POST', { ...data, id });
-};
-
 // ========================
 // PLANES
 // ========================
