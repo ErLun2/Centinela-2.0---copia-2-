@@ -230,7 +230,7 @@ export const obtenerSugerenciasInteligentes = async (ticket) => [];
 export const detectarIncidentesMasivos = async () => [];
 
 // Staff App & GPS
-export const actualizarUbicacionGPS = async (userId, coords) => await apiRequest('/gps', 'POST', { userId, ...coords });
+export const actualizarUbicacionGPS = async (empresaId, userId, lat, lng) => await apiRequest('/gps', 'POST', { companyId: empresaId, userId, lat, lng });
 export const iniciarRonda = async (data) => await apiRequest('/rondas/start', 'POST', data);
 export const finalizarRonda = async (id) => await apiRequest(`/rondas/finish/${id}`, 'POST');
 export const registrarPuntoRuta = async (data) => await apiRequest('/rondas/point', 'POST', data);

@@ -908,6 +908,8 @@ const StaffApp = () => {
   const [reportData, setReportData] = useState({ text: '', photo: false, video: false, audio: false });
   const [scannedPoints, setScannedPoints] = useState([]);
   const [scanningPointId, setScanningPointId] = useState(null);
+  const lastGpsUpdateRef = useRef(0);
+  const lastMapCenterRef = useRef(0);
   
   // Modales
   const [showReportModal, setShowReportModal] = useState(false);
@@ -1003,25 +1005,37 @@ const StaffApp = () => {
     };
 
     refreshLocalData();
-    const syncInterval = setInterval(refreshLocalData, 5000); // Refrescar UI cada 5s con datos de store
+    const syncInterval = setInterval(refreshLocalData, 30000); // REGLA DE ORO: 30s para ahorro de batería y datos en campo
 
     // Geolocation API (Real Tracking)
     let watchId;
     if ("geolocation" in navigator) {
       watchId = navigator.geolocation.watchPosition(
         async (position) => {
-          const lat = position.coords.latitude.toFixed(6);
-          const lng = position.coords.longitude.toFixed(6);
-          setCurrentGps({ lat, lng });
+          const lat = parseFloat(position.coords.latitude.toFixed(6));
+          const lng = parseFloat(position.coords.longitude.toFixed(6));
+          const now = Date.now();
+
+          // 1. Actualización de UI (Mapa) cada 3 segundos para suavidad sin jank
+          if (now - lastMapCenterRef.current > 3000) {
+            setCurrentGps({ lat, lng });
+            lastMapCenterRef.current = now;
+          }
           
-          if (user?.uid || user?.id) {
-            await actualizarUbicacionGPS(user.empresaId, user.uid || user.id, lat, lng);
+          // 2. Actualización de SERVIDOR (Ahorro de Datos/Batería)
+          // Si está en RONDA activa: cada 10s. Si está en reposo: cada 45s.
+          const updateInterval = session.inRonda ? 10000 : 45000;
+          if (now - lastGpsUpdateRef.current > updateInterval) {
+            if (user?.uid || user?.id) {
+              actualizarUbicacionGPS(user.empresaId, user.uid || user.id, lat, lng);
+            }
+            lastGpsUpdateRef.current = now;
           }
         },
         (error) => {
           console.error("GPS Error critical: Real location required.", error);
         },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 15000, maximumAge: 5000 }
       );
     }
     
@@ -1081,6 +1095,7 @@ const StaffApp = () => {
         await crearEvento(user.empresaId, { 
           tipo: 'emergencia', 
           usuario: userEmbed, 
+          usuarioId: user.uid || user.id,
           objetivoId: assignedObjective?.id || 'ubicacion_gps',
           gps: gpsStr,
           lat: currentGps ? parseFloat(currentGps.lat) : 0,
@@ -1126,6 +1141,7 @@ const StaffApp = () => {
             email: fullUserData?.email || user?.email || '',
             telefono: fullUserData?.telefono || ''
           },
+          usuarioId: user.uid || user.id,
           tipo: 'ronda_completada',
           objetivoId: assignedObjective?.id,
           objetivoNombre: assignedObjectiveName,
@@ -1548,6 +1564,7 @@ const StaffApp = () => {
                           email: fullUserData?.email || user?.email || '',
                           telefono: fullUserData?.telefono || ''
                         },
+                        usuarioId: user.uid || user.id,
                         tipo: 'informe',
                         objetivoId: assignedObjective?.id,
                         gps: currentGps ? `${currentGps.lat},${currentGps.lng}` : '0,0',
@@ -1636,6 +1653,7 @@ const StaffApp = () => {
                                         email: fullUserData?.email || user?.email || '',
                                         telefono: fullUserData?.telefono || ''
                                      },
+                                     usuarioId: user.uid || user.id,
                                      tipo: 'ronda_completada',
                                      objetivoId: assignedObjective?.id,
                                      objetivoNombre: assignedObjectiveName,
@@ -1687,6 +1705,8 @@ const StaffApp = () => {
                          crearEvento(user.empresaId, {
                            tipo: 'qr_scan',
                            puntoNombre: ptName,
+                           puntoId: matchId,
+                           usuarioId: user.uid || user.id,
                            usuario: { 
                              nombre: fullUserData?.nombre || user?.nombre || 'Guardia',
                              apellido: fullUserData?.apellido || user?.apellido || '',
