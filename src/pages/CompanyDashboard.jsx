@@ -1449,7 +1449,7 @@ const CompanyDashboard = () => {
 
     } catch (err) {
       console.error("Error actualizando evento:", err);
-      showToast("Error al guardar la gestión.", "error");
+      showToast(err.message || "Error al guardar la gestión.", "error");
     } finally {
       setIsSaving(false);
     }

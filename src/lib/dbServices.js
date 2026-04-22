@@ -24,13 +24,17 @@ export const apiRequest = async (endpoint, method = 'GET', body = null) => {
         const response = await fetch(`${API_URL}${endpoint}`, options);
         if (!response.ok) {
             const errorText = await response.text();
-            alert(`⚠️ ERROR DE SERVIDOR (${response.status}): ${endpoint}\n${errorText.substring(0, 100)}`);
-            return null;
+            let errorMessage = `Error ${response.status}: ${endpoint}`;
+            try {
+                const errorObj = JSON.parse(errorText);
+                errorMessage = errorObj.error || errorMessage;
+            } catch(e) {}
+            throw new Error(errorMessage);
         }
         return await response.json();
     } catch (error) {
-        alert(`❌ ERROR DE RED: No se pudo conectar con el servidor.\nVerifica que ${API_URL} sea correcto.\nDetalle: ${error.message}`);
-        return null;
+        console.error('API Request error:', error);
+        throw error;
     }
 };
 

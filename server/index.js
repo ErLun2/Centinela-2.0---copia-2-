@@ -143,7 +143,13 @@ pool.getConnection()
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN resolution TEXT`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN history LONGTEXT`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN videoUrl LONGTEXT`); } catch(e){}
+            
+            // Forzar el tipo de dato por si ya existían con otro tipo
+            try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN status VARCHAR(50) DEFAULT 'Abierto'`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN resolution TEXT`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN history LONGTEXT`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN fotoUrl LONGTEXT`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN videoUrl LONGTEXT`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN audioUrl LONGTEXT`); } catch(e){}
             
             console.log('  [DB] Estructura de eventos OK');
