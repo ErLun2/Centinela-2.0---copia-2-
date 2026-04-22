@@ -2817,16 +2817,27 @@ const CompanyDashboard = () => {
 
                 {objectives.filter(obj => obj.activo !== false).map(obj => {
                   const assignedGuards = companyUsers.filter(u => String(u.schedule?.objectiveId) === String(obj.id));
+                  const getT = (e) => {
+                    if (!e) return 0;
+                    if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
+                    if (e.created_at) {
+                        const d = new Date(e.created_at);
+                        if (!isNaN(d.getTime())) return d.getTime();
+                    }
+                    if (e.fechaRegistro) {
+                        const d = new Date(e.fechaRegistro);
+                        if (!isNaN(d.getTime())) return d.getTime();
+                    }
+                    // Combinar fecha y hora si existen
+                    if (e.fecha && e.hora) {
+                        const d = new Date(`${e.fecha} ${e.hora}`);
+                        if (!isNaN(d.getTime())) return d.getTime();
+                    }
+                    const d = new Date(e.fecha || 0);
+                    return isNaN(d.getTime()) ? (parseInt(e.id) || 0) : d.getTime();
+                  };
                   const totalCount = assignedGuards.length;
                   const currentCount = assignedGuards.filter(u => {
-                    // REGLA DE ORO: Normalización robusta de tiempos para MySQL
-                    const getT = (e) => {
-                      if (!e) return 0;
-                      if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000; // Firebase fallback
-                      const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
-                      return isNaN(d.getTime()) ? 0 : d.getTime();
-                    };
-                    
                     const uKeys = [
                       String(u.id || '').toLowerCase(), 
                       String(u.uid || '').toLowerCase(), 
@@ -2881,8 +2892,20 @@ const CompanyDashboard = () => {
                                   const getT = (e) => {
                                     if (!e) return 0;
                                     if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
-                                    const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
-                                    return isNaN(d.getTime()) ? 0 : d.getTime();
+                                    if (e.created_at) {
+                                        const d = new Date(e.created_at);
+                                        if (!isNaN(d.getTime())) return d.getTime();
+                                    }
+                                    if (e.fechaRegistro) {
+                                        const d = new Date(e.fechaRegistro);
+                                        if (!isNaN(d.getTime())) return d.getTime();
+                                    }
+                                    if (e.fecha && e.hora) {
+                                        const d = new Date(`${e.fecha} ${e.hora}`);
+                                        if (!isNaN(d.getTime())) return d.getTime();
+                                    }
+                                    const d = new Date(e.fecha || 0);
+                                    return isNaN(d.getTime()) ? (parseInt(e.id) || 0) : d.getTime();
                                   };
                                 const uKeys = [
                                   String(u.id || '').toLowerCase(), 
@@ -3101,8 +3124,20 @@ const CompanyDashboard = () => {
                         const getT = (e) => {
                           if (!e) return 0;
                           if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
-                          const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
-                          return isNaN(d.getTime()) ? 0 : d.getTime();
+                          if (e.created_at) {
+                              const d = new Date(e.created_at);
+                              if (!isNaN(d.getTime())) return d.getTime();
+                          }
+                          if (e.fechaRegistro) {
+                              const d = new Date(e.fechaRegistro);
+                              if (!isNaN(d.getTime())) return d.getTime();
+                          }
+                          if (e.fecha && e.hora) {
+                              const d = new Date(`${e.fecha} ${e.hora}`);
+                              if (!isNaN(d.getTime())) return d.getTime();
+                          }
+                          const d = new Date(e.fecha || 0);
+                          return isNaN(d.getTime()) ? (parseInt(e.id) || 0) : d.getTime();
                         };
                         const uKeys = [
                           String(u.id || '').toLowerCase(), 
@@ -3473,8 +3508,20 @@ const CompanyDashboard = () => {
                 const getT = (e) => {
                   if (!e) return 0;
                   if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
-                  const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
-                  return isNaN(d.getTime()) ? 0 : d.getTime();
+                  if (e.created_at) {
+                      const d = new Date(e.created_at);
+                      if (!isNaN(d.getTime())) return d.getTime();
+                  }
+                  if (e.fechaRegistro) {
+                      const d = new Date(e.fechaRegistro);
+                      if (!isNaN(d.getTime())) return d.getTime();
+                  }
+                  if (e.fecha && e.hora) {
+                      const d = new Date(`${e.fecha} ${e.hora}`);
+                      if (!isNaN(d.getTime())) return d.getTime();
+                  }
+                  const d = new Date(e.fecha || 0);
+                  return isNaN(d.getTime()) ? (parseInt(e.id) || 0) : d.getTime();
                 };
                 const uKeys = [
                   String(u.id || '').toLowerCase(), 
