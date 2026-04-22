@@ -1550,6 +1550,9 @@ const StaffApp = () => {
                         lng: currentGps ? parseFloat(currentGps.lng) : 0,
                         descripcion: desc,
                         adjuntos: Object.keys(adjuntosRef).length > 0 ? adjuntosRef : undefined,
+                        fotoUrl: capturedPhoto || undefined,
+                        videoUrl: capturedVideo || undefined,
+                        audioUrl: capturedAudio || undefined,
                         hora: new Date().toLocaleTimeString()
                      });
 

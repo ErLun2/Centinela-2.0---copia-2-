@@ -3284,7 +3284,12 @@ const CompanyDashboard = () => {
                         <tr 
                           key={idx} 
                           className="clickable-row"
-                          onClick={() => setMediaModal({ show: true, type: event.mediaType || 'info', content: event.mediaUrl, event })}
+                          onClick={() => setMediaModal({ 
+                            show: true, 
+                            type: (event.videoUrl || event.video) ? 'video' : (event.audioUrl || event.audio) ? 'audio' : 'image', 
+                            content: event.fotoUrl || event.videoUrl || event.audioUrl || event.mediaUrl || event.foto || event.video || event.audio, 
+                            event 
+                          })}
                           style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.85rem' }}
                         >
                           <td style={{ padding: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>{event.hora || '--:--'}</td>
@@ -3297,7 +3302,7 @@ const CompanyDashboard = () => {
                              {event.mensaje || event.descripcion || (event.tipo === 'qr_scan' ? `Escaneo de Punto: ${event.puntoNombre || 'S/N'}` : 'Sin descripción')}
                           </td>
                           <td>
-                             {event.hasMedia || event.mediaUrl || (event.adjuntos && (event.adjuntos.foto || event.adjuntos.video || event.adjuntos.audio)) ? <Camera size={14} color="var(--primary)" /> : '---'}
+                             {event.hasMedia || event.mediaUrl || event.fotoUrl || event.videoUrl || event.audioUrl || (event.adjuntos && (event.adjuntos.foto || event.adjuntos.video || event.adjuntos.audio)) ? <Camera size={14} color="var(--primary)" /> : '---'}
                           </td>
                           <td style={{ paddingRight: '20px', fontSize: '0.7rem', fontWeight: '900', color: event.status === 'Cerrado' ? '#10b981' : '#ef4444' }}>{event.status?.toUpperCase() || 'ABIERTO'}</td>
                         </tr>
@@ -3678,13 +3683,15 @@ const CompanyDashboard = () => {
                         </td>
                         <td>
                           {(() => {
-                            // Detectar multimedia real desde adjuntos (nuevos informes) o desde campos legacy
-                            const hasAdjuntos = event.adjuntos && (event.adjuntos.foto || event.adjuntos.video || event.adjuntos.audio);
+                            // Detectar multimedia real desde nuevos campos LONGTEXT, adjuntos o legacy
+                            const hasAdjuntos = (event.adjuntos && (event.adjuntos.foto || event.adjuntos.video || event.adjuntos.audio));
+                            const hasNewMedia = event.fotoUrl || event.videoUrl || event.audioUrl;
                             const hasLegacyMedia = event.hasMedia || event.mediaUrl || event.foto || event.video || event.audio || event.mediaType;
                             const hasDescMedia = event.descripcion && (event.descripcion.toLowerCase().includes('adjuntos') || event.descripcion.toLowerCase().includes('fotografia') || event.descripcion.toLowerCase().includes('video') || event.descripcion.toLowerCase().includes('audio'));
-                            const hasFoto = hasAdjuntos ? !!event.adjuntos.foto : (event.mediaType === 'image' || event.foto || (event.descripcion && event.descripcion.toLowerCase().includes('fotografia')));
-                            const hasVideo = hasAdjuntos ? !!event.adjuntos.video : (event.mediaType === 'video' || event.video || (event.descripcion && event.descripcion.toLowerCase().includes('video')));
-                            const hasAudio = hasAdjuntos ? !!event.adjuntos.audio : (event.mediaType === 'audio' || event.audio || (event.descripcion && event.descripcion.toLowerCase().includes('audio')));
+                            
+                            const hasFoto = event.fotoUrl || (hasAdjuntos ? !!event.adjuntos.foto : (event.mediaType === 'image' || event.foto || (event.descripcion && event.descripcion.toLowerCase().includes('fotografia'))));
+                            const hasVideo = event.videoUrl || (hasAdjuntos ? !!event.adjuntos.video : (event.mediaType === 'video' || event.video || (event.descripcion && event.descripcion.toLowerCase().includes('video'))));
+                            const hasAudio = event.audioUrl || (hasAdjuntos ? !!event.adjuntos.audio : (event.mediaType === 'audio' || event.audio || (event.descripcion && event.descripcion.toLowerCase().includes('audio'))));
 
                             if (hasFoto || hasVideo || hasAudio || hasLegacyMedia || hasDescMedia) {
                               return (
@@ -3694,23 +3701,23 @@ const CompanyDashboard = () => {
                                       size={18}
                                       className="media-icon"
                                       style={{ cursor: 'pointer', color: 'var(--primary)', transition: '0.3s' }}
-                                      onClick={() => setMediaModal({ show: true, type: 'image', content: event.mediaUrl || event.foto, event })}
+                                      onClick={() => setMediaModal({ show: true, type: 'image', content: event.fotoUrl || event.mediaUrl || event.foto, event })}
                                     />
                                   )}
                                   {hasVideo && (
                                     <Play
                                       size={18}
                                       className="media-icon"
-                                      style={{ cursor: 'pointer', color: 'var(--primary)', transition: '0.3s' }}
-                                      onClick={() => setMediaModal({ show: true, type: 'video', content: event.mediaUrl || event.video, event })}
+                                      style={{ cursor: 'pointer', color: '#00a8ff', transition: '0.3s' }}
+                                      onClick={() => setMediaModal({ show: true, type: 'video', content: event.videoUrl || event.video, event })}
                                     />
                                   )}
                                   {hasAudio && (
                                     <Volume2
                                       size={18}
                                       className="media-icon"
-                                      style={{ cursor: 'pointer', color: 'var(--primary)', transition: '0.3s' }}
-                                      onClick={() => setMediaModal({ show: true, type: 'audio', content: event.mediaUrl || event.audio, event })}
+                                      style={{ cursor: 'pointer', color: '#10b981', transition: '0.3s' }}
+                                      onClick={() => setMediaModal({ show: true, type: 'audio', content: event.audioUrl || event.audio, event })}
                                     />
                                   )}
                                   {!hasFoto && !hasVideo && !hasAudio && (hasLegacyMedia || hasDescMedia) && (
@@ -4017,9 +4024,9 @@ const CompanyDashboard = () => {
                                return val;
                             };
 
-                            const fotoSrc = resolveSrc(mediaModal.event?.adjuntos?.foto || mediaModal.event?.foto || (mediaModal.type === 'image' ? mediaModal.content : null));
-                            const videoSrc = resolveSrc(mediaModal.event?.adjuntos?.video || mediaModal.event?.video || (mediaModal.type === 'video' ? mediaModal.content : null));
-                            const audioSrc = resolveSrc(mediaModal.event?.adjuntos?.audio || mediaModal.event?.audio || (mediaModal.type === 'audio' ? mediaModal.content : null));
+                            const fotoSrc = resolveSrc(mediaModal.event?.fotoUrl || mediaModal.event?.adjuntos?.foto || mediaModal.event?.foto || (mediaModal.type === 'image' ? mediaModal.content : null));
+                            const videoSrc = resolveSrc(mediaModal.event?.videoUrl || mediaModal.event?.adjuntos?.video || mediaModal.event?.video || (mediaModal.type === 'video' ? mediaModal.content : null));
+                            const audioSrc = resolveSrc(mediaModal.event?.audioUrl || mediaModal.event?.adjuntos?.audio || mediaModal.event?.audio || (mediaModal.type === 'audio' ? mediaModal.content : null));
 
                             return (
                                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>

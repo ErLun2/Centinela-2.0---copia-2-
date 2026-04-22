@@ -127,10 +127,16 @@ pool.getConnection()
                     lng FLOAT,
                     companyId VARCHAR(100),
                     guardiaId VARCHAR(100),
-                    fotoUrl TEXT,
-                    audioUrl TEXT,
+                    fotoUrl LONGTEXT,
+                    videoUrl LONGTEXT,
+                    audioUrl LONGTEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            `);
+            await conn.query(`ALTER TABLE eventos MODIFY COLUMN fotoUrl LONGTEXT`);
+            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS videoUrl LONGTEXT`);
+            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS audioUrl LONGTEXT`);
+            await conn.query(`ALTER TABLE eventos MODIFY COLUMN audioUrl LONGTEXT`);
             `);
             console.log('  [DB] Estructura de eventos OK');
         } catch (e) { console.error('  [DB-ERROR] Eventos:', e.message); }
@@ -648,8 +654,8 @@ app.post('/api/eventos', async (req, res) => {
         if (!horaSanitizada || horaSanitizada === 'null' || !horaSanitizada.includes(':')) horaSanitizada = new Date().toTimeString().split(' ')[0];
 
         await pool.query(
-            'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, fotoUrl, audioUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, e.guardiaId, e.fotoUrl, e.audioUrl]
+            'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, fotoUrl, videoUrl, audioUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, e.guardiaId, e.fotoUrl, e.videoUrl, e.audioUrl]
         );
         res.json({ success: true });
     } catch (err) {
