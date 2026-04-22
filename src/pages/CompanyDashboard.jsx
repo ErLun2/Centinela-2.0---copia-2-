@@ -3602,7 +3602,15 @@ const CompanyDashboard = () => {
                         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}
                       >
                         <td style={{ padding: '20px' }}>
-                          <div style={{ fontWeight: 'bold' }}>{event.fechaRegistro ? new Date(event.fechaRegistro).toLocaleDateString() : 'Hoy'}</div>
+                          <div style={{ fontWeight: 'bold' }}>
+                            {(() => {
+                              const d = event.fechaRegistro || event.fecha || event.created_at;
+                              const dateStr = getARDateStr(d);
+                              if (!dateStr) return 'Hoy';
+                              const [y, m, day] = dateStr.split('-');
+                              return `${day}/${m}`;
+                            })()}
+                          </div>
                           <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{event.hora || 'S/H'}</div>
                         </td>
                         <td
@@ -3954,7 +3962,10 @@ const CompanyDashboard = () => {
                         <div>
                            <h3 style={{ margin: 0, textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--primary)', fontSize: '1rem' }}>Evidencia del Evento</h3>
                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-                              {mediaModal.event?.tipo?.toUpperCase() || 'NOTIFICACIÓN'} • {mediaModal.event?.hora} • {mediaModal.event?.fechaRegistro?.split('T')[0]}
+                              {mediaModal.event?.tipo?.toUpperCase() || 'NOTIFICACIÓN'} • {mediaModal.event?.hora || '--:--'} • {(() => {
+                                 const d = mediaModal.event?.fechaRegistro || mediaModal.event?.created_at || mediaModal.event?.fecha;
+                                 return getARDateStr(d).split('-').reverse().join('/') || 'Hoy';
+                              })()}
                            </div>
                         </div>
                      </div>
@@ -3962,11 +3973,11 @@ const CompanyDashboard = () => {
                      <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', flex: 1 }}>
                         <div className="glass" style={{ height: '320px', borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(0,168,255,0.2)', position: 'relative' }}>
                            {(() => {
-                              let lat = mediaModal.event?.lat || mediaModal.event?.latitude;
-                              let lng = mediaModal.event?.lng || mediaModal.event?.longitude;
+                              let lat = parseFloat(mediaModal.event?.lat || mediaModal.event?.latitude);
+                              let lng = parseFloat(mediaModal.event?.lng || mediaModal.event?.longitude);
                               
                               // Fallback: Parsear string "lat,lng" si existe
-                              if ((!lat || !lng) && mediaModal.event?.gps && typeof mediaModal.event.gps === 'string') {
+                              if ((isNaN(lat) || isNaN(lng)) && mediaModal.event?.gps && typeof mediaModal.event.gps === 'string') {
                                  const parts = mediaModal.event.gps.split(',');
                                  if (parts.length === 2) {
                                     lat = parseFloat(parts[0]);
@@ -3974,11 +3985,11 @@ const CompanyDashboard = () => {
                                  }
                               }
 
-                              const finalLat = (lat && lat !== 0) ? lat : -34.6037;
-                              const finalLng = (lng && lng !== 0) ? lng : -58.3816;
+                              const finalLat = (!isNaN(lat) && lat !== 0) ? lat : -34.6037;
+                              const finalLng = (!isNaN(lng) && lng !== 0) ? lng : -58.3816;
 
                               return (
-                                 <>
+                                 <React.Fragment key={mediaModal.event?.id || 'map'}>
                                     <MapContainer 
                                        center={[finalLat, finalLng]} 
                                        zoom={18} 
@@ -3991,7 +4002,7 @@ const CompanyDashboard = () => {
                                     <div style={{ position: 'absolute', bottom: '15px', left: '15px', background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(10px)', padding: '8px 15px', borderRadius: '10px', fontSize: '0.65rem', color: 'white', border: '1px solid rgba(0,168,255,0.3)', zIndex: 1000, fontWeight: 'bold' }}>
                                        UBICACIÓN DE ORIGEN: {finalLat.toFixed(6)}, {finalLng.toFixed(6)}
                                     </div>
-                                 </>
+                                 </React.Fragment>
                               );
                            })()}
                          </div>

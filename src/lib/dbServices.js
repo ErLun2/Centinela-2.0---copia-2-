@@ -99,7 +99,7 @@ export const crearEvento = async (empresaId, dataEvento) => {
       ...dataEvento, 
       id: `evt_${Date.now()}_${Math.floor(Math.random() * 1000)}`, 
       companyId: empresaId,
-      fecha: dataEvento.fecha || new Date().toISOString().split('T')[0],
+      fecha: dataEvento.fecha || new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date()),
       fechaRegistro: dataEvento.fechaRegistro || new Date().toISOString(),
       hora: dataEvento.hora || new Date().toLocaleTimeString('es-AR', { hour12: false }).split(' ')[0]
   };
