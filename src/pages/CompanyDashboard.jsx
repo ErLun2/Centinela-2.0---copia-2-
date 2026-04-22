@@ -2847,14 +2847,23 @@ const CompanyDashboard = () => {
                     
                     const userEvents = events.filter(e => {
                       let eUId = e.usuarioId || e.userId || e.guardiaId;
-                      if (!eUId && e.usuario) {
+                      let eName = '';
+                      if (e.usuario) {
                          try { 
                            const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
-                           eUId = uO.id || uO.uid;
+                           if (!eUId) eUId = uO.id || uO.uid;
+                           eName = (uO.nombre || uO.name || '') + ' ' + (uO.apellido || uO.surname || '');
                          } catch(err) {}
                       }
-                      const eKeys = [String(eUId || '').toLowerCase(), String(e.email || '').toLowerCase()].filter(k => k !== '');
-                      return eKeys.some(ek => uKeys.includes(ek));
+                      
+                      const uName = (u.nombre || u.name || '') + ' ' + (u.apellido || u.surname || '');
+                      const matchById = String(eUId || '').toLowerCase() === String(u.id || '').toLowerCase() || 
+                                       String(eUId || '').toLowerCase() === String(u.uid || '').toLowerCase() ||
+                                       (parseInt(eUId) > 0 && parseInt(eUId) === parseInt(u.id));
+                      const matchByEmail = u.email && e.email && String(u.email).toLowerCase() === String(e.email).toLowerCase();
+                      const matchByName = uName.trim().length > 3 && eName.trim().length > 3 && uName.toLowerCase().trim() === eName.toLowerCase().trim();
+                      
+                      return matchById || matchByEmail || matchByName;
                     });
                     
                     const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
@@ -2916,14 +2925,23 @@ const CompanyDashboard = () => {
                                 
                                 const userEvents = events.filter(e => {
                                   let eUId = e.usuarioId || e.userId || e.guardiaId;
-                                  if (!eUId && e.usuario) {
+                                  let eName = '';
+                                  if (e.usuario) {
                                      try { 
                                        const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
-                                       eUId = uO.id || uO.uid;
+                                       if (!eUId) eUId = uO.id || uO.uid;
+                                       eName = (uO.nombre || uO.name || '') + ' ' + (uO.apellido || uO.surname || '');
                                      } catch(err) {}
                                   }
-                                  const eKeys = [String(eUId || '').toLowerCase(), String(e.email || '').toLowerCase()].filter(k => k !== '');
-                                  return eKeys.some(ek => uKeys.includes(ek));
+                                  
+                                  const uName = (u.nombre || u.name || '') + ' ' + (u.apellido || u.surname || '');
+                                  const matchById = String(eUId || '').toLowerCase() === String(u.id || '').toLowerCase() || 
+                                                   String(eUId || '').toLowerCase() === String(u.uid || '').toLowerCase() ||
+                                                   (parseInt(eUId) > 0 && parseInt(eUId) === parseInt(u.id));
+                                  const matchByEmail = u.email && e.email && String(u.email).toLowerCase() === String(e.email).toLowerCase();
+                                  const matchByName = uName.trim().length > 3 && eName.trim().length > 3 && uName.toLowerCase().trim() === eName.toLowerCase().trim();
+                                  
+                                  return matchById || matchByEmail || matchByName;
                                 });
 
                                 const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
@@ -3148,14 +3166,23 @@ const CompanyDashboard = () => {
                         
                         const userEvents = events.filter(e => {
                           let eUId = e.usuarioId || e.userId || e.guardiaId;
-                          if (!eUId && e.usuario) {
+                          let eName = '';
+                          if (e.usuario) {
                              try { 
                                const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
-                               eUId = uO.id || uO.uid;
+                               if (!eUId) eUId = uO.id || uO.uid;
+                               eName = (uO.nombre || uO.name || '') + ' ' + (uO.apellido || uO.surname || '');
                              } catch(err) {}
                           }
-                          const eKeys = [String(eUId || '').toLowerCase(), String(e.email || '').toLowerCase()].filter(k => k !== '');
-                          return eKeys.some(ek => uKeys.includes(ek));
+                          
+                          const uName = (u.nombre || u.name || '') + ' ' + (u.apellido || u.surname || '');
+                          const matchById = String(eUId || '').toLowerCase() === String(u.id || '').toLowerCase() || 
+                                           String(eUId || '').toLowerCase() === String(u.uid || '').toLowerCase() ||
+                                           (parseInt(eUId) > 0 && parseInt(eUId) === parseInt(u.id));
+                          const matchByEmail = u.email && e.email && String(u.email).toLowerCase() === String(e.email).toLowerCase();
+                          const matchByName = uName.trim().length > 3 && eName.trim().length > 3 && uName.toLowerCase().trim() === eName.toLowerCase().trim();
+                          
+                          return matchById || matchByEmail || matchByName;
                         });
                         
                         const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
