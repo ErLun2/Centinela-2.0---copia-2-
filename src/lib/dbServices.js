@@ -107,6 +107,10 @@ export const crearEvento = async (empresaId, dataEvento) => {
   return newEvent.id;
 };
 
+export const actualizarEvento = async (id, datos) => {
+    return await apiRequest(`/eventos/${id}`, 'PATCH', datos);
+};
+
 export const obtenerEventos = async (companyId = null) => {
     const endpoint = companyId ? `/eventos?companyId=${companyId}` : '/eventos';
     return await apiRequest(endpoint);

@@ -18,7 +18,8 @@ const __dirname = dirname(__filename);
 const app = express();
 app.use(compression()); // Optimización Lite: Comprime respuestas
 app.use(cors());
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: '2mb' }));
+app.use(bodyParser.urlencoded({ limit: '2mb', extended: true }));
 
 // --- CONFIGURACIÓN DE CORREO ---
 const transporter = nodemailer.createTransport({
@@ -130,8 +131,15 @@ pool.getConnection()
                     fotoUrl LONGTEXT,
                     videoUrl LONGTEXT,
                     audioUrl LONGTEXT,
+                    status VARCHAR(50) DEFAULT 'Abierto',
+                    resolution TEXT,
+                    history JSON,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            `);
+            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Abierto'`);
+            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS resolution TEXT`);
+            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS history JSON`);
             `);
             await conn.query(`ALTER TABLE eventos MODIFY COLUMN fotoUrl LONGTEXT`);
             await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS videoUrl LONGTEXT`);
@@ -656,6 +664,19 @@ app.post('/api/eventos', async (req, res) => {
         await pool.query(
             'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, fotoUrl, videoUrl, audioUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, e.guardiaId, e.fotoUrl, e.videoUrl, e.audioUrl]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.patch('/api/eventos/:id', async (req, res) => {
+    const { status, resolution, history } = req.body;
+    try {
+        await pool.query(
+            'UPDATE eventos SET status = ?, resolution = ?, history = ? WHERE id = ?',
+            [status, resolution, JSON.stringify(history || []), req.params.id]
         );
         res.json({ success: true });
     } catch (err) {

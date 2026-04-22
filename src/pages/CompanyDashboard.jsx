@@ -1402,11 +1402,9 @@ const CompanyDashboard = () => {
     }
   };
 
-  const handleUpdateEventStatus = (status) => {
+  const handleUpdateEventStatus = async (status) => {
     if (!mediaModal.event) return;
     setIsSaving(true);
-    
-    const allEvents = JSON.parse(localStorage.getItem('centinela_events') || '[]');
     
     // Create new history entry
     const historyEntry = {
@@ -1418,32 +1416,43 @@ const CompanyDashboard = () => {
       date: new Date().toISOString()
     };
 
-    const updated = allEvents.map(e => {
-      if (e.id === mediaModal.event.id) {
-        return { 
-          ...e, 
-          status, 
-          resolution: resolutionText,
-          // Mantener historial
-          history: [...(e.history || []), historyEntry]
-        };
+    try {
+      // Parsear historial previo si viene como string
+      let currentHistory = mediaModal.event.history;
+      if (typeof currentHistory === 'string') {
+        try { currentHistory = JSON.parse(currentHistory); } catch(e) { currentHistory = []; }
       }
-      return e;
-    });
+      if (!Array.isArray(currentHistory)) currentHistory = [];
 
-    localStorage.setItem('centinela_events', JSON.stringify(updated));
-    
-    setTimeout(() => {
-      loadData();
-      setIsSaving(false);
-      // We don't close the modal immediately so they can see the saved history if they want, 
-      // but the user asked for "seguimiento y cierre".
-      // Let's at least update the local event in the modal so it reflects the change.
-      const updatedEvent = updated.find(e => e.id === mediaModal.event.id);
+      const updatedHistory = [...currentHistory, historyEntry];
+
+      await actualizarEvento(mediaModal.event.id, {
+        status,
+        resolution: resolutionText,
+        history: updatedHistory
+      });
+
+      // Actualizar localmente para feedback inmediato
+      const updatedEvent = {
+        ...mediaModal.event,
+        status,
+        resolution: resolutionText,
+        history: updatedHistory
+      };
+
       setMediaModal(prev => ({ ...prev, event: updatedEvent }));
       setResolutionText('');
-      showToast("Gestión registrada en el historial.");
-    }, 800);
+      showToast("Gestión registrada exitosamente.");
+      
+      // Recargar datos globales para refrescar las tablas
+      setTimeout(loadData, 500);
+
+    } catch (err) {
+      console.error("Error actualizando evento:", err);
+      showToast("Error al guardar la gestión.", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
 
@@ -4163,34 +4172,45 @@ const CompanyDashboard = () => {
 
                      <div style={{ maxHeight: '220px', overflowY: 'auto', paddingRight: '5px', marginBottom: '10px' }} className="custom-scrollbar">
                         <label style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '8px', fontWeight: 'bold', letterSpacing: '1px' }}>HISTORIAL DE GESTIÓN</label>
-                        {mediaModal.event?.history && mediaModal.event.history.length > 0 ? (
-                           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                              {[...mediaModal.event.history].reverse().map((h, idx) => (
-                                 <div key={idx} style={{ 
-                                    background: 'rgba(255,255,255,0.02)', 
-                                    padding: '12px', 
-                                    borderRadius: '14px', 
-                                    border: '1px solid rgba(255,255,255,0.05)',
-                                    position: 'relative'
-                                 }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                          <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: h.status === 'Cerrado' ? '#10b981' : (h.status === 'En Seguimiento' ? '#f59e0b' : '#ef4444') }} />
-                                          <span style={{ fontSize: '0.7rem', fontWeight: '900', color: 'white' }}>{h.user}</span>
+                        {(() => {
+                           let history = mediaModal.event?.history;
+                           if (typeof history === 'string') {
+                              try { history = JSON.parse(history); } catch(e) { history = []; }
+                           }
+                           if (!Array.isArray(history)) history = [];
+
+                           if (history.length > 0) {
+                              return (
+                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                    {[...history].reverse().map((h, idx) => (
+                                       <div key={idx} style={{ 
+                                          background: 'rgba(255,255,255,0.02)', 
+                                          padding: '12px', 
+                                          borderRadius: '14px', 
+                                          border: '1px solid rgba(255,255,255,0.05)',
+                                          position: 'relative'
+                                       }}>
+                                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: h.status === 'Cerrado' ? '#10b981' : (h.status === 'En Seguimiento' ? '#f59e0b' : '#ef4444') }} />
+                                                <span style={{ fontSize: '0.7rem', fontWeight: '900', color: 'white' }}>{h.user || 'Operador'}</span>
+                                             </div>
+                                             <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: 'bold' }}>{h.date ? new Date(h.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span>
+                                          </div>
+                                          <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4' }}>
+                                             {h.resolution || <em style={{ opacity: 0.5 }}>Sin comentarios adicionales</em>}
+                                          </div>
                                        </div>
-                                       <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', fontWeight: 'bold' }}>{new Date(h.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-                                    </div>
-                                    <div style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.4' }}>
-                                       {h.resolution || <em style={{ opacity: 0.5 }}>Sin comentarios adicionales</em>}
-                                    </div>
+                                    ))}
                                  </div>
-                              ))}
-                           </div>
-                        ) : (
-                           <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.15)', textAlign: 'center', padding: '20px', background: 'rgba(255,255,255,0.01)', borderRadius: '15px', border: '1px dashed rgba(255,255,255,0.05)' }}>
-                              No hay registros de seguimiento para este evento.
-                           </div>
-                        )}
+                              );
+                           }
+                           return (
+                              <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.15)', textAlign: 'center', padding: '20px', background: 'rgba(255,255,255,0.01)', borderRadius: '15px', border: '1px dashed rgba(255,255,255,0.05)' }}>
+                                 No hay registros de seguimiento para este evento.
+                              </div>
+                           );
+                        })()}
                      </div>
 
                      <div style={{ flex: 1 }}>
