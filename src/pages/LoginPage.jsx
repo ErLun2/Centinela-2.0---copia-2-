@@ -15,8 +15,7 @@ const LoginPage = () => {
   const [activeTab, setActiveTab] = useState('personal');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showTerms, setShowTerms] = useState(false);
-  const [showPrivacy, setShowPrivacy] = useState(false);
+  const [activationUser, setActivationUser] = useState(null); // Para activación inline
   const [showForgot, setShowForgot] = useState(false);
   const [showSales, setShowSales] = useState(false);
 
@@ -87,7 +86,7 @@ const LoginPage = () => {
         };
 
         if (user.mustChangePassword) {
-          navigate('/change-password');
+          setActivationUser(user);
           return;
         }
 
@@ -114,7 +113,26 @@ const LoginPage = () => {
             <p style={styles.subtitle}>SISTEMA INTELIGENTE DE CONTROL DE SEGURIDAD</p>
           </div>
 
-          {activeTab !== 'soporte' ? (
+          {activationUser ? (
+            <ActivationForm 
+              user={activationUser} 
+              onCancel={() => setActivationUser(null)} 
+              onSuccess={() => {
+                const redirectMap = {
+                  [ROLES.SUPER_ADMIN]: '/master',
+                  [ROLES.SUPPORT]: '/support',
+                  [ROLES.COMPANY_ADMIN]: '/company',
+                  [ROLES.OPERADOR]: '/company',
+                  [ROLES.COMPANY_CLIENT]: '/company',
+                  [ROLES.SUPERVISOR]: '/staff',
+                  [ROLES.GUARD]: '/staff'
+                };
+                navigate(redirectMap[activationUser.rol] || '/');
+              }}
+              onShowTerms={() => setShowTerms(true)}
+              onShowPrivacy={() => setShowPrivacy(true)}
+            />
+          ) : activeTab !== 'soporte' ? (
             <div style={styles.tabContainer}>
               <TabButton
                 active={activeTab === 'personal'}
@@ -233,8 +251,18 @@ const LoginPage = () => {
 
       <SalesModal isOpen={showSales} onClose={() => setShowSales(false)} />
       <ForgotModal isOpen={showForgot} onClose={() => setShowForgot(false)} originTab={activeTab} />
-      <TermsModal isOpen={showTerms} onClose={() => setShowTerms(false)} />
-      <PrivacyModal isOpen={showPrivacy} onClose={() => setShowPrivacy(false)} />
+      <LegalModal 
+        isOpen={showTerms} 
+        onClose={() => setShowTerms(false)} 
+        title="Términos y Condiciones" 
+        content="Al acceder y utilizar el ecosistema Centinela 2.0, usted acepta estar vinculado por estos términos. El sistema es para uso profesional de seguridad y gestión operativa. Queda prohibida la reproducción parcial o total del código o la ingeniería inversa. Centinela se reserva el derecho de auditar las sesiones para garantizar la integridad del sistema táctico."
+      />
+      <LegalModal 
+        isOpen={showPrivacy} 
+        onClose={() => setShowPrivacy(false)} 
+        title="Políticas de Privacidad" 
+        content="En Centinela Security, la privacidad es nuestra máxima prioridad. Sus datos biométricos, credenciales y registros operativos están protegidos mediante cifrado AES-256. No compartimos información con terceros sin consentimiento explícito. Los datos de geolocalización solo se procesan durante las rondas activas para garantizar la cobertura de seguridad contratada."
+      />
 
       <style>{`
         .pulse-primary {
@@ -890,6 +918,154 @@ const SalesModal = ({ isOpen, onClose }) => {
               </button>
             </form>
           )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// --- COMPONENTE DE ACTIVACIÓN INLINE (Solicitado por USER) ---
+const ActivationForm = ({ user, onCancel, onSuccess, onShowTerms, onShowPrivacy }) => {
+  const [newPass, setNewPass] = useState('');
+  const [confirmPass, setConfirmPass] = useState('');
+  const [agreedTerms, setAgreedTerms] = useState(false);
+  const [agreedPrivacy, setAgreedPrivacy] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
+  const { updatePasswordDemo } = useAuth();
+
+  const handleActivate = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (newPass.length < 6) {
+      setError("La contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+    if (newPass !== confirmPass) {
+      setError("Las contraseñas no coinciden.");
+      return;
+    }
+    if (!agreedTerms || !agreedPrivacy) {
+      setError("Debe aceptar los términos y políticas para continuar.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Sync con MySQL via AuthContext
+      await updatePasswordDemo(newPass);
+      onSuccess();
+    } catch (err) {
+      console.error("Activation failed:", err);
+      setError("Error de sincronización. Intente nuevamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+      <div style={{ textAlign: 'center', marginBottom: '10px' }}>
+        <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: '50%', width: 'fit-content', margin: '0 auto 15px', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+          <Shield size={24} color="#ef4444" />
+        </div>
+        <h3 style={{ margin: 0, color: 'white', letterSpacing: '4px', fontWeight: '900', fontSize: '1.2rem' }}>ACTIVACIÓN DE CUENTA</h3>
+        <p style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.7rem', marginTop: '8px' }}>Establezca su contraseña personal para continuar.</p>
+      </div>
+
+      <form onSubmit={handleActivate} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+        <div style={{ position: 'relative' }}>
+          <div style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(0, 168, 255, 0.4)' }}><Lock size={18} /></div>
+          <input 
+            type="password" 
+            placeholder="NUEVA CONTRASEÑA"
+            required
+            value={newPass}
+            onChange={(e) => setNewPass(e.target.value)}
+            style={inlineInputStyle} 
+          />
+        </div>
+
+        <div style={{ position: 'relative' }}>
+          <div style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: 'rgba(0, 168, 255, 0.4)' }}><Lock size={18} /></div>
+          <input 
+            type="password" 
+            placeholder="CONFIRMAR CONTRASEÑA"
+            required
+            value={confirmPass}
+            onChange={(e) => setConfirmPass(e.target.value)}
+            style={inlineInputStyle} 
+          />
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+          <label style={checkboxLabelStyle}>
+            <input type="checkbox" checked={agreedTerms} onChange={(e) => setAgreedTerms(e.target.checked)} style={checkboxStyle} />
+            <span>Acepto <button type="button" onClick={onShowTerms} style={linkBtnStyle}>Términos y condiciones</button></span>
+          </label>
+          <label style={checkboxLabelStyle}>
+            <input type="checkbox" checked={agreedPrivacy} onChange={(e) => setAgreedPrivacy(e.target.checked)} style={checkboxStyle} />
+            <span>Acepto <button type="button" onClick={onShowPrivacy} style={linkBtnStyle}>Políticas de privacidad</button></span>
+          </label>
+        </div>
+
+        {error && (
+          <div style={{ color: '#ff4d4d', fontSize: '0.7rem', textAlign: 'center', background: 'rgba(255,77,77,0.1)', padding: '10px', borderRadius: '10px', border: '1px solid rgba(255,77,77,0.2)' }}>
+            {error}
+          </div>
+        )}
+
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          style={{
+            width: '100%', padding: '18px', borderRadius: '15px', background: 'linear-gradient(135deg, #00a8ff 0%, #0072ff 100%)',
+            color: 'white', border: 'none', fontWeight: '900', letterSpacing: '2px', cursor: 'pointer', transition: 'all 0.3s',
+            marginTop: '10px', boxShadow: '0 10px 25px rgba(0, 168, 255, 0.3)'
+          }}
+        >
+          {isSubmitting ? <Loader2 size={20} className="animate-spin" /> : 'ACTIVAR MI CUENTA'}
+        </button>
+
+        <button type="button" onClick={onCancel} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: '0.65rem', cursor: 'pointer', textDecoration: 'underline', marginTop: '5px' }}>
+          Cancelar y volver al inicio
+        </button>
+      </form>
+    </div>
+  );
+};
+
+const inlineInputStyle = {
+  width: '100%', boxSizing: 'border-box', padding: '16px 15px 16px 52px', 
+  background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.1)', 
+  borderRadius: '12px', color: 'white', outline: 'none', fontSize: '0.9rem'
+};
+
+const checkboxLabelStyle = {
+  display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', cursor: 'pointer'
+};
+
+const checkboxStyle = {
+  accentColor: '#00a8ff', width: '16px', height: '16px'
+};
+
+const linkBtnStyle = {
+  background: 'none', border: 'none', color: '#00a8ff', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: '0.75rem'
+};
+
+// MODAL SIMPLE PARA TÉRMINOS / PRIVACIDAD (Solicitado para la misma pantalla)
+const LegalModal = ({ isOpen, onClose, title, content }) => {
+  if (!isOpen) return null;
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px' }} onClick={onClose}>
+      <div style={{ background: '#0f172a', width: '100%', maxWidth: '600px', maxHeight: '80vh', borderRadius: '24px', border: '1px solid rgba(0, 168, 255, 0.2)', display: 'flex', flexDirection: 'column', overflow: 'hidden' }} onClick={e => e.stopPropagation()}>
+        <div style={{ padding: '20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3 style={{ margin: 0, color: 'white', fontSize: '1rem', letterSpacing: '2px' }}>{title}</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'white', cursor: 'pointer' }}><X size={24} /></button>
+        </div>
+        <div className="custom-scrollbar" style={{ padding: '30px', overflowY: 'auto', color: 'rgba(255,255,255,0.7)', fontSize: '0.85rem', lineHeight: '1.6' }}>
+          {content}
         </div>
       </div>
     </div>
