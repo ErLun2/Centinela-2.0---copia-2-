@@ -189,8 +189,8 @@ const EnterpriseConfigPanel = ({
   // Local state for company data to handle editing
   const [localCompany, setLocalCompany] = React.useState({
     id: companyData?.id || companyData?.uid || '',
-    nombre: companyData?.nombre || companyData?.name || user?.company || 'STARK INDUSTRIES',
-    email: companyData?.email || companyData?.appEmail || user?.email || 'admin@centinela.com',
+    nombre: companyData?.nombre || companyData?.name || user?.company || '',
+    email: companyData?.appEmail || companyData?.email || user?.email || '',
     timezone: companyData?.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
     logo: companyData?.logo || ''
   });
@@ -200,8 +200,8 @@ const EnterpriseConfigPanel = ({
     if (companyData) {
       setLocalCompany({
         id: companyData.id || companyData.uid || '',
-        nombre: companyData.nombre || companyData.name || user?.company || 'STARK INDUSTRIES',
-        email: companyData.email || companyData.appEmail || user?.email || 'admin@centinela.com',
+        nombre: companyData.nombre || companyData.name || user?.company || '',
+        email: companyData.appEmail || companyData.email || user?.email || '',
         timezone: companyData.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
         logo: companyData.logo || ''
       });
@@ -1019,8 +1019,8 @@ const CompanyDashboard = () => {
         // NORMALIZACIÓN ESTRATÉGICA (Evitar 'PREMIUM'/'CLIENTE' fantasmas)
         setCompanyData({
           ...found,
-          nombre: found.nombre || found.name || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'STARK INDUSTRIES'),
-          email: found.email || user?.email || 'admin@centinela.com',
+          nombre: found.name || found.nombre || user?.company || '',
+          email: found.appEmail || found.email || user?.email || '',
           plan: (found.plan || found.planId || 'demo').toLowerCase()
         });
       }

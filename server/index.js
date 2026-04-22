@@ -246,9 +246,12 @@ pool.getConnection()
                     lat FLOAT,
                     lng FLOAT,
                     companyId VARCHAR(100),
+                    activo TINYINT(1) DEFAULT 1,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
+            // Asegurar columna activo existe en instalaciones previas
+            await conn.query(`ALTER TABLE objectives ADD COLUMN IF NOT EXISTS activo TINYINT(1) DEFAULT 1`);
             console.log('  [DB] Objetivos OK');
         } catch (e) { console.error('  [DB-ERROR] Objetivos:', e.message); }
 
@@ -528,14 +531,17 @@ app.post('/api/usuarios', async (req, res) => {
 });
 
 app.post('/api/usuarios/update-password', async (req, res) => {
-    const { email, newPassword } = req.body;
+    const { id, email, newPassword } = req.body;
     try {
+        // Actualizamos por ID (más preciso) o por Email como fallback
         await pool.query(
-            'UPDATE usuarios SET password = ?, password_changed = 1 WHERE email = ?',
-            [newPassword, email]
+            'UPDATE usuarios SET password = ?, password_changed = 1 WHERE id = ? OR (email IS NOT NULL AND LOWER(email) = LOWER(?))',
+            [newPassword, id, email]
         );
+        console.log(`[AUTH] Password updated for: ${email || id}`);
         res.json({ success: true });
     } catch (err) {
+        console.error("[AUTH-ERROR] Update Password:", err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -975,8 +981,8 @@ app.post('/api/objectives', async (req, res) => {
     const obj = req.body;
     try {
         await pool.query(
-            'INSERT INTO objectives (id, name, nombre, address, lat, lng, companyId) VALUES (?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, nombre=?, address=?, lat=?, lng=?, companyId=?',
-            [obj.id, obj.name, obj.nombre, obj.address, obj.lat, obj.lng, obj.companyId, obj.name, obj.nombre, obj.address, obj.lat, obj.lng, obj.companyId]
+            'INSERT INTO objectives (id, name, nombre, address, lat, lng, companyId, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE name=?, nombre=?, address=?, lat=?, lng=?, companyId=?, activo=?',
+            [obj.id, obj.name, obj.nombre, obj.address, obj.lat, obj.lng, obj.companyId, obj.activo !== false ? 1 : 0, obj.name, obj.nombre, obj.address, obj.lat, obj.lng, obj.companyId, obj.activo !== false ? 1 : 0]
         );
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }

@@ -243,24 +243,31 @@ export const AuthProvider = ({ children }) => {
   const updatePasswordDemo = async (newPassword) => {
     if (!user) return;
     
-    // 1. Update local state
-    const updatedUser = { ...user, password: newPassword, mustChangePassword: false };
-    setUser(updatedUser);
-    localStorage.setItem('centinela_current_user', JSON.stringify(updatedUser));
-
-    // 2. REMOTE SYNC (MySQL Persistence)
+    // 1. REMOTE SYNC (MySQL Persistence) - MUST HAPPEN FIRST
     try {
       const { apiRequest } = await import('../lib/dbServices');
-      await apiRequest('/usuarios/update-password', 'POST', {
+      const result = await apiRequest('/usuarios/update-password', 'POST', {
+        id: user.uid || user.id,
         email: user.email,
         newPassword: newPassword
       });
+      
+      if (!result) {
+        throw new Error("El servidor no confirmó el cambio. Intente nuevamente.");
+      }
+
       console.log("Password synchronized with server.");
+      
+      // 2. Update local state ONLY IF SERVER SUCCEEDED
+      const updatedUser = { ...user, password: newPassword, mustChangePassword: false };
+      setUser(updatedUser);
+      localStorage.setItem('centinela_current_user', JSON.stringify(updatedUser));
+      
+      return true;
     } catch (e) {
-      console.warn("Failed to sync password with server, only local update applied:", e);
+      console.error("Auth Update Error:", e);
+      throw e; // Relaunch to UI catches it
     }
-    
-    return true;
   };
 
   const logout = async () => {
