@@ -138,13 +138,14 @@ pool.getConnection()
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
-            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Abierto'`);
-            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS resolution TEXT`);
-            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS history LONGTEXT`);
-            await conn.query(`ALTER TABLE eventos MODIFY COLUMN fotoUrl LONGTEXT`);
-            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS videoUrl LONGTEXT`);
-            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS audioUrl LONGTEXT`);
-            await conn.query(`ALTER TABLE eventos MODIFY COLUMN audioUrl LONGTEXT`);
+            // Intentar añadir columnas una a una (silencioso si ya existen)
+            try { await conn.query(`ALTER TABLE eventos ADD COLUMN status VARCHAR(50) DEFAULT 'Abierto'`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos ADD COLUMN resolution TEXT`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos ADD COLUMN history LONGTEXT`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos ADD COLUMN videoUrl LONGTEXT`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN fotoUrl LONGTEXT`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN audioUrl LONGTEXT`); } catch(e){}
+            
             console.log('  [DB] Estructura de eventos OK');
         } catch (e) { console.error('  [DB-ERROR] Eventos:', e.message); }
 
@@ -661,8 +662,8 @@ app.post('/api/eventos', async (req, res) => {
         if (!horaSanitizada || horaSanitizada === 'null' || !horaSanitizada.includes(':')) horaSanitizada = new Date().toTimeString().split(' ')[0];
 
         await pool.query(
-            'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, fotoUrl, videoUrl, audioUrl) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, e.guardiaId, e.fotoUrl, e.videoUrl, e.audioUrl]
+            'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, fotoUrl, videoUrl, audioUrl, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, e.guardiaId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto']
         );
         res.json({ success: true });
     } catch (err) {
