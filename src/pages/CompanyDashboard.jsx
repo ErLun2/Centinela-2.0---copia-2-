@@ -159,11 +159,20 @@ const OBJETIVOS_MOCK = [
 const getARDateStr = (dateInput) => {
   if (!dateInput) return '';
   try {
-    const d = new Date(dateInput);
-    if (isNaN(d.getTime())) return typeof dateInput === 'string' ? dateInput.split('T')[0] : '';
-    // Ajustar a UTC-3. Restamos 3 horas al UTC.
-    const arDate = new Date(d.getTime() - (3 * 60 * 60 * 1000));
-    return arDate.toISOString().split('T')[0];
+    // Forzar interpretación como fecha local de Argentina para evitar saltos de día por UTC
+    const date = new Date(dateInput);
+    if (isNaN(date.getTime())) {
+       // Si es solo un string YYYY-MM-DD, devolverlo tal cual
+       if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) return dateInput.split('T')[0];
+       return '';
+    }
+    // Usar Intl para obtener el string YYYY-MM-DD en la zona horaria correcta
+    return new Intl.DateTimeFormat('fr-CA', {
+      timeZone: 'America/Argentina/Buenos_Aires',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }).format(date);
   } catch (e) {
     return String(dateInput).split('T')[0];
   }
@@ -3313,7 +3322,10 @@ const CompanyDashboard = () => {
               const eventsThisMonth = uniqueEvents.filter(e => {
                 if (!e.fechaRegistro) return false;
                 const d = new Date(e.fechaRegistro);
-                return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+                // Usar Argentina timezone para determinar mes y año
+                const arMonth = parseInt(new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires', month: '2-digit' }).format(d)) - 1;
+                const arYear = parseInt(new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires', year: 'numeric' }).format(d));
+                return arMonth === currentMonth && arYear === currentYear;
               });
               const rondasThisMonth = rondas.filter(r => {
                 const d = new Date(r.inicio || r.fechaRegistro);
