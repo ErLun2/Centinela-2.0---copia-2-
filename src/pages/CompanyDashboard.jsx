@@ -1037,7 +1037,7 @@ const CompanyDashboard = () => {
         });
       }
     });
-
+    const unsubEvents = db.subscribeToAllEventsGroup((allEvents) => {
       // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro y marcador de 'Hoy'
       const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
       
