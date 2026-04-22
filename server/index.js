@@ -310,6 +310,20 @@ pool.getConnection()
             console.log('  [DB] Rondas OK');
         } catch (e) { console.error('  [DB-ERROR] Rondas Programación:', e.message); }
 
+        // 12. Locations (Última ubicación conocida para Mapa)
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS locations (
+                    usuarioId VARCHAR(100) PRIMARY KEY,
+                    companyId VARCHAR(100),
+                    latitud FLOAT,
+                    longitud FLOAT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('  [DB] Estructura de ubicaciones OK');
+        } catch (e) { console.error('  [DB-ERROR] Locations:', e.message); }
+
         // 5. Usuario Maestro (REGLA DE ORO: Asegurar acceso inicial)
         const [adminRows] = await conn.query('SELECT id FROM usuarios WHERE email = "vidal@master.com"');
         if (adminRows.length === 0) {
@@ -1015,10 +1029,31 @@ app.post('/api/pagos/config', async (req, res) => {
 // --- RONDAS Y GPS (RESTAURADAS) ---
 app.post('/api/gps', async (req, res) => {
     try {
-        const { userId, lat, lng } = req.body;
-        // Registro de traza GPS (Simple log por ahora)
-        console.log(`[GPS] User: ${userId} -> ${lat}, ${lng}`);
+        const { companyId, userId, lat, lng } = req.body;
+        if (!userId || !lat || !lng) return res.status(400).json({ error: "Datos de GPS incompletos" });
+        
+        await pool.query(
+            'INSERT INTO locations (usuarioId, companyId, latitud, longitud) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE latitud=?, longitud=?',
+            [userId, companyId, lat, lng, lat, lng]
+        );
         res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.get('/api/gps', async (req, res) => {
+    try {
+        const { companyId } = req.query;
+        let sql = 'SELECT * FROM locations';
+        let params = [];
+        if (companyId) {
+            sql += ' WHERE companyId = ?';
+            params.push(companyId);
+        }
+        const [rows] = await pool.query(sql, params);
+        // Normalizar para el dashboard (latitud -> lat, etc si es necesario, pero el dashboard usa latitud/longitud)
+        res.json(rows);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

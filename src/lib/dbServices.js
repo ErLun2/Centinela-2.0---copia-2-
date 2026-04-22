@@ -231,6 +231,7 @@ export const detectarIncidentesMasivos = async () => [];
 
 // Staff App & GPS
 export const actualizarUbicacionGPS = async (empresaId, userId, lat, lng) => await apiRequest('/gps', 'POST', { companyId: empresaId, userId, lat, lng });
+export const subscribeToLocations = (companyId, cb) => subscribeToResource(`/gps?companyId=${companyId}`, cb, 10000); // 10s para el Dashboard
 export const iniciarRonda = async (data) => await apiRequest('/rondas/start', 'POST', data);
 export const finalizarRonda = async (id) => await apiRequest(`/rondas/finish/${id}`, 'POST');
 export const registrarPuntoRuta = async (data) => await apiRequest('/rondas/point', 'POST', data);

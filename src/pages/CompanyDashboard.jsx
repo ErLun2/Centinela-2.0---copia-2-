@@ -1100,8 +1100,12 @@ const CompanyDashboard = () => {
       setRondas(normalized.filter(r => r.companyId === user.empresaId));
     });
 
+    const unsubLocations = db.subscribeToLocations(user.empresaId, (allLocs) => {
+      setLocations(allLocs);
+    });
+
     return () => {
-      unsubUsers(); unsubCompanies(); unsubEvents(); unsubTickets(); unsubObjectives(); unsubQrPoints(); unsubRondas();
+      unsubUsers(); unsubCompanies(); unsubEvents(); unsubTickets(); unsubObjectives(); unsubQrPoints(); unsubRondas(); unsubLocations();
     };
   };
 
@@ -2815,15 +2819,24 @@ const CompanyDashboard = () => {
                   const assignedGuards = companyUsers.filter(u => String(u.schedule?.objectiveId) === String(obj.id));
                   const totalCount = assignedGuards.length;
                   const currentCount = assignedGuards.filter(u => {
-                    const getT = (e) => e?.fechaRegistro?.seconds ? e.fechaRegistro.seconds * 1000 : new Date(e?.fechaRegistro || 0).getTime();
+                    // REGLA DE ORO: Normalización robusta de tiempos para MySQL
+                    const getT = (e) => {
+                      if (!e) return 0;
+                      if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000; // Firebase fallback
+                      const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                      return isNaN(d.getTime()) ? 0 : d.getTime();
+                    };
+                    
                     const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                     const userEvents = events.filter(e => {
                       const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
                       return eKey !== '' && uKeys.includes(eKey);
                     });
+                    
                     // Filtrar por el ingreso más reciente a ESTE objetivo específico
                     const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
                     const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                    
                     return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                   }).length;
 
