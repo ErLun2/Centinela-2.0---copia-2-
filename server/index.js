@@ -641,15 +641,25 @@ app.get('/api/eventos', async (req, res) => {
             sql += ' AND id > ?';
             params.push(lastId);
         }
-        sql += ' ORDER BY id DESC LIMIT 500';
+        sql += ' ORDER BY id DESC LIMIT 2000';
         const [rows] = await pool.query(sql, params);
         
         // REGLA DE ORO: Normalizar para el Dashboard (guardiaId -> usuarioId)
-        const normalized = rows.map(evt => ({
-            ...evt,
-            usuarioId: evt.guardiaId, // Compatibilidad con dashboard
-            userId: evt.guardiaId
-        }));
+        const normalized = rows.map(evt => {
+            let uId = evt.guardiaId || evt.usuarioId || evt.userId;
+            if (!uId && evt.usuario) {
+                try {
+                    const uObj = typeof evt.usuario === 'string' ? JSON.parse(evt.usuario) : evt.usuario;
+                    uId = uObj.id || uObj.uid;
+                } catch(e) {}
+            }
+            return {
+                ...evt,
+                usuarioId: uId,
+                userId: uId,
+                guardiaId: uId
+            };
+        });
         
         res.json(normalized);
     } catch (err) {

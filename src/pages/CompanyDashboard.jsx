@@ -2835,21 +2835,18 @@ const CompanyDashboard = () => {
                     ].filter(k => k !== '');
                     
                     const userEvents = events.filter(e => {
-                      const eUserObj = typeof e.usuario === 'string' ? JSON.parse(e.usuario || '{}') : (e.usuario || {});
-                      const eKeys = [
-                        String(e.usuarioId || '').toLowerCase(),
-                        String(e.userId || '').toLowerCase(),
-                        String(e.guardiaId || '').toLowerCase(),
-                        String(eUserObj.id || '').toLowerCase(),
-                        String(eUserObj.uid || '').toLowerCase(),
-                        String(eUserObj.email || '').toLowerCase()
-                      ].filter(k => k !== '');
-                      
+                      let eUId = e.usuarioId || e.userId || e.guardiaId;
+                      if (!eUId && e.usuario) {
+                         try { 
+                           const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
+                           eUId = uO.id || uO.uid;
+                         } catch(err) {}
+                      }
+                      const eKeys = [String(eUId || '').toLowerCase(), String(e.email || '').toLowerCase()].filter(k => k !== '');
                       return eKeys.some(ek => uKeys.includes(ek));
                     });
                     
-                    // Lógica Flexible: El último ingreso vs último egreso (sin importar el puesto exacto para la presencia global)
-                    const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                    const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
                     const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                     
                     return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
@@ -2895,21 +2892,18 @@ const CompanyDashboard = () => {
                                 ].filter(k => k !== '');
                                 
                                 const userEvents = events.filter(e => {
-                                  const eUserObj = typeof e.usuario === 'string' ? JSON.parse(e.usuario || '{}') : (e.usuario || {});
-                                  const eKeys = [
-                                    String(e.usuarioId || '').toLowerCase(),
-                                    String(e.userId || '').toLowerCase(),
-                                    String(e.guardiaId || '').toLowerCase(),
-                                    String(eUserObj.id || '').toLowerCase(),
-                                    String(eUserObj.uid || '').toLowerCase(),
-                                    String(eUserObj.email || '').toLowerCase()
-                                  ].filter(k => k !== '');
-                                  
+                                  let eUId = e.usuarioId || e.userId || e.guardiaId;
+                                  if (!eUId && e.usuario) {
+                                     try { 
+                                       const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
+                                       eUId = uO.id || uO.uid;
+                                     } catch(err) {}
+                                  }
+                                  const eKeys = [String(eUId || '').toLowerCase(), String(e.email || '').toLowerCase()].filter(k => k !== '');
                                   return eKeys.some(ek => uKeys.includes(ek));
                                 });
 
-                                // Lógica Flexible: Detección por último movimiento de entrada/salida
-                                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
                                 const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
 
@@ -3118,20 +3112,18 @@ const CompanyDashboard = () => {
                         ].filter(k => k !== '');
                         
                         const userEvents = events.filter(e => {
-                          const eUserObj = typeof e.usuario === 'string' ? JSON.parse(e.usuario || '{}') : (e.usuario || {});
-                          const eKeys = [
-                            String(e.usuarioId || '').toLowerCase(),
-                            String(e.userId || '').toLowerCase(),
-                            String(e.guardiaId || '').toLowerCase(),
-                            String(eUserObj.id || '').toLowerCase(),
-                            String(eUserObj.uid || '').toLowerCase(),
-                            String(eUserObj.email || '').toLowerCase()
-                          ].filter(k => k !== '');
-                          
+                          let eUId = e.usuarioId || e.userId || e.guardiaId;
+                          if (!eUId && e.usuario) {
+                             try { 
+                               const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
+                               eUId = uO.id || uO.uid;
+                             } catch(err) {}
+                          }
+                          const eKeys = [String(eUId || '').toLowerCase(), String(e.email || '').toLowerCase()].filter(k => k !== '');
                           return eKeys.some(ek => uKeys.includes(ek));
                         });
                         
-                        const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                        const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
                         const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                         return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                       }).length;
