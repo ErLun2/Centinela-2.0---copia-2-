@@ -18,6 +18,8 @@ const LoginPage = () => {
   const [activationUser, setActivationUser] = useState(null); // Para activación inline
   const [showForgot, setShowForgot] = useState(false);
   const [showSales, setShowSales] = useState(false);
+  const [showTerms, setShowTerms] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const { login } = useAuth();
   const navigate = useNavigate();
