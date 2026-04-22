@@ -2337,14 +2337,15 @@ const CompanyDashboard = () => {
 
             <style>
               {`
-                  @media print {
-                    body * { visibility: hidden; }
-                    .printable-qr-grid, .printable-qr-grid * { visibility: visible; }
-                    .printable-qr-grid { position: absolute !important; left: 0; top: 0; display: block !important; width: 100% !important; }
-                    .qr-card { page-break-inside: avoid; margin-bottom: 2cm; background: white !important; border: 2px solid black !important; padding: 20px !important; display: inline-block; width: 45%; vertical-align: top; margin: 10px; box-shadow: none !important; color: black !important; }
-                    .qr-card h4 { color: black !important; font-size: 1.5rem !important; margin-bottom: 10px !important; }
-                    .qr-card div { color: #333 !important; }
-                    .qr-card svg { width: 250px !important; height: 250px !important; }
+                  @media print { /* Centinela Print Fix */
+                    @page { margin: 1cm; size: portrait; }
+                    body { background: white !important; color: black !important; }
+                    .sidebar, .navbar, .noprint, button { display: none !important; }
+                    .printable-qr-grid { display: grid !important; grid-template-columns: 1fr 1fr !important; gap: 20px !important; width: 100% !important; }
+                    .qr-card { page-break-inside: avoid; background: white !important; border: 2px solid #000 !important; padding: 25px !important; display: flex !important; flex-direction: column !important; alignItems: center !important; text-align: center !important; color: black !important; opacity: 1 !important; visibility: visible !important; animation: none !important; }
+                    .qr-card h4 { color: #000 !important; font-size: 1.4rem !important; margin-bottom: 5px !important; font-weight: bold !important; visibility: visible !important; }
+                    .qr-card div { color: #000 !important; font-weight: bold !important; visibility: visible !important; }
+                    .qr-card svg { width: 220px !important; height: 220px !important; display: block !important; margin-top: 10px !important; visibility: visible !important; }
                     .noprint { display: none !important; }
                   }
                `}
