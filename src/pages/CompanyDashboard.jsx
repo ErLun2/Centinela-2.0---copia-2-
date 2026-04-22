@@ -172,6 +172,7 @@ const getARDateStr = (dateInput) => {
 
 //// ======== ENTERPRISE CONFIG COMPONENT ========
 const EnterpriseConfigPanel = ({ companyData, companyUsers, objectives, showToast, refreshData, setSelectedUserForView }) => {
+  const { user } = useAuth();
   const { settings, saveSettings, testSound, stopPanic, isPanicActive } = useSound();
   const [activeSubTab, setActiveSubTab] = React.useState('Empresa');
 
@@ -4306,6 +4307,7 @@ const CompanyDashboard = () => {
 // BILLING PANEL - REDISEÑO B2B PREMIUM
 // ============================================================
 const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) => {
+  const { user } = useAuth();
   const [billingConfig, setBillingConfig] = useState(null);
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [paymentMethod, setPaymentMethod] = useState(null); // 'transfer' | 'mp'
