@@ -108,7 +108,7 @@ export const crearEvento = async (empresaId, dataEvento) => {
 };
 
 export const actualizarEvento = async (id, datos) => {
-    return await apiRequest(`/eventos/${id}`, 'PATCH', datos);
+    return await apiRequest(`/eventos/${id}/update`, 'POST', datos);
 };
 
 export const obtenerEventos = async (companyId = null) => {

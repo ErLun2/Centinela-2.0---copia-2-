@@ -18,8 +18,9 @@ const __dirname = dirname(__filename);
 const app = express();
 app.use(compression()); // Optimización Lite: Comprime respuestas
 app.use(cors());
-app.use(bodyParser.json({ limit: '2mb' }));
-app.use(bodyParser.urlencoded({ limit: '2mb', extended: true }));
+app.use(bodyParser.json({ limit: '10mb' }));
+app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: '10mb' }));
 
 // --- CONFIGURACIÓN DE CORREO ---
 const transporter = nodemailer.createTransport({
@@ -133,19 +134,17 @@ pool.getConnection()
                     audioUrl LONGTEXT,
                     status VARCHAR(50) DEFAULT 'Abierto',
                     resolution TEXT,
-                    history JSON,
+                    history LONGTEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
             await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'Abierto'`);
             await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS resolution TEXT`);
-            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS history JSON`);
-            `);
+            await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS history LONGTEXT`);
             await conn.query(`ALTER TABLE eventos MODIFY COLUMN fotoUrl LONGTEXT`);
             await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS videoUrl LONGTEXT`);
             await conn.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS audioUrl LONGTEXT`);
             await conn.query(`ALTER TABLE eventos MODIFY COLUMN audioUrl LONGTEXT`);
-            `);
             console.log('  [DB] Estructura de eventos OK');
         } catch (e) { console.error('  [DB-ERROR] Eventos:', e.message); }
 
@@ -671,7 +670,7 @@ app.post('/api/eventos', async (req, res) => {
     }
 });
 
-app.patch('/api/eventos/:id', async (req, res) => {
+app.post('/api/eventos/:id/update', async (req, res) => {
     const { status, resolution, history } = req.body;
     try {
         await pool.query(
