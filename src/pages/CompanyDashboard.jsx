@@ -158,15 +158,18 @@ const OBJETIVOS_MOCK = [
 // Helper to get Argentina local date string YYYY-MM-DD
 const getARDateStr = (dateInput) => {
   if (!dateInput) return '';
+  
+  // Si ya es un string YYYY-MM-DD (format de la App), devolverlo directamente
+  // Esto evita que new Date() lo tome como UTC y lo mueva al día anterior en Argentina
+  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.split('T')[0])) {
+    return dateInput.split('T')[0];
+  }
+
   try {
-    // Forzar interpretación como fecha local de Argentina para evitar saltos de día por UTC
     const date = new Date(dateInput);
-    if (isNaN(date.getTime())) {
-       // Si es solo un string YYYY-MM-DD, devolverlo tal cual
-       if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateInput)) return dateInput.split('T')[0];
-       return '';
-    }
-    // Usar Intl para obtener el string YYYY-MM-DD en la zona horaria correcta
+    if (isNaN(date.getTime())) return String(dateInput).split('T')[0];
+
+    // Usar Intl para obtener el string YYYY-MM-DD en la zona horaria de Argentina
     return new Intl.DateTimeFormat('fr-CA', {
       timeZone: 'America/Argentina/Buenos_Aires',
       year: 'numeric',
@@ -1035,12 +1038,18 @@ const CompanyDashboard = () => {
       }
     });
 
-    const unsubEvents = db.subscribeToAllEventsGroup((allEvents) => {
-      // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro para los filtros
-      const normalizedEvents = allEvents.map(e => ({
-        ...e,
-        fechaRegistro: e.fechaRegistro || e.created_at || e.fecha || new Date().toISOString()
-      }));
+      // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro y marcador de 'Hoy'
+      const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
+      
+      const normalizedEvents = allEvents.map(e => {
+        const fechaReg = e.fechaRegistro || e.created_at || e.fecha || new Date().toISOString();
+        const eventDateStr = getARDateStr(fechaReg);
+        return {
+          ...e,
+          fechaRegistro: fechaReg,
+          isToday: eventDateStr === todayStr
+        };
+      });
 
       const compEvents = normalizedEvents.filter(e => e.empresaId === user.empresaId || e.companyId === user.empresaId);
       compEvents.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
@@ -3195,7 +3204,7 @@ const CompanyDashboard = () => {
                               {['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'][parseInt(m.split('-')[1]) - 1]} {m.split('-')[0]}
                            </div>
                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '5px' }}>
-                              {events.filter(e => e.fechaRegistro?.startsWith(m)).length} Registros
+                              {events.filter(e => e.fechaRegistro?.startsWith(m) && !e.isToday).length} Registros
                            </div>
                         </div>
                      </div>
@@ -3204,7 +3213,7 @@ const CompanyDashboard = () => {
 
                {/* WEEKS LEVEL */}
                {selectedHistoryMonth && !selectedHistoryWeek && (() => {
-                  const monthEvents = events.filter(e => e.fechaRegistro?.startsWith(selectedHistoryMonth));
+                  const monthEvents = events.filter(e => e.fechaRegistro?.startsWith(selectedHistoryMonth) && !e.isToday);
                   const weeks = [...new Set(monthEvents.map(e => Math.ceil(new Date(e.fechaRegistro).getDate() / 7)))].sort();
                   return weeks.map(w => (
                      <div 
@@ -3217,7 +3226,7 @@ const CompanyDashboard = () => {
                         <div style={{ textAlign: 'center' }}>
                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>SEMANA {w}</div>
                            <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '5px' }}>
-                              {monthEvents.filter(e => Math.ceil(new Date(e.fechaRegistro).getDate() / 7) === w).length} Registros
+                              {monthEvents.filter(e => Math.ceil(new Date(e.fechaRegistro).getDate() / 7) === w && !e.isToday).length} Registros
                            </div>
                         </div>
                      </div>
@@ -3228,7 +3237,7 @@ const CompanyDashboard = () => {
                {selectedHistoryWeek && !selectedHistoryDate && (() => {
                   const weekEvents = events.filter(e => {
                      const d = new Date(e.fechaRegistro);
-                     return e.fechaRegistro?.startsWith(selectedHistoryMonth) && Math.ceil(d.getDate() / 7) === parseInt(selectedHistoryWeek);
+                     return e.fechaRegistro?.startsWith(selectedHistoryMonth) && Math.ceil(d.getDate() / 7) === parseInt(selectedHistoryWeek) && !e.isToday;
                   });
                   const days = [...new Set(weekEvents.map(e => e.fechaRegistro?.split('T')[0]))].sort();
                   return days.map(d => (
@@ -3550,11 +3559,7 @@ const CompanyDashboard = () => {
                 </thead>
                 <tbody>
                   {events
-                    .filter(e => {
-                      const eventDate = getARDateStr(e.fechaRegistro || e.fecha || e.created_at);
-                      const today = getARDateStr(new Date());
-                      return eventDate === today;
-                    })
+                    .filter(e => e.isToday)
                     .filter(e => {
                       if (!resumenFilters.objetivo) return true;
                       let objId = e.objetivoId;
