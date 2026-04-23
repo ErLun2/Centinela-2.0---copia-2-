@@ -2866,7 +2866,7 @@ const CompanyDashboard = () => {
                       return matchById || matchByEmail || matchByName;
                     });
                     
-                    const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
+                    const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
                     const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                     
                     return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
@@ -2944,7 +2944,7 @@ const CompanyDashboard = () => {
                                   return matchById || matchByEmail || matchByName;
                                 });
 
-                                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
+                                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
 
@@ -3185,7 +3185,7 @@ const CompanyDashboard = () => {
                           return matchById || matchByEmail || matchByName;
                         });
                         
-                        const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
+                        const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
                         const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                         return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                       }).length;
