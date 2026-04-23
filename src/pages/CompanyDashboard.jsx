@@ -1,4 +1,4 @@
-// Centinela Dashboard - Enterprise Edition [STABILITY_V2.1_SYNC]
+// Centinela Dashboard - Enterprise Edition
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   BarChart, Wallet, Fingerprint, Code, Server, Webhook, FileText, ToggleLeft, GitBranch, Share2, Layers, Map,
@@ -1054,16 +1054,7 @@ const CompanyDashboard = () => {
       const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
       
       const normalizedEvents = allEvents.map(e => {
-        // PRIORIDAD: fechaRegistro > created_at > (fecha+hora combinados) > fecha > ahora
-        let fechaReg = e.fechaRegistro || e.created_at;
-        if (!fechaReg && e.fecha && e.hora) {
-          // Combinar fecha + hora correctamente (fecha viene como "2026-04-22T00:00:00.000Z")
-          const fechaBase = String(e.fecha).split('T')[0]; // Extraer solo YYYY-MM-DD
-          fechaReg = `${fechaBase}T${e.hora}`;
-        }
-        if (!fechaReg) {
-          fechaReg = e.fecha || new Date().toISOString();
-        }
+        const fechaReg = e.fechaRegistro || e.created_at || e.fecha || new Date().toISOString();
         const eventDateStr = getARDateStr(fechaReg);
         return {
           ...e,
@@ -2826,62 +2817,25 @@ const CompanyDashboard = () => {
 
                 {objectives.filter(obj => obj.activo !== false).map(obj => {
                   const assignedGuards = companyUsers.filter(u => String(u.schedule?.objectiveId) === String(obj.id));
-                  const getT = (e) => {
-                    if (!e) return 0;
-                    if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
-                    if (e.created_at) {
-                        const d = new Date(e.created_at);
-                        if (!isNaN(d.getTime())) return d.getTime();
-                    }
-                    if (e.fechaRegistro) {
-                        const d = new Date(e.fechaRegistro);
-                        if (!isNaN(d.getTime())) return d.getTime();
-                    }
-                    // Combinar fecha y hora si existen (FECHA puede venir como ISO "2026-04-22T00:00:00.000Z")
-                    if (e.fecha && e.hora) {
-                        const fechaBase = String(e.fecha).split('T')[0]; // Extraer solo YYYY-MM-DD
-                        const d = new Date(`${fechaBase}T${e.hora}`);
-                        if (!isNaN(d.getTime())) return d.getTime();
-                    }
-                    // Fallback: usar solo fecha, o ID numérico como último recurso
-                    if (e.fecha) {
-                        const d = new Date(e.fecha);
-                        if (!isNaN(d.getTime())) return d.getTime();
-                    }
-                    return parseInt(e.id?.replace(/\D/g, '')) || 0;
-                  };
                   const totalCount = assignedGuards.length;
                   const currentCount = assignedGuards.filter(u => {
-                    const uKeys = [
-                      String(u.id || '').toLowerCase(), 
-                      String(u.uid || '').toLowerCase(), 
-                      String(u.legajo || '').toLowerCase(),
-                      String(u.email || '').toLowerCase()
-                    ].filter(k => k !== '');
+                    // REGLA DE ORO: Normalización robusta de tiempos para MySQL
+                    const getT = (e) => {
+                      if (!e) return 0;
+                      if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000; // Firebase fallback
+                      const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                      return isNaN(d.getTime()) ? 0 : d.getTime();
+                    };
                     
+                    const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                     const userEvents = events.filter(e => {
-                      let eUId = e.usuarioId || e.userId || e.guardiaId;
-                      let eName = '';
-                      if (e.usuario) {
-                         try { 
-                           const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
-                           if (!eUId) eUId = uO.id || uO.uid;
-                           eName = (uO.nombre || uO.name || '') + ' ' + (uO.apellido || uO.surname || '');
-                         } catch(err) {}
-                      }
-                      
-                      const uName = (u.nombre || u.name || '') + ' ' + (u.apellido || u.surname || '');
-                      const matchById = String(eUId || '').toLowerCase() === String(u.id || '').toLowerCase() || 
-                                       String(eUId || '').toLowerCase() === String(u.uid || '').toLowerCase() ||
-                                       (parseInt(eUId) > 0 && parseInt(eUId) === parseInt(u.id));
-                      const matchByEmail = u.email && e.email && String(u.email).toLowerCase() === String(e.email).toLowerCase();
-                      const matchByName = uName.trim().length > 3 && eName.trim().length > 3 && uName.toLowerCase().trim() === eName.toLowerCase().trim();
-                      
-                      return matchById || matchByEmail || matchByName;
+                      const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
+                      return eKey !== '' && uKeys.includes(eKey);
                     });
                     
-                    const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                    const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                    // Filtrar por el ingreso más reciente a ESTE objetivo específico
+                    const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
+                    const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                     
                     return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                   }).length;
@@ -2915,55 +2869,16 @@ const CompanyDashboard = () => {
                                   const getT = (e) => {
                                     if (!e) return 0;
                                     if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
-                                    if (e.created_at) {
-                                        const d = new Date(e.created_at);
-                                        if (!isNaN(d.getTime())) return d.getTime();
-                                    }
-                                    if (e.fechaRegistro) {
-                                        const d = new Date(e.fechaRegistro);
-                                        if (!isNaN(d.getTime())) return d.getTime();
-                                    }
-                                    if (e.fecha && e.hora) {
-                                        const fechaBase = String(e.fecha).split('T')[0];
-                                        const d = new Date(`${fechaBase}T${e.hora}`);
-                                        if (!isNaN(d.getTime())) return d.getTime();
-                                    }
-                                    if (e.fecha) {
-                                        const d = new Date(e.fecha);
-                                        if (!isNaN(d.getTime())) return d.getTime();
-                                    }
-                                    return parseInt(e.id?.replace(/\D/g, '')) || 0;
+                                    const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                                    return isNaN(d.getTime()) ? 0 : d.getTime();
                                   };
-                                const uKeys = [
-                                  String(u.id || '').toLowerCase(), 
-                                  String(u.uid || '').toLowerCase(), 
-                                  String(u.legajo || '').toLowerCase(),
-                                  String(u.email || '').toLowerCase()
-                                ].filter(k => k !== '');
-                                
+                                const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                                 const userEvents = events.filter(e => {
-                                  let eUId = e.usuarioId || e.userId || e.guardiaId;
-                                  let eName = '';
-                                  if (e.usuario) {
-                                     try { 
-                                       const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
-                                       if (!eUId) eUId = uO.id || uO.uid;
-                                       eName = (uO.nombre || uO.name || '') + ' ' + (uO.apellido || uO.surname || '');
-                                     } catch(err) {}
-                                  }
-                                  
-                                  const uName = (u.nombre || u.name || '') + ' ' + (u.apellido || u.surname || '');
-                                  const matchById = String(eUId || '').toLowerCase() === String(u.id || '').toLowerCase() || 
-                                                   String(eUId || '').toLowerCase() === String(u.uid || '').toLowerCase() ||
-                                                   (parseInt(eUId) > 0 && parseInt(eUId) === parseInt(u.id));
-                                  const matchByEmail = u.email && e.email && String(u.email).toLowerCase() === String(e.email).toLowerCase();
-                                  const matchByName = uName.trim().length > 3 && eName.trim().length > 3 && uName.toLowerCase().trim() === eName.toLowerCase().trim();
-                                  
-                                  return matchById || matchByEmail || matchByName;
+                                  const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
+                                  return eKey !== '' && uKeys.includes(eKey);
                                 });
-
-                                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                                const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                                const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
+                                const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
 
                                 return (
@@ -3160,55 +3075,16 @@ const CompanyDashboard = () => {
                         const getT = (e) => {
                           if (!e) return 0;
                           if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
-                          if (e.created_at) {
-                              const d = new Date(e.created_at);
-                              if (!isNaN(d.getTime())) return d.getTime();
-                          }
-                          if (e.fechaRegistro) {
-                              const d = new Date(e.fechaRegistro);
-                              if (!isNaN(d.getTime())) return d.getTime();
-                          }
-                          if (e.fecha && e.hora) {
-                              const fechaBase = String(e.fecha).split('T')[0];
-                              const d = new Date(`${fechaBase}T${e.hora}`);
-                              if (!isNaN(d.getTime())) return d.getTime();
-                          }
-                          if (e.fecha) {
-                              const d = new Date(e.fecha);
-                              if (!isNaN(d.getTime())) return d.getTime();
-                          }
-                          return parseInt(e.id?.replace(/\D/g, '')) || 0;
+                          const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                          return isNaN(d.getTime()) ? 0 : d.getTime();
                         };
-                        const uKeys = [
-                          String(u.id || '').toLowerCase(), 
-                          String(u.uid || '').toLowerCase(), 
-                          String(u.legajo || '').toLowerCase(),
-                          String(u.email || '').toLowerCase()
-                        ].filter(k => k !== '');
-                        
+                        const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                         const userEvents = events.filter(e => {
-                          let eUId = e.usuarioId || e.userId || e.guardiaId;
-                          let eName = '';
-                          if (e.usuario) {
-                             try { 
-                               const uO = typeof e.usuario === 'string' ? JSON.parse(e.usuario) : e.usuario;
-                               if (!eUId) eUId = uO.id || uO.uid;
-                               eName = (uO.nombre || uO.name || '') + ' ' + (uO.apellido || uO.surname || '');
-                             } catch(err) {}
-                          }
-                          
-                          const uName = (u.nombre || u.name || '') + ' ' + (u.apellido || u.surname || '');
-                          const matchById = String(eUId || '').toLowerCase() === String(u.id || '').toLowerCase() || 
-                                           String(eUId || '').toLowerCase() === String(u.uid || '').toLowerCase() ||
-                                           (parseInt(eUId) > 0 && parseInt(eUId) === parseInt(u.id));
-                          const matchByEmail = u.email && e.email && String(u.email).toLowerCase() === String(e.email).toLowerCase();
-                          const matchByName = uName.trim().length > 3 && eName.trim().length > 3 && uName.toLowerCase().trim() === eName.toLowerCase().trim();
-                          
-                          return matchById || matchByEmail || matchByName;
+                          const eKey = String(e.usuarioId || e.userId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
+                          return eKey !== '' && uKeys.includes(eKey);
                         });
-                        
-                        const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                        const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                        const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                        const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                         return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                       }).length;
 
@@ -3557,48 +3433,16 @@ const CompanyDashboard = () => {
                 const getT = (e) => {
                   if (!e) return 0;
                   if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
-                  if (e.created_at) {
-                      const d = new Date(e.created_at);
-                      if (!isNaN(d.getTime())) return d.getTime();
-                  }
-                  if (e.fechaRegistro) {
-                      const d = new Date(e.fechaRegistro);
-                      if (!isNaN(d.getTime())) return d.getTime();
-                  }
-                  if (e.fecha && e.hora) {
-                      const fechaBase = String(e.fecha).split('T')[0];
-                      const d = new Date(`${fechaBase}T${e.hora}`);
-                      if (!isNaN(d.getTime())) return d.getTime();
-                  }
-                  if (e.fecha) {
-                      const d = new Date(e.fecha);
-                      if (!isNaN(d.getTime())) return d.getTime();
-                  }
-                  return parseInt(e.id?.replace(/\D/g, '')) || 0;
+                  const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                  return isNaN(d.getTime()) ? 0 : d.getTime();
                 };
-                const uKeys = [
-                  String(u.id || '').toLowerCase(), 
-                  String(u.uid || '').toLowerCase(), 
-                  String(u.legajo || '').toLowerCase(),
-                  String(u.email || '').toLowerCase()
-                ].filter(k => k !== '');
-                
+                const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                 const userEvents = events.filter(e => {
-                  const eUserObj = typeof e.usuario === 'string' ? JSON.parse(e.usuario || '{}') : (e.usuario || {});
-                  const eKeys = [
-                    String(e.usuarioId || '').toLowerCase(),
-                    String(e.userId || '').toLowerCase(),
-                    String(e.guardiaId || '').toLowerCase(),
-                    String(eUserObj.id || '').toLowerCase(),
-                    String(eUserObj.uid || '').toLowerCase(),
-                    String(eUserObj.email || '').toLowerCase()
-                  ].filter(k => k !== '');
-                  
-                  return eKeys.some(ek => uKeys.includes(ek));
+                  const eKey = String(e.usuarioId || e.userId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
+                  return eKey !== '' && uKeys.includes(eKey);
                 });
-                
-                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                 return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
               }).length;
 
