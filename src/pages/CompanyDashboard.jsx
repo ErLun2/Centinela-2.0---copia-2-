@@ -2797,10 +2797,29 @@ const CompanyDashboard = () => {
 
                 {selectedObjective && <ChangeView center={[selectedObjective.lat, selectedObjective.lng]} />}
 
-                {/* Personnel Markers (Live GPS) */}
+                {/* Personnel Markers (Live GPS) — REGLA DE ORO: Solo personal EN SERVICIO */}
                 {companyUsers.map((u, idx) => {
                   const loc = locations.find(l => l.usuarioId === (u.id || u.uid));
                   if (!loc) return null;
+
+                  // Verificar presencia por eventos (ingreso/egreso) — GPS solo visual
+                  const getT_gps = (e) => {
+                    if (!e) return 0;
+                    if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
+                    const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                    return isNaN(d.getTime()) ? 0 : d.getTime();
+                  };
+                  const uKeysGps = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
+                  const userEvtsGps = events.filter(e => {
+                    const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
+                    return eKey !== '' && uKeysGps.includes(eKey);
+                  });
+                  const lastInGps = userEvtsGps.filter(e => e.tipo === 'ingreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
+                  const lastOutGps = userEvtsGps.filter(e => e.tipo === 'egreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
+                  const isOnDuty = lastInGps && (!lastOutGps || getT_gps(lastInGps) > getT_gps(lastOutGps));
+
+                  if (!isOnDuty) return null; // No mostrar fuera de turno
+
                   const pos = [parseFloat(loc.latitud), parseFloat(loc.longitud)];
                   return (
                     <Marker key={u.id || u.uid || idx} position={pos} icon={guardIcon}>
