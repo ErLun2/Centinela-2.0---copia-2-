@@ -1063,7 +1063,7 @@ const CompanyDashboard = () => {
         };
       });
 
-      const compEvents = normalizedEvents.filter(e => e.empresaId === user.empresaId || e.companyId === user.empresaId);
+      const compEvents = normalizedEvents.filter(e => String(e.empresaId || e.companyId) === String(user.empresaId || user.companyId));
       compEvents.sort((a, b) => new Date(b.fechaRegistro || 0) - new Date(a.fechaRegistro || 0));
       setEvents(compEvents);
 
@@ -2913,18 +2913,25 @@ const CompanyDashboard = () => {
                                 const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
 
                                 return (
-                                  <div key={u.id || u.uid} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                      <div style={{ 
-                                        width: '8px', height: '8px', borderRadius: '50%', 
-                                        background: isPresent ? '#10b981' : '#ef4444',
-                                        boxShadow: isPresent ? '0 0 6px rgba(16, 185, 129, 0.4)' : '0 0 6px rgba(239, 68, 68, 0.4)'
-                                      }} />
-                                      <span style={{ fontSize: '11px', fontWeight: '700', color: '#1e293b' }}>{u.nombre} {u.apellido?.charAt(0)}.</span>
+                                  <div key={u.id || u.uid} style={{ display: 'flex', flexDirection: 'column', background: isPresent ? 'rgba(16, 185, 129, 0.05)' : '#f8fafc', padding: '10px', borderRadius: '12px', border: isPresent ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid #e2e8f0' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ 
+                                          width: '10px', height: '10px', borderRadius: '50%', 
+                                          background: isPresent ? '#10b981' : '#ef4444',
+                                          boxShadow: isPresent ? '0 0 8px rgba(16, 185, 129, 0.6)' : 'none'
+                                        }} />
+                                        <span style={{ fontSize: '12px', fontWeight: '900', color: '#1e293b', textTransform: 'uppercase' }}>{u.nombre} {u.apellido}</span>
+                                      </div>
+                                      <span style={{ fontSize: '10px', fontWeight: '900', color: isPresent ? '#10b981' : '#ef4444', letterSpacing: '0.5px' }}>
+                                        {isPresent ? '✅ PRESENTE' : '❌ AUSENTE'}
+                                      </span>
                                     </div>
-                                    <span style={{ fontSize: '9px', fontWeight: '900', color: isPresent ? '#10b981' : '#ef4444' }}>
-                                      {isPresent ? 'ONLINE' : 'AUSENTE'}
-                                    </span>
+                                    {isPresent && lastIn && (
+                                      <div style={{ fontSize: '9px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                        <Clock size={10} /> INGRESO: {lastIn.hora || new Date(getT(lastIn)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}
