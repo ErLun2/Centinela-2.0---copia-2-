@@ -2799,7 +2799,7 @@ const CompanyDashboard = () => {
 
                 {/* Personnel Markers (Live GPS) */}
                 {companyUsers.map((u, idx) => {
-                  const loc = locations.find(l => l.usuario === (u.id || u.uid));
+                  const loc = locations.find(l => l.usuarioId === (u.id || u.uid));
                   if (!loc) return null;
                   const pos = [parseFloat(loc.latitud), parseFloat(loc.longitud)];
                   return (

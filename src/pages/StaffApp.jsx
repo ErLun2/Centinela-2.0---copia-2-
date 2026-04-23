@@ -1074,6 +1074,12 @@ const StaffApp = () => {
         manual: false
       });
       setSession(prev => ({ ...prev, isCheckedIn: newStatus, inRuta: false, inRonda: false }));
+
+      // REGLA DE ORO: Forzar envío GPS inmediato al iniciar turno para que el mapa lo detecte al instante
+      if (newStatus && currentGps) {
+        actualizarUbicacionGPS(user.empresaId, user.uid || user.id, currentGps.lat, currentGps.lng);
+      }
+
       alert(newStatus ? "✅ Turno Iniciado" : "🚪 Turno Finalizado");
     } catch (e) {
       alert("Error: " + e.message);

@@ -706,6 +706,20 @@ app.post('/api/eventos', async (req, res) => {
             'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, objetivoId, fotoUrl, videoUrl, audioUrl, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
             [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, finalGuardiaId, finalObjetivoId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto']
         );
+
+        // REGLA DE ORO: Si es un INGRESO con coordenadas, actualizar locations para que el mapa lo detecte al instante
+        if (e.tipo === 'ingreso' && finalGuardiaId && e.lat && e.lng && e.lat !== 0 && e.lng !== 0) {
+            try {
+                await pool.query(
+                    'INSERT INTO locations (usuarioId, companyId, latitud, longitud) VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE latitud=?, longitud=?, companyId=?',
+                    [finalGuardiaId, e.companyId, e.lat, e.lng, e.lat, e.lng, e.companyId]
+                );
+                console.log(`[GPS-AUTO] Ubicación actualizada por INGRESO: ${finalGuardiaId}`);
+            } catch (locErr) {
+                console.error('[GPS-AUTO] Error actualizando ubicación en ingreso:', locErr.message);
+            }
+        }
+
         res.json({ success: true });
     } catch (err) {
         console.error("Error al crear evento:", err);
