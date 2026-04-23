@@ -2828,13 +2828,18 @@ const CompanyDashboard = () => {
                         const d = new Date(e.fechaRegistro);
                         if (!isNaN(d.getTime())) return d.getTime();
                     }
-                    // Combinar fecha y hora si existen
+                    // Combinar fecha y hora si existen (FECHA puede venir como ISO "2026-04-22T00:00:00.000Z")
                     if (e.fecha && e.hora) {
-                        const d = new Date(`${e.fecha} ${e.hora}`);
+                        const fechaBase = String(e.fecha).split('T')[0]; // Extraer solo YYYY-MM-DD
+                        const d = new Date(`${fechaBase}T${e.hora}`);
                         if (!isNaN(d.getTime())) return d.getTime();
                     }
-                    const d = new Date(e.fecha || 0);
-                    return isNaN(d.getTime()) ? (parseInt(e.id) || 0) : d.getTime();
+                    // Fallback: usar solo fecha, o ID numérico como último recurso
+                    if (e.fecha) {
+                        const d = new Date(e.fecha);
+                        if (!isNaN(d.getTime())) return d.getTime();
+                    }
+                    return parseInt(e.id?.replace(/\D/g, '')) || 0;
                   };
                   const totalCount = assignedGuards.length;
                   const currentCount = assignedGuards.filter(u => {
@@ -2910,11 +2915,15 @@ const CompanyDashboard = () => {
                                         if (!isNaN(d.getTime())) return d.getTime();
                                     }
                                     if (e.fecha && e.hora) {
-                                        const d = new Date(`${e.fecha} ${e.hora}`);
+                                        const fechaBase = String(e.fecha).split('T')[0];
+                                        const d = new Date(`${fechaBase}T${e.hora}`);
                                         if (!isNaN(d.getTime())) return d.getTime();
                                     }
-                                    const d = new Date(e.fecha || 0);
-                                    return isNaN(d.getTime()) ? (parseInt(e.id) || 0) : d.getTime();
+                                    if (e.fecha) {
+                                        const d = new Date(e.fecha);
+                                        if (!isNaN(d.getTime())) return d.getTime();
+                                    }
+                                    return parseInt(e.id?.replace(/\D/g, '')) || 0;
                                   };
                                 const uKeys = [
                                   String(u.id || '').toLowerCase(), 
@@ -3151,11 +3160,15 @@ const CompanyDashboard = () => {
                               if (!isNaN(d.getTime())) return d.getTime();
                           }
                           if (e.fecha && e.hora) {
-                              const d = new Date(`${e.fecha} ${e.hora}`);
+                              const fechaBase = String(e.fecha).split('T')[0];
+                              const d = new Date(`${fechaBase}T${e.hora}`);
                               if (!isNaN(d.getTime())) return d.getTime();
                           }
-                          const d = new Date(e.fecha || 0);
-                          return isNaN(d.getTime()) ? (parseInt(e.id) || 0) : d.getTime();
+                          if (e.fecha) {
+                              const d = new Date(e.fecha);
+                              if (!isNaN(d.getTime())) return d.getTime();
+                          }
+                          return parseInt(e.id?.replace(/\D/g, '')) || 0;
                         };
                         const uKeys = [
                           String(u.id || '').toLowerCase(), 
@@ -3544,11 +3557,15 @@ const CompanyDashboard = () => {
                       if (!isNaN(d.getTime())) return d.getTime();
                   }
                   if (e.fecha && e.hora) {
-                      const d = new Date(`${e.fecha} ${e.hora}`);
+                      const fechaBase = String(e.fecha).split('T')[0];
+                      const d = new Date(`${fechaBase}T${e.hora}`);
                       if (!isNaN(d.getTime())) return d.getTime();
                   }
-                  const d = new Date(e.fecha || 0);
-                  return isNaN(d.getTime()) ? (parseInt(e.id) || 0) : d.getTime();
+                  if (e.fecha) {
+                      const d = new Date(e.fecha);
+                      if (!isNaN(d.getTime())) return d.getTime();
+                  }
+                  return parseInt(e.id?.replace(/\D/g, '')) || 0;
                 };
                 const uKeys = [
                   String(u.id || '').toLowerCase(), 
