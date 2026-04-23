@@ -21,8 +21,8 @@ class ErrorBoundary extends Component {
     super(props);
     this.state = { hasError: false, errorDetail: '' };
   }
-  static getDerivedStateFromError(error) { 
-    return { hasError: true, errorDetail: error.message }; 
+  static getDerivedStateFromError(error) {
+    return { hasError: true, errorDetail: error.message };
   }
   render() {
     if (this.state.hasError) {
@@ -67,9 +67,9 @@ const ProtectedRoute = ({ children, allowedRoles, isSecurityPage = false }) => {
 
   // Prevent back-loop from security page
   if (!user.mustChangePassword && isSecurityPage) {
-    const dest = 
-      user.rol === ROLES.SUPER_ADMIN ? '/master' : 
-      ([ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR].includes(user.rol) ? '/staff' : '/company');
+    const dest =
+      user.rol === ROLES.SUPER_ADMIN ? '/master' :
+        ([ROLES.GUARD, 'GUARDIA', ROLES.SUPERVISOR].includes(user.rol) ? '/staff' : '/company');
     return <Navigate to={dest} replace />;
   }
 
