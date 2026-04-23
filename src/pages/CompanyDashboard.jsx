@@ -2797,12 +2797,9 @@ const CompanyDashboard = () => {
 
                 {selectedObjective && <ChangeView center={[selectedObjective.lat, selectedObjective.lng]} />}
 
-                {/* Personnel Markers (Live GPS) — REGLA DE ORO: Solo personal EN SERVICIO */}
+                {/* Personnel Markers (Live GPS + Fallback Objetivo) — REGLA DE ORO: Solo personal EN SERVICIO */}
                 {companyUsers.map((u, idx) => {
-                  const loc = locations.find(l => l.usuarioId === (u.id || u.uid));
-                  if (!loc) return null;
-
-                  // Verificar presencia por eventos (ingreso/egreso) — GPS solo visual
+                  // 1. Verificar presencia por eventos (ingreso/egreso)
                   const getT_gps = (e) => {
                     if (!e) return 0;
                     if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
@@ -2820,14 +2817,33 @@ const CompanyDashboard = () => {
 
                   if (!isOnDuty) return null; // No mostrar fuera de turno
 
-                  const pos = [parseFloat(loc.latitud), parseFloat(loc.longitud)];
+                  // 2. Determinar posición: GPS real o fallback a objetivo asignado
+                  const loc = locations.find(l => l.usuarioId === (u.id || u.uid));
+                  const assignedObj = objectives.find(o => String(o.id) === String(u.schedule?.objectiveId));
+                  
+                  let pos = null;
+                  let posSource = 'gps'; // 'gps' | 'objetivo'
+
+                  if (loc && loc.latitud && loc.longitud) {
+                    pos = [parseFloat(loc.latitud), parseFloat(loc.longitud)];
+                  } else if (assignedObj && assignedObj.lat && assignedObj.lng) {
+                    pos = [parseFloat(assignedObj.lat), parseFloat(assignedObj.lng)];
+                    posSource = 'objetivo';
+                  }
+
+                  if (!pos) return null; // Sin GPS ni objetivo con coordenadas
+
                   return (
                     <Marker key={u.id || u.uid || idx} position={pos} icon={guardIcon}>
                       <Popup>
                         <div style={{ color: 'black', fontSize: '12px' }}>
                           <strong style={{ textTransform: 'uppercase' }}>{u.nombre} {u.apellido}</strong><br />
                           <div style={{ marginTop: '5px', color: '#10b981', fontWeight: 'bold' }}>🟢 EN SERVICIO</div>
-                          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>Último reporte: {new Date(loc.timestamp).toLocaleTimeString()}</div>
+                          {posSource === 'gps' ? (
+                            <div style={{ fontSize: '10px', color: '#64748b', marginTop: '3px' }}>Último reporte GPS: {new Date(loc.timestamp).toLocaleTimeString()}</div>
+                          ) : (
+                            <div style={{ fontSize: '10px', color: '#f59e0b', marginTop: '3px' }}>📍 Ubicación estimada (objetivo asignado)</div>
+                          )}
                         </div>
                       </Popup>
                     </Marker>
