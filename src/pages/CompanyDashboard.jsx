@@ -1054,7 +1054,16 @@ const CompanyDashboard = () => {
       const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
       
       const normalizedEvents = allEvents.map(e => {
-        const fechaReg = e.fechaRegistro || e.created_at || e.fecha || new Date().toISOString();
+        // PRIORIDAD: fechaRegistro > created_at > (fecha+hora combinados) > fecha > ahora
+        let fechaReg = e.fechaRegistro || e.created_at;
+        if (!fechaReg && e.fecha && e.hora) {
+          // Combinar fecha + hora correctamente (fecha viene como "2026-04-22T00:00:00.000Z")
+          const fechaBase = String(e.fecha).split('T')[0]; // Extraer solo YYYY-MM-DD
+          fechaReg = `${fechaBase}T${e.hora}`;
+        }
+        if (!fechaReg) {
+          fechaReg = e.fecha || new Date().toISOString();
+        }
         const eventDateStr = getARDateStr(fechaReg);
         return {
           ...e,
