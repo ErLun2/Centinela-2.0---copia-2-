@@ -2415,30 +2415,37 @@ const CompanyDashboard = () => {
               {`
                   @media print {
                     @page { margin: 0; size: A4 portrait; }
-                    body { background: white !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
+                    body { background: white !important; margin: 0 !important; padding: 0 !important; }
                     
-                    /* Ocultar absolutamente todo excepto lo que queremos */
-                    #root > div > div, header, nav, .noprint, button, .arrow-indicator, .glass::before { 
-                      display: none !important; 
+                    /* Hide EVERYTHING by default */
+                    body * { visibility: hidden; }
+                    
+                    /* Only show the QR grid and its contents */
+                    .printable-qr-grid, .printable-qr-grid * { 
+                      visibility: visible !important; 
                     }
                     
-                    #root > div { 
-                      display: block !important; 
-                      background: white !important; 
-                      padding: 0 !important; 
+                    /* Ensure parents are visible but don't take space */
+                    #root, #root > div, #root > div > div {
+                      visibility: visible !important;
+                      display: block !important;
+                      position: absolute !important;
+                      top: 0; left: 0; width: 100%;
                       margin: 0 !important;
-                      width: 100% !important;
+                      padding: 0 !important;
                     }
 
+                    /* Specifically hide siblings of the grid to avoid layout shifts */
+                    #root > div > div > *:not(.printable-qr-grid) {
+                      display: none !important;
+                    }
+                    
                     .printable-qr-grid { 
-                      display: block !important; 
                       position: absolute !important;
                       top: 0 !important;
                       left: 0 !important;
                       width: 100% !important; 
-                      background: white !important;
-                      z-index: 99999 !important;
-                      visibility: visible !important;
+                      display: block !important;
                     }
                     
                     .qr-card { 
@@ -2447,23 +2454,27 @@ const CompanyDashboard = () => {
                       flex-direction: column !important;
                       align-items: center !important;
                       justify-content: center !important;
-                      height: ${100 / qrExportConfig.perPage}vh !important;
+                      height: ${98 / qrExportConfig.perPage}vh !important;
                       width: 100% !important;
-                      border-bottom: 1px dashed #ddd !important;
+                      border-bottom: 1px dashed #ccc !important;
                       page-break-inside: avoid !important;
                       padding: 40px !important;
                       box-sizing: border-box;
                       background: white !important;
                       color: black !important;
+                      text-align: center !important;
                     }
                     
                     .qr-card .qr-header {
                       color: #00d2ff !important;
+                      -webkit-print-color-adjust: exact;
+                      print-color-adjust: exact;
                       font-weight: 900 !important;
                       font-size: 1.2rem !important;
                       margin-bottom: 10px !important;
                       text-transform: uppercase !important;
                       letter-spacing: 2px !important;
+                      visibility: visible !important;
                     }
 
                     .qr-card .qr-obj-name {
@@ -2472,6 +2483,7 @@ const CompanyDashboard = () => {
                        font-weight: 800 !important;
                        margin-bottom: 5px !important;
                        text-transform: uppercase !important;
+                       visibility: visible !important;
                     }
 
                     .qr-card h4 { 
@@ -2480,11 +2492,13 @@ const CompanyDashboard = () => {
                       margin: 5px 0 20px 0 !important; 
                       font-weight: 900 !important; 
                       text-transform: uppercase !important;
+                      visibility: visible !important;
                     }
 
                     .qr-card svg { 
                       width: ${qrExportConfig.size}px !important; 
                       height: ${qrExportConfig.size}px !important; 
+                      visibility: visible !important;
                     }
                     
                     .qr-card svg rect { fill: white !important; }
