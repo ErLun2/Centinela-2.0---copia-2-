@@ -2822,9 +2822,8 @@ const CompanyDashboard = () => {
                     return uFull !== '' && uFull === eFull;
                   });
 
-                  const lastInGps = userEvtsGps.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
-                  const lastOutGps = userEvtsGps.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
-                  const isOnDuty = lastInGps && (!lastOutGps || getT_gps(lastInGps) > getT_gps(lastOutGps));
+                  const latestEventGps = userEvtsGps.length > 0 ? [...userEvtsGps].sort((a,b) => getT_gps(b) - getT_gps(a))[0] : null;
+                  const isOnDuty = latestEventGps && (latestEventGps.tipo || '').toLowerCase() === 'ingreso';
 
                   if (!isOnDuty) return null; // No mostrar fuera de turno
 
@@ -2957,9 +2956,9 @@ const CompanyDashboard = () => {
                                         {isPresent ? '✅ PRESENTE' : '❌ AUSENTE'}
                                       </span>
                                     </div>
-                                    {isPresent && lastIn && (
+                                    {isPresent && latestEvent && (
                                       <div style={{ fontSize: '9px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Clock size={10} /> INGRESO: {lastIn.hora || new Date(getT(lastIn)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                        <Clock size={10} /> INGRESO: {latestEvent.hora || new Date(getT(latestEvent)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                       </div>
                                     )}
                                   </div>
