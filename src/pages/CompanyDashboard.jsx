@@ -2423,67 +2423,79 @@ const CompanyDashboard = () => {
                     }
                     
                     /* Reset de contenedores */
-                    #root, #root > div, #root > div > div {
+                    /* Reset de contenedores principales */
+                    #root, #root > div, #root > div > div, main {
                       display: block !important;
-                      background: white !important;
-                      padding: 0 !important;
-                      margin: 0 !important;
+                      visibility: visible !important;
+                      position: static !important;
                       width: 100% !important;
                       height: auto !important;
-                      min-height: auto !important;
+                      margin: 0 !important;
+                      padding: 0 !important;
+                      background: white !important;
                       box-shadow: none !important;
                     }
 
-                    /* Ocultar todo lo que no sea la grilla dentro de main */
+                    /* Asegurar que la grilla sea el único contenido visible en main */
                     main > div > *:not(.printable-qr-grid) {
                       display: none !important;
                     }
 
                     .printable-qr-grid { 
                       display: block !important;
-                      width: 100% !important; 
+                      width: 100% !important;
+                      visibility: visible !important;
                     }
                     
                     .qr-card { 
                       display: flex !important;
+                      visibility: visible !important;
                       flex-direction: column !important;
                       align-items: center !important;
                       justify-content: center !important;
-                      height: ${95 / qrExportConfig.perPage}vh !important;
+                      height: ${100 / qrExportConfig.perPage}vh !important;
                       width: 100% !important;
                       border-bottom: 1px dashed #ccc !important;
                       page-break-inside: avoid !important;
-                      padding: 40px !important;
+                      padding: 20px !important;
                       box-sizing: border-box;
                       background: white !important;
                       color: black !important;
+                      overflow: hidden !important;
                     }
                     
-                    .qr-card .qr-header {
+                    .qr-header {
                       color: #00d2ff !important;
-                      -webkit-print-color-adjust: exact;
-                      print-color-adjust: exact;
                       font-weight: 900 !important;
                       font-size: 1.2rem !important;
-                      margin-bottom: 10px !important;
+                      margin-bottom: 8px !important;
                       text-transform: uppercase !important;
                       letter-spacing: 2px !important;
+                      display: block !important;
                     }
 
-                    .qr-card .qr-obj-name {
-                       color: #444 !important;
-                       font-size: 1.1rem !important;
+                    .qr-obj-name {
+                       color: #666 !important;
+                       font-size: 1rem !important;
                        font-weight: 800 !important;
-                       margin-bottom: 5px !important;
+                       margin-bottom: 4px !important;
                        text-transform: uppercase !important;
+                       display: block !important;
                     }
 
                     .qr-card h4 { 
                       color: black !important; 
-                      font-size: 2rem !important; 
-                      margin: 5px 0 20px 0 !important; 
+                      font-size: 1.6rem !important; 
+                      margin: 0 0 15px 0 !important; 
                       font-weight: 900 !important; 
                       text-transform: uppercase !important;
+                    }
+
+                    .qr-container {
+                      background: white !important;
+                      padding: 10px !important;
+                      border-radius: 10px !important;
+                      border: 1px solid #eee !important;
                     }
 
                     .qr-card svg { 
@@ -2591,12 +2603,14 @@ const CompanyDashboard = () => {
                         <div className="qr-header" style={{ color: '#00d2ff', fontWeight: '900', fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase' }}>CENTINELA SECURITY</div>
                         <div className="qr-obj-name" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontWeight: 'bold', textTransform: 'uppercase' }}>{obj?.nombre || 'General'}</div>
                         <h4 style={{ margin: 0, fontSize: '1.4rem', color: 'white', fontWeight: 900 }}>{point.name}</h4>
-                        <div style={{ position: 'relative', background: 'white', padding: '15px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', marginTop: '10px', marginBottom: '10px' }}>
+                        <div className="qr-container" style={{ position: 'relative', background: 'white', padding: '15px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', marginTop: '10px', marginBottom: '10px' }}>
                           <QRCodeSVG
                             value={JSON.stringify({ id: point.id, type: 'ronda_qr' })}
-                            size={200}
-                            level="M"
+                            size={qrExportConfig.size}
+                            level="H"
                             includeMargin={true}
+                            fgColor="#000000"
+                            bgColor="#ffffff"
                           />
                         </div>
 
