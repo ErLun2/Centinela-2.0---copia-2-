@@ -2451,29 +2451,35 @@ const CompanyDashboard = () => {
                       width: 100% !important;
                       border-bottom: 1px dashed #ddd !important;
                       page-break-inside: avoid !important;
-                      padding: 20px !important;
+                      padding: 40px !important;
                       box-sizing: border-box;
                       background: white !important;
-                      box-shadow: none !important;
-                      border-right: none !important;
-                      border-left: none !important;
-                      border-top: none !important;
-                      border-radius: 0 !important;
                       color: black !important;
                     }
                     
+                    .qr-card .qr-header {
+                      color: #00d2ff !important;
+                      font-weight: 900 !important;
+                      font-size: 1.2rem !important;
+                      margin-bottom: 10px !important;
+                      text-transform: uppercase !important;
+                      letter-spacing: 2px !important;
+                    }
+
+                    .qr-card .qr-obj-name {
+                       color: #444 !important;
+                       font-size: 1.1rem !important;
+                       font-weight: 800 !important;
+                       margin-bottom: 5px !important;
+                       text-transform: uppercase !important;
+                    }
+
                     .qr-card h4 { 
                       color: black !important; 
-                      font-size: 1.8rem !important; 
-                      margin: 10px 0 !important; 
+                      font-size: 2rem !important; 
+                      margin: 5px 0 20px 0 !important; 
                       font-weight: 900 !important; 
                       text-transform: uppercase !important;
-                    }
-                    
-                    .qr-card .qr-obj-name {
-                       color: #666 !important;
-                       font-size: 1rem !important;
-                       font-weight: bold !important;
                     }
 
                     .qr-card svg { 
@@ -2481,7 +2487,6 @@ const CompanyDashboard = () => {
                       height: ${qrExportConfig.size}px !important; 
                     }
                     
-                    /* Forzar QR en blanco y negro puro */
                     .qr-card svg rect { fill: white !important; }
                     .qr-card svg path { fill: black !important; }
                   }
@@ -2578,8 +2583,9 @@ const CompanyDashboard = () => {
                   .map(point => {
                     const obj = Array.isArray(objectives) ? objectives.find(o => o.id === point.objectiveId) : null;
                     return (
-                      <div key={point.id} className="qr-card fade-up" style={{ padding: '30px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-                        <div className="qr-obj-name" style={{ fontSize: '0.8rem', color: '#00d2ff', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>{obj?.nombre || 'General'}</div>
+                      <div key={point.id} className="qr-card fade-up" style={{ padding: '30px', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', transition: '0.3s' }}>
+                        <div className="qr-header" style={{ color: '#00d2ff', fontWeight: '900', fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase' }}>CENTINELA SECURITY</div>
+                        <div className="qr-obj-name" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontWeight: 'bold', textTransform: 'uppercase' }}>{obj?.nombre || 'General'}</div>
                         <h4 style={{ margin: 0, fontSize: '1.4rem', color: 'white', fontWeight: 900 }}>{point.name}</h4>
                         <div style={{ position: 'relative', background: 'white', padding: '15px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', marginTop: '10px', marginBottom: '10px' }}>
                           <QRCodeSVG
@@ -2819,66 +2825,113 @@ const CompanyDashboard = () => {
 
         {/* MODAL CONFIGURACIÓN EXPORTACIÓN QR */}
         {showQrExportModal && (
-          <div className="noprint" style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(10px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000 }}>
-            <div className="glass fade-up" style={{ width: '500px', padding: '40px', borderRadius: '30px', border: '1px solid #00d2ff', boxShadow: '0 0 50px rgba(0,210,255,0.2)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
-                <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '15px' }}><Settings color="#00d2ff" size={28} /> Configurar Impresión QR</h3>
-                <button onClick={() => setShowQrExportModal(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', width: '40px', height: '40px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X /></button>
-              </div>
+          <div className="noprint" style={{ position: 'fixed', inset: 0, background: 'rgba(2, 6, 23, 0.95)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 5000 }}>
+            <div className="glass fade-up" style={{ width: '100%', maxWidth: '900px', borderRadius: '32px', border: '1px solid #00d2ff', overflow: 'hidden', boxShadow: '0 0 100px rgba(0,210,255,0.2)' }}>
+              <div style={{ display: 'flex', height: '600px' }}>
+                {/* Lado Izquierdo: Configuración */}
+                <div style={{ flex: '0 0 400px', padding: '40px', background: 'rgba(15, 23, 42, 0.9)', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                    <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '15px' }}><Settings color="#00d2ff" size={28} /> Exportar QR</h3>
+                    <button onClick={() => setShowQrExportModal(false)} style={{ background: 'rgba(255,255,255,0.05)', border: 'none', color: 'white', width: '35px', height: '35px', borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={18} /></button>
+                  </div>
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: '15px' }}>TAMAÑO DEL CÓDIGO QR ({qrExportConfig.size}px)</label>
-                  <input 
-                    type="range" min="150" max="600" step="10"
-                    value={qrExportConfig.size}
-                    onChange={e => setQrExportConfig({...qrExportConfig, size: parseInt(e.target.value)})}
-                    style={{ width: '100%', accentColor: '#00d2ff' }}
-                  />
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)', marginTop: '5px' }}>
-                    <span>Pequeño</span>
-                    <span>Mediano</span>
-                    <span>Grande</span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '25px', flex: 1 }}>
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', display: 'block', marginBottom: '15px' }}>TAMAÑO DEL CÓDIGO QR ({qrExportConfig.size}px)</label>
+                      <input 
+                        type="range" min="150" max="600" step="10"
+                        value={qrExportConfig.size}
+                        onChange={e => setQrExportConfig({...qrExportConfig, size: parseInt(e.target.value)})}
+                        style={{ width: '100%', accentColor: '#00d2ff' }}
+                      />
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '8px' }}>
+                        <span>PEQUEÑO</span>
+                        <span>MEDIANO</span>
+                        <span>GRANDE</span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', display: 'block', marginBottom: '15px' }}>CÓDIGOS POR PÁGINA</label>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                        {[1, 2, 4].map(num => (
+                          <button 
+                            key={num}
+                            onClick={() => setQrExportConfig({...qrExportConfig, perPage: num})}
+                            style={{ 
+                              padding: '12px', borderRadius: '12px', border: qrExportConfig.perPage === num ? '1px solid #00d2ff' : '1px solid rgba(255,255,255,0.1)',
+                              background: qrExportConfig.perPage === num ? 'rgba(0,210,255,0.1)' : 'rgba(255,255,255,0.02)',
+                              color: qrExportConfig.perPage === num ? '#00d2ff' : 'rgba(255,255,255,0.5)',
+                              cursor: 'pointer', fontWeight: 'bold', transition: '0.3s'
+                            }}
+                          >
+                            {num} {num === 1 ? 'Pág' : 'Pág'}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div style={{ background: 'rgba(0,210,255,0.05)', padding: '20px', borderRadius: '20px', border: '1px solid rgba(0,210,255,0.1)', marginTop: 'auto' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#00d2ff', marginBottom: '8px' }}>
+                        <FileText size={18} />
+                        <span style={{ fontSize: '0.8rem', fontWeight: '900' }}>RESUMEN DE EXPORTACIÓN</span>
+                      </div>
+                      <p style={{ margin: 0, fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.5' }}>
+                        Se generarán <b>{qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective).length}</b> códigos QR. 
+                        Asegúrese de configurar su impresora en tamaño A4 para mejores resultados.
+                      </p>
+                    </div>
+
+                    <button 
+                      onClick={() => {
+                        setShowQrExportModal(false);
+                        setTimeout(() => window.print(), 500);
+                      }}
+                      className="primary" 
+                      style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)', boxShadow: '0 10px 25px rgba(0,210,255,0.3)' }}
+                    >
+                      <Download size={20} /> GENERAR E IMPRIMIR
+                    </button>
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.6)', display: 'block', marginBottom: '15px' }}>DISTRIBUCIÓN (CÓDIGOS POR PÁGINA)</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
-                    {[1, 2, 4].map(num => (
-                      <button 
-                        key={num}
-                        onClick={() => setQrExportConfig({...qrExportConfig, perPage: num})}
-                        style={{ 
-                          padding: '12px', borderRadius: '12px', border: qrExportConfig.perPage === num ? '1px solid #00d2ff' : '1px solid rgba(255,255,255,0.1)',
-                          background: qrExportConfig.perPage === num ? 'rgba(0,210,255,0.1)' : 'transparent',
-                          color: qrExportConfig.perPage === num ? '#00d2ff' : 'white',
-                          cursor: 'pointer', fontWeight: 'bold', transition: '0.3s'
-                        }}
-                      >
-                        {num} {num === 1 ? 'POR PÁG.' : 'POR PÁG.'}
-                      </button>
-                    ))}
+                {/* Lado Derecho: Vista Previa Real */}
+                <div style={{ flex: 1, background: '#f8fafc', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: '20px', left: '20px', zIndex: 10 }}>
+                    <div style={{ background: 'rgba(15, 23, 42, 0.8)', backdropFilter: 'blur(10px)', padding: '8px 15px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', color: 'white', fontSize: '0.7rem', fontWeight: 'bold' }}>
+                      VISTA PREVIA DE IMPRESIÓN
+                    </div>
+                  </div>
+
+                  {/* Hoja A4 Simulada */}
+                  <div style={{ 
+                    width: '350px', height: '495px', background: 'white', boxShadow: '0 20px 50px rgba(0,0,0,0.1)', 
+                    display: 'flex', flexDirection: 'column', border: '1px solid #e2e8f0', transform: 'scale(0.9)',
+                    overflow: 'hidden'
+                  }}>
+                    {(() => {
+                      const samplePoint = qrPoints.find(p => !selectedQrObjective || p.objectiveId === selectedQrObjective) || { name: 'Punto de Prueba', objectiveId: '' };
+                      const sampleObj = objectives.find(o => o.id === samplePoint.objectiveId);
+                      
+                      return Array.from({ length: Math.min(qrExportConfig.perPage, 2) }).map((_, i) => (
+                        <div key={i} style={{ 
+                          flex: 1, borderBottom: '1px dashed #ddd', display: 'flex', flexDirection: 'column', 
+                          alignItems: 'center', justifyContent: 'center', padding: '20px', textAlign: 'center' 
+                        }}>
+                          <div style={{ color: '#00d2ff', fontWeight: '900', fontSize: '10px', letterSpacing: '2px', marginBottom: '5px' }}>CENTINELA SECURITY</div>
+                          <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 'bold', textTransform: 'uppercase' }}>{sampleObj?.nombre || 'OBJETIVO GENERAL'}</div>
+                          <h4 style={{ margin: '5px 0 10px 0', fontSize: '16px', color: 'black', fontWeight: '900', textTransform: 'uppercase' }}>{samplePoint.name}</h4>
+                          <QRCodeSVG
+                            value="PREVIEW"
+                            size={Math.min(qrExportConfig.size / 2, 180)}
+                            level="M"
+                            includeMargin={true}
+                          />
+                        </div>
+                      ));
+                    })()}
                   </div>
                 </div>
-
-                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                  <p style={{ margin: 0, fontSize: '0.8rem', color: 'rgba(255,255,255,0.5)', lineHeight: '1.5' }}>
-                    <Zap size={14} style={{ marginRight: '5px', verticalAlign: 'middle', color: '#00d2ff' }} />
-                    Se exportarán <strong>{qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective).length}</strong> códigos QR según el filtro seleccionado.
-                  </p>
-                </div>
-
-                <button 
-                  onClick={() => {
-                    setShowQrExportModal(false);
-                    setTimeout(() => window.print(), 500);
-                  }}
-                  className="primary" 
-                  style={{ padding: '18px', borderRadius: '15px', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)' }}
-                >
-                  <FileText size={20} /> GENERAR PDF / IMPRIMIR
-                </button>
               </div>
             </div>
           </div>
