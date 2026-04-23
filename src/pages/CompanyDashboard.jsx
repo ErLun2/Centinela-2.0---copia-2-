@@ -2414,50 +2414,80 @@ const CompanyDashboard = () => {
             <style>
               {`
                   @media print {
-                    @page { margin: 1cm; size: A4 portrait; }
-                    body { background: white !important; }
-                    #root > div > div:first-child, header, nav, .noprint, button { display: none !important; }
+                    @page { margin: 0; size: A4 portrait; }
+                    body { background: white !important; margin: 0 !important; padding: 0 !important; overflow: visible !important; }
                     
-                    #root > div > div:last-child { 
+                    /* Ocultar absolutamente todo excepto lo que queremos */
+                    #root > div > div, header, nav, .noprint, button, .arrow-indicator, .glass::before { 
+                      display: none !important; 
+                    }
+                    
+                    #root > div { 
+                      display: block !important; 
+                      background: white !important; 
                       padding: 0 !important; 
-                      margin: 0 !important; 
-                      width: 100% !important; 
-                      display: block !important;
-                      background: white !important;
+                      margin: 0 !important;
+                      width: 100% !important;
                     }
 
                     .printable-qr-grid { 
                       display: block !important; 
+                      position: absolute !important;
+                      top: 0 !important;
+                      left: 0 !important;
                       width: 100% !important; 
                       background: white !important;
+                      z-index: 99999 !important;
+                      visibility: visible !important;
                     }
                     
                     .qr-card { 
                       display: flex !important;
+                      visibility: visible !important;
                       flex-direction: column !important;
                       align-items: center !important;
                       justify-content: center !important;
-                      height: ${95 / qrExportConfig.perPage}vh !important;
-                      border-bottom: 1px dashed #eee !important;
+                      height: ${100 / qrExportConfig.perPage}vh !important;
+                      width: 100% !important;
+                      border-bottom: 1px dashed #ddd !important;
                       page-break-inside: avoid !important;
                       padding: 20px !important;
                       box-sizing: border-box;
                       background: white !important;
                       box-shadow: none !important;
-                      border: none !important;
+                      border-right: none !important;
+                      border-left: none !important;
+                      border-top: none !important;
+                      border-radius: 0 !important;
+                      color: black !important;
                     }
                     
-                    .qr-card h4 { color: black !important; font-size: 1.8rem !important; margin: 10px 0 !important; font-weight: 900 !important; }
-                    .qr-card div { color: #444 !important; font-size: 1rem !important; margin-bottom: 10px !important; }
-                    .qr-card svg { width: ${qrExportConfig.size}px !important; height: ${qrExportConfig.size}px !important; }
-                    .qr-card .noprint { display: none !important; }
+                    .qr-card h4 { 
+                      color: black !important; 
+                      font-size: 1.8rem !important; 
+                      margin: 10px 0 !important; 
+                      font-weight: 900 !important; 
+                      text-transform: uppercase !important;
+                    }
                     
-                    /* Asegurar que el QR se vea bien en blanco y negro */
+                    .qr-card .qr-obj-name {
+                       color: #666 !important;
+                       font-size: 1rem !important;
+                       font-weight: bold !important;
+                    }
+
+                    .qr-card svg { 
+                      width: ${qrExportConfig.size}px !important; 
+                      height: ${qrExportConfig.size}px !important; 
+                    }
+                    
+                    /* Forzar QR en blanco y negro puro */
                     .qr-card svg rect { fill: white !important; }
                     .qr-card svg path { fill: black !important; }
                   }
                `}
             </style>
+
 
 
             {activeRondaSubTab === 'puntos' && (
@@ -2549,7 +2579,7 @@ const CompanyDashboard = () => {
                     const obj = Array.isArray(objectives) ? objectives.find(o => o.id === point.objectiveId) : null;
                     return (
                       <div key={point.id} className="qr-card fade-up" style={{ padding: '30px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.5)' }}>
-                        <div style={{ fontSize: '0.8rem', color: '#00d2ff', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>{obj?.nombre || 'General'}</div>
+                        <div className="qr-obj-name" style={{ fontSize: '0.8rem', color: '#00d2ff', fontWeight: 'bold', letterSpacing: '2px', textTransform: 'uppercase' }}>{obj?.nombre || 'General'}</div>
                         <h4 style={{ margin: 0, fontSize: '1.4rem', color: 'white', fontWeight: 900 }}>{point.name}</h4>
                         <div style={{ position: 'relative', background: 'white', padding: '15px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', marginTop: '10px', marginBottom: '10px' }}>
                           <QRCodeSVG
