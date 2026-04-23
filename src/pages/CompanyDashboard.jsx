@@ -2865,14 +2865,18 @@ const CompanyDashboard = () => {
                   const currentCount = assignedGuards.filter(u => {
                     const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                     const userEvents = events.filter(e => {
-                      const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
-                      return eKey !== '' && uKeys.includes(eKey);
+                      const eKeys = [
+                        String(e.usuarioId || ''), 
+                        String(e.userId || ''), 
+                        String(e.guardiaId || ''),
+                        String(typeof e.usuario === 'string' ? e.usuario : (e.usuario?.id || e.usuario?.uid || ''))
+                      ].filter(k => k !== '');
+                      return eKeys.some(ek => uKeys.includes(ek));
                     });
                     
-                    const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                    const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                    const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                    const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                     
-                    // Si el INGRESO es posterior al EGRESO, el usuario está presente
                     return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                   }).length;
 
@@ -2904,12 +2908,17 @@ const CompanyDashboard = () => {
                               {assignedGuards.map(u => {
                                 const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                                 const userEvents = events.filter(e => {
-                                  const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
-                                  return eKey !== '' && uKeys.includes(eKey);
+                                  const eKeys = [
+                                    String(e.usuarioId || ''), 
+                                    String(e.userId || ''), 
+                                    String(e.guardiaId || ''),
+                                    String(typeof e.usuario === 'string' ? e.usuario : (e.usuario?.id || e.usuario?.uid || ''))
+                                  ].filter(k => k !== '');
+                                  return eKeys.some(ek => uKeys.includes(ek));
                                 });
                                 
-                                const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                                const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                                const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
 
                                 return (
