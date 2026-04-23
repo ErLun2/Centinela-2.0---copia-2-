@@ -1640,7 +1640,7 @@ const CompanyDashboard = () => {
       )}
 
       {/* Sidebar */}
-      <div style={{ width: '280px', background: 'linear-gradient(180deg, #0f172a 0%, #020617 100%)', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
+      <div className="noprint" style={{ width: '280px', background: 'linear-gradient(180deg, #0f172a 0%, #020617 100%)', borderRight: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '40px 20px', borderBottom: '1px solid rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', gap: '15px' }}>
           <img src="/logo-centinela.png" alt="Logo" style={{ width: '80px', height: '80px', objectFit: 'contain', filter: 'drop-shadow(0 0 10px rgba(0,210,255,0.3))' }} />
           <div>
@@ -2414,47 +2414,42 @@ const CompanyDashboard = () => {
             <style>
               {`
                   @media print {
-                    @page { margin: 0; size: A4 portrait; }
+                    @page { margin: 1cm; size: A4 portrait; }
                     body { background: white !important; margin: 0 !important; padding: 0 !important; }
                     
-                    /* Hide EVERYTHING by default */
-                    body * { visibility: hidden; }
-                    
-                    /* Only show the QR grid and its contents */
-                    .printable-qr-grid, .printable-qr-grid * { 
-                      visibility: visible !important; 
+                    /* Ocultar elementos marcados */
+                    .noprint, nav, header, aside, button, .arrow-indicator, .glass::before { 
+                      display: none !important; 
                     }
                     
-                    /* Ensure parents are visible but don't take space */
+                    /* Reset de contenedores */
                     #root, #root > div, #root > div > div {
-                      visibility: visible !important;
                       display: block !important;
-                      position: absolute !important;
-                      top: 0; left: 0; width: 100%;
-                      margin: 0 !important;
+                      background: white !important;
                       padding: 0 !important;
+                      margin: 0 !important;
+                      width: 100% !important;
+                      height: auto !important;
+                      min-height: auto !important;
+                      box-shadow: none !important;
                     }
 
-                    /* Specifically hide siblings of the grid to avoid layout shifts */
-                    #root > div > div > *:not(.printable-qr-grid) {
+                    /* Ocultar todo lo que no sea la grilla dentro de main */
+                    main > div > *:not(.printable-qr-grid) {
                       display: none !important;
                     }
-                    
+
                     .printable-qr-grid { 
-                      position: absolute !important;
-                      top: 0 !important;
-                      left: 0 !important;
-                      width: 100% !important; 
                       display: block !important;
+                      width: 100% !important; 
                     }
                     
                     .qr-card { 
                       display: flex !important;
-                      visibility: visible !important;
                       flex-direction: column !important;
                       align-items: center !important;
                       justify-content: center !important;
-                      height: ${98 / qrExportConfig.perPage}vh !important;
+                      height: ${95 / qrExportConfig.perPage}vh !important;
                       width: 100% !important;
                       border-bottom: 1px dashed #ccc !important;
                       page-break-inside: avoid !important;
@@ -2462,7 +2457,6 @@ const CompanyDashboard = () => {
                       box-sizing: border-box;
                       background: white !important;
                       color: black !important;
-                      text-align: center !important;
                     }
                     
                     .qr-card .qr-header {
@@ -2474,7 +2468,6 @@ const CompanyDashboard = () => {
                       margin-bottom: 10px !important;
                       text-transform: uppercase !important;
                       letter-spacing: 2px !important;
-                      visibility: visible !important;
                     }
 
                     .qr-card .qr-obj-name {
@@ -2483,7 +2476,6 @@ const CompanyDashboard = () => {
                        font-weight: 800 !important;
                        margin-bottom: 5px !important;
                        text-transform: uppercase !important;
-                       visibility: visible !important;
                     }
 
                     .qr-card h4 { 
@@ -2492,13 +2484,11 @@ const CompanyDashboard = () => {
                       margin: 5px 0 20px 0 !important; 
                       font-weight: 900 !important; 
                       text-transform: uppercase !important;
-                      visibility: visible !important;
                     }
 
                     .qr-card svg { 
                       width: ${qrExportConfig.size}px !important; 
                       height: ${qrExportConfig.size}px !important; 
-                      visibility: visible !important;
                     }
                     
                     .qr-card svg rect { fill: white !important; }
