@@ -2806,13 +2806,24 @@ const CompanyDashboard = () => {
                     const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
                     return isNaN(d.getTime()) ? 0 : d.getTime();
                   };
-                  const uKeysGps = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                   const userEvtsGps = events.filter(e => {
-                    const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
-                    return eKey !== '' && uKeysGps.includes(eKey);
+                    const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || ''), String(u.email || '')].filter(k => k !== '').map(k => k.toLowerCase());
+                    const eKeys = [
+                      String(e.usuarioId || ''), String(e.userId || ''), String(e.guardiaId || ''),
+                      String(e.usuario?.id || ''), String(e.usuario?.uid || ''), 
+                      String(e.usuario?.legajo || ''), String(e.usuario?.email || '')
+                    ].filter(k => k !== '').map(k => k.toLowerCase());
+                    
+                    const idMatch = eKeys.some(ek => uKeys.includes(ek));
+                    if (idMatch) return true;
+                    
+                    const uFull = `${u.nombre || ''} ${u.apellido || ''}`.trim().toLowerCase();
+                    const eFull = typeof e.usuario === 'object' ? `${e.usuario?.nombre || ''} ${e.usuario?.apellido || ''}`.trim().toLowerCase() : '';
+                    return uFull !== '' && uFull === eFull;
                   });
-                  const lastInGps = userEvtsGps.filter(e => e.tipo === 'ingreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
-                  const lastOutGps = userEvtsGps.filter(e => e.tipo === 'egreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
+
+                  const lastInGps = userEvtsGps.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
+                  const lastOutGps = userEvtsGps.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
                   const isOnDuty = lastInGps && (!lastOutGps || getT_gps(lastInGps) > getT_gps(lastOutGps));
 
                   if (!isOnDuty) return null; // No mostrar fuera de turno
@@ -2863,21 +2874,27 @@ const CompanyDashboard = () => {
                   };
 
                   const currentCount = assignedGuards.filter(u => {
-                    const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                     const userEvents = events.filter(e => {
+                      const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || ''), String(u.email || '')].filter(k => k !== '').map(k => k.toLowerCase());
                       const eKeys = [
-                        String(e.usuarioId || ''), 
-                        String(e.userId || ''), 
-                        String(e.guardiaId || ''),
-                        String(typeof e.usuario === 'string' ? e.usuario : (e.usuario?.id || e.usuario?.uid || ''))
-                      ].filter(k => k !== '');
-                      return eKeys.some(ek => uKeys.includes(ek));
+                        String(e.usuarioId || ''), String(e.userId || ''), String(e.guardiaId || ''),
+                        String(e.usuario?.id || ''), String(e.usuario?.uid || ''), 
+                        String(e.usuario?.legajo || ''), String(e.usuario?.email || '')
+                      ].filter(k => k !== '').map(k => k.toLowerCase());
+                      
+                      const idMatch = eKeys.some(ek => uKeys.includes(ek));
+                      if (idMatch) return true;
+                      
+                      const uFull = `${u.nombre || ''} ${u.apellido || ''}`.trim().toLowerCase();
+                      const eFull = typeof e.usuario === 'object' ? `${e.usuario?.nombre || ''} ${e.usuario?.apellido || ''}`.trim().toLowerCase() : '';
+                      return uFull !== '' && uFull === eFull;
                     });
                     
-                    const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                    const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                    if (userEvents.length === 0) return false;
                     
-                    return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
+                    // El evento más reciente manda (Igual que la visual del Resumen)
+                    const latestEvent = [...userEvents].sort((a,b) => getT(b) - getT(a))[0];
+                    return (latestEvent.tipo || '').toLowerCase() === 'ingreso';
                   }).length;
 
                   return (
@@ -2906,20 +2923,24 @@ const CompanyDashboard = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '900', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '2px' }}>Personal Asignado</div>
                               {assignedGuards.map(u => {
-                                const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                                 const userEvents = events.filter(e => {
+                                  const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || ''), String(u.email || '')].filter(k => k !== '').map(k => k.toLowerCase());
                                   const eKeys = [
-                                    String(e.usuarioId || ''), 
-                                    String(e.userId || ''), 
-                                    String(e.guardiaId || ''),
-                                    String(typeof e.usuario === 'string' ? e.usuario : (e.usuario?.id || e.usuario?.uid || ''))
-                                  ].filter(k => k !== '');
-                                  return eKeys.some(ek => uKeys.includes(ek));
+                                    String(e.usuarioId || ''), String(e.userId || ''), String(e.guardiaId || ''),
+                                    String(e.usuario?.id || ''), String(e.usuario?.uid || ''), 
+                                    String(e.usuario?.legajo || ''), String(e.usuario?.email || '')
+                                  ].filter(k => k !== '').map(k => k.toLowerCase());
+                                  
+                                  const idMatch = eKeys.some(ek => uKeys.includes(ek));
+                                  if (idMatch) return true;
+                                  
+                                  const uFull = `${u.nombre || ''} ${u.apellido || ''}`.trim().toLowerCase();
+                                  const eFull = typeof e.usuario === 'object' ? `${e.usuario?.nombre || ''} ${e.usuario?.apellido || ''}`.trim().toLowerCase() : '';
+                                  return uFull !== '' && uFull === eFull;
                                 });
                                 
-                                const lastIn = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
-                                const lastOut = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
-                                const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
+                                const latestEvent = userEvents.length > 0 ? [...userEvents].sort((a,b) => getT(b) - getT(a))[0] : null;
+                                const isPresent = latestEvent && (latestEvent.tipo || '').toLowerCase() === 'ingreso';
 
                                 return (
                                   <div key={u.id || u.uid} style={{ display: 'flex', flexDirection: 'column', background: isPresent ? 'rgba(16, 185, 129, 0.05)' : '#f8fafc', padding: '10px', borderRadius: '12px', border: isPresent ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid #e2e8f0' }}>
