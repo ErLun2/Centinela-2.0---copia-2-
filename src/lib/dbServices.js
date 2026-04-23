@@ -7,8 +7,8 @@ import { getAuth, createUserWithEmailAndPassword, signOut as signOutAuth } from 
 // CONFIGURACIÓN API (RENDER / PRODUCCIÓN)
 // ========================
 const getApiUrl = () => {
-    // REGLA DE ORO: Forzamos la conexión al servidor real de Render para que PC y Celular vean lo mismo
-    return 'https://centinela-backend.onrender.com/api';
+    // REGLA DE ORO: Priorizamos la variable de entorno de Vite, con fallback al servidor real de Render
+    return import.meta.env.VITE_API_URL || 'https://centinela-backend.onrender.com/api';
 };
 
 export const API_URL = getApiUrl();

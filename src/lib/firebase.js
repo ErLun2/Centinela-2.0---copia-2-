@@ -12,25 +12,25 @@ const firebaseConfig = {
 };
 
 let app;
-let mock = false;
+let isReal = false;
 
 // We check if the minimum required config exists
-if (!firebaseConfig.apiKey || firebaseConfig.apiKey === "" || firebaseConfig.apiKey.includes("your_")) {
-  console.warn("Firebase not configured. Entering DEMO MODE.");
-  mock = true;
-  app = null;
-} else {
+if (firebaseConfig.apiKey && firebaseConfig.apiKey !== "" && !firebaseConfig.apiKey.includes("your_")) {
   try {
     app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+    isReal = true;
   } catch (err) {
     console.error("Firebase initialization failed:", err);
-    mock = true;
     app = null;
   }
+} else {
+  // En producción, no queremos asustar con "DEMO MODE" si estamos usando MySQL/Render
+  console.info("Firebase Auth not configured. Primary authentication via Render API enabled.");
 }
 
 export const auth = app ? getAuth(app) : { 
-  isMock: true,
+  isReal: false,
+  isMock: true, // Mantenemos por compatibilidad de tipos pero ya no disparará la lógica de datos demo en AuthContext
   onAuthStateChanged: (cb) => { 
     setTimeout(() => cb(null), 100); 
     return () => {}; 

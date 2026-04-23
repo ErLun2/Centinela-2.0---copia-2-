@@ -60,10 +60,7 @@ export const AuthProvider = ({ children }) => {
 
     // Safe Auth State Listener
     let unsubscribe;
-    if (auth?.isMock) {
-       setTimeout(() => setLoading(false), 500);
-       unsubscribe = () => {};
-    } else {
+    if (auth?.isReal) {
        unsubscribe = firebaseOnAuthStateChanged(auth, async (firebaseUser) => {
          setLoading(true);
          if (firebaseUser) {
@@ -74,14 +71,21 @@ export const AuthProvider = ({ children }) => {
          }
          setLoading(false);
        });
+    } else {
+       // Fallback: No Firebase, dependemos totalmente de API Render (MySQL)
+       setTimeout(() => setLoading(false), 500);
+       unsubscribe = () => {};
     }
 
     return () => unsubscribe();
   }, []);
 
-  // Initialize MOCK data if not present
+  // Initialize MOCK data ONLY if explicitly requested (Avoids "Demo Mode" bug in production)
   useEffect(() => {
-    if (auth?.isMock) {
+    const isDev = import.meta.env.DEV;
+    const forceDemo = localStorage.getItem('centinela_force_demo') === 'true';
+
+    if (auth?.isMock && (isDev || forceDemo)) {
       const companies = JSON.parse(localStorage.getItem('centinela_companies') || '[]');
       if (!companies.find(c => c.id === 'demo_001')) {
         const demoCompany = {
