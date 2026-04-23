@@ -2853,25 +2853,26 @@ const CompanyDashboard = () => {
                 {objectives.filter(obj => obj.activo !== false).map(obj => {
                   const assignedGuards = companyUsers.filter(u => String(u.schedule?.objectiveId) === String(obj.id));
                   const totalCount = assignedGuards.length;
+                  
+                  // REGLA DE ORO: La presencia depende de INGRESO > EGRESO (Igual que en RESUMEN)
+                  const getT = (e) => {
+                    if (!e) return 0;
+                    if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
+                    const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
+                    return isNaN(d.getTime()) ? 0 : d.getTime();
+                  };
+
                   const currentCount = assignedGuards.filter(u => {
-                    // REGLA DE ORO: Normalización robusta de tiempos para MySQL
-                    const getT = (e) => {
-                      if (!e) return 0;
-                      if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000; // Firebase fallback
-                      const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
-                      return isNaN(d.getTime()) ? 0 : d.getTime();
-                    };
-                    
                     const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                     const userEvents = events.filter(e => {
                       const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
                       return eKey !== '' && uKeys.includes(eKey);
                     });
                     
-                    // Filtrar por el ingreso más reciente a ESTE objetivo específico
-                    const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
+                    const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
                     const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                     
+                    // Si el INGRESO es posterior al EGRESO, el usuario está presente
                     return lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
                   }).length;
 
@@ -2901,18 +2902,13 @@ const CompanyDashboard = () => {
                             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                               <div style={{ fontSize: '10px', color: '#94a3b8', fontWeight: '900', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '2px' }}>Personal Asignado</div>
                               {assignedGuards.map(u => {
-                                  const getT = (e) => {
-                                    if (!e) return 0;
-                                    if (e.fechaRegistro?.seconds) return e.fechaRegistro.seconds * 1000;
-                                    const d = new Date(e.fechaRegistro || e.created_at || e.fecha || 0);
-                                    return isNaN(d.getTime()) ? 0 : d.getTime();
-                                  };
                                 const uKeys = [String(u.id || ''), String(u.uid || ''), String(u.legajo || '')].filter(k => k !== '');
                                 const userEvents = events.filter(e => {
                                   const eKey = String(e.usuarioId || e.userId || e.guardiaId || (typeof e.usuario === 'string' ? e.usuario : e.usuario?.id || e.usuario?.uid || '') || '');
                                   return eKey !== '' && uKeys.includes(eKey);
                                 });
-                                const lastIn = userEvents.filter(e => e.tipo === 'ingreso' && String(e.objetivoId || e.objectiveId) === String(obj.id)).sort((a,b) => getT(b) - getT(a))[0];
+                                
+                                const lastIn = userEvents.filter(e => e.tipo === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const lastOut = userEvents.filter(e => e.tipo === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
                                 const isPresent = lastIn && (!lastOut || getT(lastIn) > getT(lastOut));
 
