@@ -1,9 +1,9 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { QRCodeCanvas } from 'qrcode.react';
+import React from 'react';
 
 /**
  * QRPrintSystem
  * A professional system for generating high-quality QR PDF/Printouts.
+ * Optimized for high-resolution Base64 images to ensure visibility in all contexts.
  */
 
 // --- COMPONENTS ---
@@ -11,24 +11,7 @@ import { QRCodeCanvas } from 'qrcode.react';
 /**
  * Individual QR Card optimized for full-page printing
  */
-const QRPrintCard = ({ point, objective, companyName }) => {
-  const [qrLoaded, setQrLoaded] = useState(false);
-  const canvasRef = useRef(null);
-  const [imgData, setImgData] = useState(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (canvasRef.current) {
-        const canvas = canvasRef.current.querySelector('canvas');
-        if (canvas) {
-          setImgData(canvas.toDataURL('image/png'));
-          setQrLoaded(true);
-        }
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [point.id]);
-
+const QRPrintCard = ({ point, objective, companyName, qrImage }) => {
   return (
     <div className="qr-print-page">
       <div className="qr-print-container">
@@ -40,18 +23,10 @@ const QRPrintCard = ({ point, objective, companyName }) => {
         <div className="qr-print-main">
           <h1 className="qr-title">{point.name}</h1>
           <div className="qr-image-wrapper">
-             <div ref={canvasRef} style={{ display: 'none' }}>
-                <QRCodeCanvas 
-                  value={JSON.stringify({ id: point.id, type: 'ronda_qr' })} 
-                  size={512} 
-                  level="H" 
-                  includeMargin={true} 
-                />
-             </div>
-             {imgData ? (
-               <img src={imgData} alt={point.name} className="qr-final-image" />
+             {qrImage ? (
+               <img src={qrImage} alt={point.name} className="qr-final-image" />
              ) : (
-               <div className="qr-placeholder">Cargando QR...</div>
+               <div className="qr-placeholder">Cargando imagen QR...</div>
              )}
           </div>
           <div className="qr-footer-info">
@@ -71,20 +46,25 @@ const QRPrintCard = ({ point, objective, companyName }) => {
 /**
  * Label Format: Multiple QR per page
  */
-const QRLabelGrid = ({ points, objectives, companyName }) => {
-  const [imgDataMap, setImgDataMap] = useState({});
-
+const QRLabelGrid = ({ points, objectives, companyName, qrImages }) => {
   return (
     <div className="qr-labels-grid-page">
       <div className="qr-labels-container">
         {points.map(point => {
           const obj = objectives.find(o => o.id === point.objectiveId);
+          const qrImg = qrImages[point.id];
           return (
             <div key={point.id} className="qr-label-item">
               <div className="label-brand">{companyName || 'CENTINELA'}</div>
               <div className="label-obj">{obj?.nombre || 'GENERAL'}</div>
               <div className="label-name">{point.name}</div>
-              <QRToImage value={JSON.stringify({ id: point.id, type: 'ronda_qr' })} size={120} />
+              <div className="qr-image-mini">
+                {qrImg ? (
+                  <img src={qrImg} style={{ width: '80px', height: '80px' }} alt="QR" />
+                ) : (
+                  <div style={{ fontSize: '8px' }}>Cargando...</div>
+                )}
+              </div>
               <div className="label-footer">{point.code}</div>
             </div>
           );
@@ -94,34 +74,10 @@ const QRLabelGrid = ({ points, objectives, companyName }) => {
   );
 };
 
-const QRToImage = ({ value, size }) => {
-  const canvasRef = useRef(null);
-  const [imgData, setImgData] = useState(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (canvasRef.current) {
-        const canvas = canvasRef.current.querySelector('canvas');
-        if (canvas) setImgData(canvas.toDataURL('image/png'));
-      }
-    }, 100);
-    return () => clearTimeout(timer);
-  }, [value]);
-
-  return (
-    <div className="qr-image-mini">
-      <div ref={canvasRef} style={{ display: 'none' }}>
-        <QRCodeCanvas value={value} size={256} level="H" includeMargin={true} />
-      </div>
-      {imgData && <img src={imgData} style={{ width: size, height: size }} alt="QR" />}
-    </div>
-  );
-};
-
 /**
  * Main Print View
  */
-export const QRPrintView = ({ points, objectives, companyName, config }) => {
+export const QRPrintView = ({ points, objectives, companyName, config, qrImages }) => {
   if (!points || points.length === 0) return null;
 
   return (
@@ -151,14 +107,14 @@ export const QRPrintView = ({ points, objectives, companyName, config }) => {
           }
 
           @page {
-            size: A4;
+            size: A4 portrait;
             margin: 0;
           }
 
           /* One QR per Page Layout */
           .qr-print-page {
             width: 210mm;
-            height: 297mm;
+            height: 296mm; /* Margen de seguridad para evitar saltos extra */
             page-break-after: always;
             display: flex;
             flex-direction: column;
@@ -166,20 +122,22 @@ export const QRPrintView = ({ points, objectives, companyName, config }) => {
             justify-content: center;
             background: white;
             box-sizing: border-box;
-            padding: 20mm;
+            padding: 15mm;
             position: relative;
+            overflow: hidden;
           }
 
           .qr-print-container {
             width: 100%;
             height: 100%;
-            border: 1px solid #eee;
+            border: 2px solid #f1f5f9;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: space-between;
             padding: 20mm 10mm;
             box-sizing: border-box;
+            border-radius: 10mm;
           }
 
           .qr-print-header {
@@ -187,16 +145,16 @@ export const QRPrintView = ({ points, objectives, companyName, config }) => {
           }
 
           .brand {
-            font-size: 14pt;
+            font-size: 16pt;
             font-weight: 900;
-            color: #1e293b;
-            letter-spacing: 4px;
+            color: #0f172a;
+            letter-spacing: 5px;
             margin-bottom: 5mm;
             text-transform: uppercase;
           }
 
           .objective {
-            font-size: 18pt;
+            font-size: 20pt;
             font-weight: 700;
             color: #64748b;
             text-transform: uppercase;
@@ -212,45 +170,48 @@ export const QRPrintView = ({ points, objectives, companyName, config }) => {
           }
 
           .qr-title {
-            font-size: 32pt;
+            font-size: 38pt;
             font-weight: 900;
             color: black;
             margin: 0 0 15mm 0;
             text-align: center;
             text-transform: uppercase;
+            line-height: 1.1;
           }
 
           .qr-image-wrapper {
             background: white;
             padding: 5mm;
-            border: 2px solid #000;
+            border: 1pt solid #000;
             display: flex;
             align-items: center;
             justify-content: center;
           }
 
           .qr-final-image {
-            width: 120mm;
-            height: 120mm;
+            width: 130mm;
+            height: 130mm;
             display: block;
           }
 
           .qr-footer-info {
             margin-top: 15mm;
             display: flex;
-            gap: 10mm;
-            font-family: monospace;
-            font-size: 10pt;
+            gap: 15mm;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 11pt;
             color: #94a3b8;
+            font-weight: bold;
           }
 
           .qr-print-footer {
-            font-size: 9pt;
-            color: #cbd5e1;
+            font-size: 10pt;
+            color: #94a3b8;
             text-align: center;
             border-top: 1pt solid #f1f5f9;
             width: 80%;
             padding-top: 5mm;
+            font-weight: bold;
           }
 
           /* Labels Layout */
@@ -258,6 +219,7 @@ export const QRPrintView = ({ points, objectives, companyName, config }) => {
             width: 210mm;
             padding: 10mm;
             box-sizing: border-box;
+            display: block;
           }
 
           .qr-labels-container {
@@ -274,12 +236,18 @@ export const QRPrintView = ({ points, objectives, companyName, config }) => {
             align-items: center;
             text-align: center;
             page-break-inside: avoid;
+            background: white;
           }
 
-          .label-brand { font-size: 8pt; font-weight: 900; color: #3b82f6; margin-bottom: 2mm; }
-          .label-obj { font-size: 7pt; color: #64748b; margin-bottom: 1mm; }
-          .label-name { font-size: 10pt; font-weight: 700; margin-bottom: 3mm; height: 12mm; display: flex; align-items: center; }
-          .label-footer { font-size: 6pt; color: #94a3b8; margin-top: 2mm; font-family: monospace; }
+          .label-brand { font-size: 9pt; font-weight: 900; color: #3b82f6; margin-bottom: 2mm; text-transform: uppercase; }
+          .label-obj { font-size: 7pt; color: #64748b; margin-bottom: 1mm; text-transform: uppercase; font-weight: bold; }
+          .label-name { font-size: 11pt; font-weight: 800; margin-bottom: 3mm; height: 12mm; display: flex; align-items: center; justify-content: center; line-height: 1.2; text-transform: uppercase; }
+          .label-footer { font-size: 7pt; color: #94a3b8; margin-top: 2mm; font-family: monospace; font-weight: bold; }
+          
+          .qr-image-mini img {
+            display: block;
+            margin: 0 auto;
+          }
         }
       `}</style>
 
@@ -290,6 +258,7 @@ export const QRPrintView = ({ points, objectives, companyName, config }) => {
             point={point} 
             objective={objectives.find(o => o.id === point.objectiveId)} 
             companyName={companyName}
+            qrImage={qrImages[point.id]}
           />
         ))
       ) : (
@@ -297,6 +266,7 @@ export const QRPrintView = ({ points, objectives, companyName, config }) => {
           points={points} 
           objectives={objectives} 
           companyName={companyName} 
+          qrImages={qrImages}
         />
       )}
     </div>

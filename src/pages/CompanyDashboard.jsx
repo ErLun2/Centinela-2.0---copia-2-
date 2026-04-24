@@ -4134,7 +4134,7 @@ const CompanyDashboard = () => {
         {/* Modal: Planificación de Turnos (Shift) */}
         {showShiftModal && selectedUser && (
           <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(20px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100 }}>
-             <div className="glass fade-up" style={{ width: '550px', maxHeight: '90vh', overflowY: 'auto', padding: '40px', borderRadius: '32px', border: '1px solid #10b981' }} className="custom-scrollbar">
+             <div className="glass fade-up custom-scrollbar" style={{ width: '550px', maxHeight: '90vh', overflowY: 'auto', padding: '40px', borderRadius: '32px', border: '1px solid #10b981' }}>
                 <h3 style={{ margin: '0 0 25px', display: 'flex', alignItems: 'center', gap: '15px' }}><Calendar size={24} color="#10b981" /> Agenda Operativa: {selectedUser.nombre}</h3>
                 
                 <div style={{ marginBottom: '20px' }}>
