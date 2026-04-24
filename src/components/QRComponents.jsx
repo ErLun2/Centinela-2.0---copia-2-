@@ -1,16 +1,46 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { QRCodeCanvas, QRCodeSVG } from 'qrcode.react';
+import React from 'react';
+import { QRCodeSVG } from 'qrcode.react';
+import QRCode from 'qrcode';
 
 /**
  * QRComponents.jsx
- * Separación robusta entre visualización UI y exportación profesional a PDF.
+ * Sistema robusto de pre-generación de imágenes QR para evitar el problema de "Canvas en blanco" en PDFs.
  */
 
-// --- 1. COMPONENTE PARA LA APP (UI) ---
+// --- 1. UTILIDAD DE GENERACIÓN (Independiente de la UI) ---
 
 /**
- * QrCard: Componente optimizado para la grilla del dashboard.
- * Tamaño reducido y prolijo.
+ * generateQRImages: Convierte una lista de puntos en un mapa de imágenes base64.
+ * Es asíncrono y asegura que los QR existan como imágenes estáticas antes de imprimir.
+ */
+export const generateQRImages = async (points, size = 512) => {
+  const images = {};
+  for (const point of points) {
+    try {
+      const data = JSON.stringify({ id: point.id, type: 'ronda_qr' });
+      // Generación directa a Base64 usando la librería 'qrcode'
+      const url = await QRCode.toDataURL(data, {
+        width: size,
+        margin: 2,
+        errorCorrectionLevel: 'H',
+        color: {
+          dark: '#000000',
+          light: '#ffffff'
+        }
+      });
+      images[point.id] = url;
+    } catch (err) {
+      console.error(`Error generando QR para ${point.id}:`, err);
+    }
+  }
+  return images;
+};
+
+// --- 2. COMPONENTE PARA LA APP (UI) ---
+
+/**
+ * QrCard: Para visualización rápida en el Dashboard.
+ * Usa SVG para máxima nitidez en pantalla sin problemas de renderizado.
  */
 export const QrCard = ({ point, objective, onDelete, assignedRondas = [] }) => {
   return (
@@ -24,33 +54,20 @@ export const QrCard = ({ point, objective, onDelete, assignedRondas = [] }) => {
       alignItems: 'center', 
       gap: '8px', 
       textAlign: 'center', 
-      boxShadow: '0 10px 30px rgba(0,0,0,0.3)',
-      transition: '0.3s'
+      boxShadow: '0 10px 30px rgba(0,0,0,0.3)'
     }}>
       <div style={{ color: '#00d2ff', fontWeight: '900', fontSize: '0.6rem', letterSpacing: '2px', textTransform: 'uppercase' }}>CENTINELA SECURITY</div>
       <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>{objective?.nombre || 'General'}</div>
       <h4 style={{ margin: 0, fontSize: '1.1rem', color: 'white', fontWeight: 800 }}>{point.name}</h4>
       
-      <div className="qr-ui-container" style={{ 
-        background: 'white', 
-        padding: '12px', 
-        borderRadius: '12px', 
-        marginTop: '5px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center'
-      }}>
+      <div style={{ background: 'white', padding: '12px', borderRadius: '12px', marginTop: '5px' }}>
         <QRCodeSVG
           value={JSON.stringify({ id: point.id, type: 'ronda_qr' })}
-          size={140} // Tamaño fijo y prolijo para la UI
+          size={140}
           level="H"
-          includeMargin={false}
-          fgColor="#000000"
-          bgColor="#ffffff"
         />
       </div>
 
-      {/* Rondas asignadas */}
       <div className="noprint" style={{ display: 'flex', gap: '5px', flexWrap: 'wrap', justifyContent: 'center', marginTop: '5px' }}>
          {assignedRondas.length === 0 ? (
             <span style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.3)', background: 'rgba(255,255,255,0.03)', padding: '4px 8px', borderRadius: '6px' }}>SIN RONDA</span>
@@ -67,16 +84,8 @@ export const QrCard = ({ point, objective, onDelete, assignedRondas = [] }) => {
         onClick={() => onDelete(point)}
         className="noprint"
         style={{ 
-          marginTop: '10px', 
-          background: 'transparent', 
-          border: '1px solid rgba(239, 68, 68, 0.3)', 
-          color: '#ef4444', 
-          padding: '6px 12px', 
-          borderRadius: '8px', 
-          fontSize: '0.7rem', 
-          fontWeight: 'bold', 
-          cursor: 'pointer',
-          width: '100%'
+          marginTop: '10px', background: 'transparent', border: '1px solid rgba(239, 68, 68, 0.3)', 
+          color: '#ef4444', padding: '6px 12px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold', cursor: 'pointer'
         }}
       >
         ELIMINAR
@@ -86,29 +95,12 @@ export const QrCard = ({ point, objective, onDelete, assignedRondas = [] }) => {
 };
 
 
-// --- 2. COMPONENTES PARA IMPRESIÓN (PDF) ---
+// --- 3. COMPONENTES PARA IMPRESIÓN (ESTÁTICOS) ---
 
 /**
- * QrPrintPage: El template de página completa para el PDF.
- * Convierte el QR a imagen para asegurar visibilidad en PDF.
+ * QrPrintPage: Renderiza un QR pre-generado como imagen estática.
  */
-const QrPrintPage = ({ point, objective, companyName, size = 350 }) => {
-  const canvasRef = useRef(null);
-  const [imgData, setImgData] = useState(null);
-
-  useEffect(() => {
-    // Generar la imagen a partir del canvas de forma asíncrona
-    const timer = setTimeout(() => {
-      if (canvasRef.current) {
-        const canvas = canvasRef.current.querySelector('canvas');
-        if (canvas) {
-          setImgData(canvas.toDataURL('image/png'));
-        }
-      }
-    }, 200); // Pequeño delay para asegurar que qrcode.react terminó
-    return () => clearTimeout(timer);
-  }, [point.id, size]);
-
+const QrPrintPage = ({ point, objective, companyName, qrImage, size }) => {
   return (
     <div className="qr-print-page">
       <div className="qr-print-content">
@@ -119,172 +111,85 @@ const QrPrintPage = ({ point, objective, companyName, size = 350 }) => {
 
         <div className="qr-print-body">
           <h1 className="qr-point-name">{point.name}</h1>
-          
           <div className="qr-image-frame">
-            {/* Generador oculto */}
-            <div ref={canvasRef} style={{ display: 'none' }}>
-              <QRCodeCanvas 
-                value={JSON.stringify({ id: point.id, type: 'ronda_qr' })} 
-                size={512} // Generamos en alta resolución
-                level="H" 
-                includeMargin={true} 
-              />
-            </div>
-            
-            {/* Imagen final estática (Indispensable para PDF) */}
-            {imgData ? (
-              <img src={imgData} alt={point.name} style={{ width: `${size}px`, height: `${size}px` }} />
-            ) : (
-              <div style={{ width: `${size}px`, height: `${size}px`, border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10pt' }}>
-                Generando código...
-              </div>
-            )}
+            <img 
+              src={qrImage} 
+              alt={point.name} 
+              style={{ width: `${size}px`, height: `${size}px`, display: 'block' }} 
+            />
           </div>
-
-          <div className="qr-point-id">ID: {point.id} | CODE: {point.code || point.id}</div>
+          <div className="qr-point-id">ID: {point.id} | VERIFICADO POR SISTEMA CENTINELA</div>
         </div>
 
         <div className="qr-print-footer">
-          SISTEMA DE CONTROL DE RONDAS - CENTINELA 2.0
+          CONTROL DE ACCESO Y RONDAS - GENERADO EL {new Date().toLocaleDateString()}
         </div>
       </div>
     </div>
   );
 };
 
-/**
- * QrLabelGrid: Layout de etiquetas (múltiples por hoja)
- */
-const QrLabelGrid = ({ points, objectives, companyName }) => {
-  return (
-    <div className="qr-labels-page">
-      <div className="qr-labels-container">
-        {points.map(point => (
-          <QrLabelItem 
-            key={point.id} 
-            point={point} 
-            objective={objectives.find(o => o.id === point.objectiveId)} 
-            companyName={companyName}
-          />
-        ))}
-      </div>
-    </div>
-  );
-};
-
-const QrLabelItem = ({ point, objective, companyName }) => {
-  const canvasRef = useRef(null);
-  const [imgData, setImgData] = useState(null);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (canvasRef.current) {
-        const canvas = canvasRef.current.querySelector('canvas');
-        if (canvas) setImgData(canvas.toDataURL('image/png'));
-      }
-    }, 200);
-    return () => clearTimeout(timer);
-  }, [point.id]);
-
+const QrLabelItem = ({ point, objective, companyName, qrImage }) => {
   return (
     <div className="qr-label-item">
       <div className="label-top">{companyName || 'CENTINELA'}</div>
-      <div className="label-obj">{objective?.nombre || 'GENERAL'}</div>
+      <div className="label-obj">{objective?.nombre || 'PUESTO'}</div>
       <div className="label-title">{point.name}</div>
       <div className="label-qr">
-        <div ref={canvasRef} style={{ display: 'none' }}>
-           <QRCodeCanvas value={JSON.stringify({ id: point.id, type: 'ronda_qr' })} size={256} level="H" includeMargin={true} />
-        </div>
-        {imgData && <img src={imgData} alt="QR" style={{ width: '100px', height: '100px' }} />}
+        <img src={qrImage} alt="QR" style={{ width: '100px', height: '100px' }} />
       </div>
-      <div className="label-code">{point.code}</div>
+      <div className="label-code">{point.id.slice(0, 8).toUpperCase()}</div>
     </div>
   );
 };
 
 
 /**
- * QRPrintSystem: Componente raíz para la vista de impresión.
+ * QRPrintSystem: Componente raíz para impresión. 
+ * IMPORTANTE: No genera nada, solo muestra lo que ya fue pre-generado.
  */
-export const QRPrintSystem = ({ points, objectives, companyName, config }) => {
-  if (!points || points.length === 0) return null;
+export const QRPrintSystem = ({ points, objectives, companyName, config, qrImages }) => {
+  if (!points || points.length === 0 || !qrImages) return null;
 
   return (
     <div className="qr-print-system-root print-only">
       <style>{`
-        @media screen {
-          .qr-print-system-root { display: none !important; }
-        }
-
+        @media screen { .qr-print-system-root { display: none !important; } }
         @media print {
-          @page {
-            size: A4;
-            margin: 0;
-          }
+          @page { size: A4; margin: 0; }
+          html, body { margin: 0 !important; padding: 0 !important; background: white !important; }
+          .noprint { display: none !important; }
+          .qr-print-system-root { display: block !important; width: 100% !important; }
 
-          html, body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-            color: black !important;
-          }
-
-          .noprint, nav, header, aside, .no-print {
-            display: none !important;
-          }
-
-          .qr-print-system-root {
-            display: block !important;
-            width: 100% !important;
-          }
-
-          /* Layout Full Page */
           .qr-print-page {
-            width: 210mm;
-            height: 297mm;
+            width: 210mm; height: 297mm;
             page-break-after: always;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center;
             background: white;
           }
-
           .qr-print-content {
-            width: 90%;
-            height: 90%;
-            border: 2pt solid #000;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20mm 10mm;
-            text-align: center;
+            width: 180mm; height: 260mm;
+            border: 3pt solid #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+            padding: 15mm; text-align: center;
           }
+          .brand { font-size: 14pt; font-weight: 900; letter-spacing: 4px; }
+          .subtitle { font-size: 16pt; font-weight: 700; color: #444; }
+          .qr-point-name { font-size: 42pt; font-weight: 900; margin: 10mm 0; }
+          .qr-image-frame { padding: 5mm; border: 1pt solid #eee; }
+          .qr-point-id { font-family: monospace; font-size: 9pt; color: #666; margin-top: 10mm; }
+          .qr-print-footer { font-size: 8pt; color: #999; border-top: 1pt solid #eee; width: 80%; padding-top: 5mm; }
 
-          .brand { font-size: 16pt; font-weight: 900; letter-spacing: 5px; color: #1e293b; margin-bottom: 5mm; }
-          .subtitle { font-size: 18pt; font-weight: 700; color: #64748b; }
-          .qr-point-name { font-size: 36pt; font-weight: 900; margin: 10mm 0; }
-          .qr-image-frame { padding: 5mm; background: white; border: 1pt solid #eee; }
-          .qr-point-id { font-family: monospace; font-size: 10pt; color: #94a3b8; margin-top: 10mm; }
-          .qr-print-footer { font-size: 9pt; color: #cbd5e1; border-top: 1pt solid #f1f5f9; width: 70%; padding-top: 5mm; }
-
-          /* Layout Labels (3x5 approx) */
-          .qr-labels-page { width: 210mm; padding: 10mm; box-sizing: border-box; }
-          .qr-labels-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10mm; }
+          .qr-labels-page { width: 210mm; padding: 10mm; }
+          .qr-labels-container { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; }
           .qr-label-item { 
-            border: 0.5pt solid #ddd; 
-            padding: 5mm; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            text-align: center; 
+            border: 1pt solid #000; padding: 3mm; 
+            display: flex; flex-direction: column; align-items: center; text-align: center;
             page-break-inside: avoid;
           }
-          .label-top { font-size: 8pt; font-weight: 900; color: #3b82f6; }
-          .label-obj { font-size: 7pt; color: #64748b; }
-          .label-title { font-size: 11pt; font-weight: 900; margin: 3mm 0; height: 10mm; display: flex; align-items: center; }
-          .label-code { font-size: 6pt; color: #94a3b8; font-family: monospace; margin-top: 2mm; }
+          .label-top { font-size: 7pt; font-weight: 900; }
+          .label-obj { font-size: 6pt; }
+          .label-title { font-size: 9pt; font-weight: 900; margin: 2mm 0; height: 8mm; display: flex; align-items: center; }
         }
       `}</style>
 
@@ -295,15 +200,23 @@ export const QRPrintSystem = ({ points, objectives, companyName, config }) => {
             point={point} 
             objective={objectives.find(o => o.id === point.objectiveId)} 
             companyName={companyName}
+            qrImage={qrImages[point.id]}
             size={config.size}
           />
         ))
       ) : (
-        <QrLabelGrid 
-          points={points} 
-          objectives={objectives} 
-          companyName={companyName} 
-        />
+        <div className="qr-labels-page">
+          <div className="qr-labels-container">
+            {points.map(point => (
+              <QrLabelItem 
+                key={point.id} point={point} 
+                objective={objectives.find(o => o.id === point.objectiveId)} 
+                companyName={companyName}
+                qrImage={qrImages[point.id]}
+              />
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -11,7 +11,7 @@ import {
   Mail, Phone, UserCircle, BadgeCheck, ShieldX, RotateCw, Edit3, Folder, HardDrive
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { QRPrintSystem, QrCard } from '../components/QRComponents';
+import { QRPrintSystem, QrCard, generateQRImages } from '../components/QRComponents';
 import { 
   BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area 
@@ -696,6 +696,27 @@ const CompanyDashboard = () => {
   });
   const [showQrExportModal, setShowQrExportModal] = useState(false);
   const [qrExportConfig, setQrExportConfig] = useState({ size: 350, perPage: 1, layout: 'full' });
+  const [qrImages, setQrImages] = useState(null);
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+
+  const handlePreparePrint = async () => {
+    setIsGeneratingQR(true);
+    try {
+      const filteredPoints = qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective);
+      const images = await generateQRImages(filteredPoints);
+      setQrImages(images);
+    } catch (error) {
+      console.error("Error al generar imágenes QR:", error);
+    } finally {
+      setIsGeneratingQR(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showQrExportModal) {
+      handlePreparePrint();
+    }
+  }, [showQrExportModal, selectedQrObjective]);
 
 
   // Resumen States
@@ -2778,13 +2799,27 @@ const CompanyDashboard = () => {
 
                     <button 
                       onClick={() => {
+                        if (isGeneratingQR) return;
                         setShowQrExportModal(false);
-                        setTimeout(() => window.print(), 800);
+                        setTimeout(() => window.print(), 1000);
                       }}
+                      disabled={isGeneratingQR}
                       className="primary" 
-                      style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)' }}
+                      style={{ 
+                        padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', 
+                        letterSpacing: '1px', background: isGeneratingQR ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)',
+                        cursor: isGeneratingQR ? 'not-allowed' : 'pointer'
+                      }}
                     >
-                      <Download size={20} /> GENERAR E IMPRIMIR
+                      {isGeneratingQR ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                          <Loader2 className="spin" size={20} /> GENERANDO IMÁGENES...
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
+                          <Download size={20} /> GENERAR E IMPRIMIR
+                        </div>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -5343,6 +5378,7 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
           objectives={objectives} 
           companyName={companyData?.nombre || user?.company} 
           config={qrExportConfig}
+          qrImages={qrImages}
         />
       </div>
     </div>
