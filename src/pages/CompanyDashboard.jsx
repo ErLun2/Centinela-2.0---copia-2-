@@ -2832,7 +2832,7 @@ const CompanyDashboard = () => {
                       <div>
                         <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', display: 'block', marginBottom: '15px' }}>TAMAÑO DEL CÓDIGO QR ({qrExportConfig.size}px)</label>
                         <input 
-                          type="range" min="300" max="600" step="10"
+                          type="range" min="150" max="450" step="5"
                           value={qrExportConfig.size}
                           onChange={e => setQrExportConfig({...qrExportConfig, size: parseInt(e.target.value)})}
                           style={{ width: '100%', accentColor: '#00d2ff' }}
@@ -2855,9 +2855,11 @@ const CompanyDashboard = () => {
 
                     <button 
                       disabled={isGeneratingQr}
-                      onClick={() => {
+                      onClick={async () => {
                         setShowQrExportModal(false);
-                        setTimeout(() => window.print(), 800);
+                        // Esperar a que el DOM se actualice y las imágenes se rendericen en el componente de impresión
+                        await new Promise(r => setTimeout(r, 1000));
+                        window.print();
                       }}
                       className="primary" 
                       style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)', opacity: isGeneratingQr ? 0.5 : 1, cursor: isGeneratingQr ? 'not-allowed' : 'pointer' }}
