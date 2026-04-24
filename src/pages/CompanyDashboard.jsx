@@ -11,7 +11,8 @@ import {
   Mail, Phone, UserCircle, BadgeCheck, ShieldX, RotateCw, Edit3, Folder, HardDrive
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { QRPrintSystem, QrCard, generateQRImages } from '../components/QRComponents';
+import QRCode from 'qrcode';
+import { QRPrintView } from '../components/QRPrintSystem';
 import { 
   BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area 
@@ -695,28 +696,9 @@ const CompanyDashboard = () => {
     assignedQrIds: [] 
   });
   const [showQrExportModal, setShowQrExportModal] = useState(false);
-  const [qrExportConfig, setQrExportConfig] = useState({ size: 350, perPage: 1, layout: 'full' });
-  const [qrImages, setQrImages] = useState(null);
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
-
-  const handlePreparePrint = async () => {
-    setIsGeneratingQR(true);
-    try {
-      const filteredPoints = qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective);
-      const images = await generateQRImages(filteredPoints);
-      setQrImages(images);
-    } catch (error) {
-      console.error("Error al generar imágenes QR:", error);
-    } finally {
-      setIsGeneratingQR(false);
-    }
-  };
-
-  useEffect(() => {
-    if (showQrExportModal) {
-      handlePreparePrint();
-    }
-  }, [showQrExportModal, selectedQrObjective]);
+  const [qrExportConfig, setQrExportConfig] = useState({ size: 400, perPage: 1, layout: 'full' });
+  const [generatedQrImages, setGeneratedQrImages] = useState({}); // { [pointId]: base64 }
+  const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
 
   // Resumen States
@@ -731,7 +713,36 @@ const CompanyDashboard = () => {
   const [resolutionText, setResolutionText] = useState('');
   const alertedMissedRoundsRef = useRef(new Set());
   const [activeMissedRounds, setActiveMissedRounds] = useState([]);
-  const [activePanics, setActivePanics] = useState([]);
+  // Pre-generar imágenes QR (Base64) al abrir el modal para evitar canvas vacíos en preview/print
+  useEffect(() => {
+    if (showQrExportModal) {
+      const generateImages = async () => {
+        setIsGeneratingQr(true);
+        const pointsToExport = qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective);
+        const images = {};
+        
+        try {
+          await Promise.all(pointsToExport.map(async (p) => {
+            const text = JSON.stringify({ id: p.id, type: 'ronda_qr' });
+            const dataUrl = await QRCode.toDataURL(text, {
+              width: 1024,
+              margin: 2,
+              errorCorrectionLevel: 'H',
+              color: { dark: '#000000', light: '#ffffff' }
+            });
+            images[p.id] = dataUrl;
+          }));
+          setGeneratedQrImages(images);
+        } catch (err) {
+          console.error("Error generando QR:", err);
+          showToast("Error al generar imágenes QR", "error");
+        } finally {
+          setIsGeneratingQr(false);
+        }
+      };
+      generateImages();
+    }
+  }, [showQrExportModal, qrPoints, selectedQrObjective]);
 
   useEffect(() => {
     // El loop de voz y sonido ahora se gestiona centralizado en SoundContext
@@ -2531,25 +2542,66 @@ const CompanyDashboard = () => {
                 </div>
               </div>
 
-              <div className="printable-qr-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+              <div className="printable-qr-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '25px' }}>
                 {Array.isArray(qrPoints) && qrPoints
                   .filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective)
-                  .map(point => (
-                    <QrCard 
-                      key={point.id}
-                      point={point}
-                      objective={objectives.find(o => o.id === point.objectiveId)}
-                      assignedRondas={rondas.filter(r => r.assignedQrIds?.includes(point.id))}
-                      onDelete={async (p) => {
-                        if (confirm(`¿Eliminar definitivamente el punto "${p.name}"? Los guardias no podrán escanearlo.`)) {
-                          const allQrPoints = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
-                          const updated = allQrPoints.filter(x => x.id !== p.id);
-                          localStorage.setItem('centinela_qr_points', JSON.stringify(updated));
-                          setQrPoints(qrPoints.filter(x => x.id !== p.id));
-                        }
-                      }}
-                    />
-                  ))}
+                  .map(point => {
+                    const obj = Array.isArray(objectives) ? objectives.find(o => o.id === point.objectiveId) : null;
+                    return (
+                      <div key={point.id} className="qr-card fade-up" style={{ padding: '30px', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', transition: '0.3s' }}>
+                        <div className="qr-header" style={{ color: '#00d2ff', fontWeight: '900', fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase' }}>CENTINELA SECURITY</div>
+                        <div className="qr-obj-name" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontWeight: 'bold', textTransform: 'uppercase' }}>{obj?.nombre || 'General'}</div>
+                        <h4 style={{ margin: 0, fontSize: '1.4rem', color: 'white', fontWeight: 900 }}>{point.name}</h4>
+                        <div className="qr-container" style={{ position: 'relative', background: 'white', padding: '15px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', marginTop: '10px', marginBottom: '10px' }}>
+                          <QRCodeSVG
+                            value={JSON.stringify({ id: point.id, type: 'ronda_qr' })}
+                            size={qrExportConfig.size}
+                            level="H"
+                            includeMargin={true}
+                            fgColor="#000000"
+                            bgColor="#ffffff"
+                          />
+                        </div>
+
+                        {/* INDICADOR DE ASIGNACIÓN A RONDAS */}
+                        <div className="noprint" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                           {(() => {
+                              const assigned = rondas.filter(r => r.assignedQrIds?.includes(point.id));
+                              if (assigned.length === 0) {
+                                 return (
+                                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.05)', padding: '5px 12px', borderRadius: '8px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)' }}>
+                                       <X size={10} /> SIN RONDA ASIGNADA
+                                    </span>
+                                 )
+                              }
+                              return assigned.map(r => (
+                                 <span key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(16,185,129,0.1)', padding: '5px 12px', borderRadius: '8px', fontSize: '0.65rem', color: '#10b981', fontWeight: 'bold', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                                    <CheckCircle size={10} /> {r.nombre.toUpperCase()}
+                                 </span>
+                              ))
+                           })()}
+                        </div>
+
+                        <div className="noprint" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>PT-ID: {point.id.toUpperCase()}</div>
+                        <button
+                          onClick={async () => {
+                            if (confirm(`¿Eliminar definitivamente el punto "${point.name}"? Los guardias no podrán escanearlo.`)) {
+                              const allQrPoints = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
+                              const updated = allQrPoints.filter(p => p.id !== point.id);
+                              localStorage.setItem('centinela_qr_points', JSON.stringify(updated));
+                              setQrPoints(qrPoints.filter(p => p.id !== point.id));
+                            }
+                          }}
+                          className="noprint"
+                          style={{ marginTop: '15px', background: 'transparent', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#ef4444', padding: '8px 15px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', width: '100%' }}
+                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
+                          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
+                        >
+                          ELIMINAR PUNTO
+                        </button>
+                      </div>
+                    );
+                  })}
               </div>
 
               {qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective).length === 0 && (
@@ -2789,37 +2841,27 @@ const CompanyDashboard = () => {
 
                     <div style={{ background: 'rgba(0,210,255,0.05)', padding: '20px', borderRadius: '20px', border: '1px solid rgba(0,210,255,0.1)', marginTop: 'auto' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: '#00d2ff', marginBottom: '8px' }}>
-                        <CheckCircle size={18} />
-                        <span style={{ fontSize: '0.8rem', fontWeight: '900' }}>SISTEMA PROFESIONAL</span>
+                        {isGeneratingQr ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle size={18} />}
+                        <span style={{ fontSize: '0.8rem', fontWeight: '900' }}>{isGeneratingQr ? 'GENERANDO CÓDIGOS...' : 'SISTEMA PROFESIONAL'}</span>
                       </div>
                       <p style={{ margin: 0, fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', lineHeight: '1.5' }}>
-                        Se generarán <b>{qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective).length}</b> códigos QR optimizados para impresión física sin cortes.
+                        {isGeneratingQr 
+                          ? 'Por favor espere mientras se procesan las imágenes de alta resolución...'
+                          : `Se generarán ${qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective).length} códigos QR optimizados para impresión física sin cortes.`
+                        }
                       </p>
                     </div>
 
                     <button 
+                      disabled={isGeneratingQr}
                       onClick={() => {
-                        if (isGeneratingQR) return;
                         setShowQrExportModal(false);
-                        setTimeout(() => window.print(), 1000);
+                        setTimeout(() => window.print(), 800);
                       }}
-                      disabled={isGeneratingQR}
                       className="primary" 
-                      style={{ 
-                        padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', 
-                        letterSpacing: '1px', background: isGeneratingQR ? 'rgba(255,255,255,0.1)' : 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)',
-                        cursor: isGeneratingQR ? 'not-allowed' : 'pointer'
-                      }}
+                      style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)', opacity: isGeneratingQr ? 0.5 : 1, cursor: isGeneratingQr ? 'not-allowed' : 'pointer' }}
                     >
-                      {isGeneratingQR ? (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
-                          <Loader2 className="spin" size={20} /> GENERANDO IMÁGENES...
-                        </div>
-                      ) : (
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'center' }}>
-                          <Download size={20} /> GENERAR E IMPRIMIR
-                        </div>
-                      )}
+                      <Download size={20} /> {isGeneratingQr ? 'PROCESANDO...' : 'GENERAR E IMPRIMIR'}
                     </button>
                   </div>
                 </div>
@@ -2843,7 +2885,15 @@ const CompanyDashboard = () => {
                           <div style={{ color: '#00d2ff', fontWeight: '900', fontSize: '10px', letterSpacing: '2px', marginBottom: '5px' }}>CENTINELA SECURITY</div>
                           <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>OBJETIVO MUESTRA</div>
                           <h4 style={{ margin: '10px 0', fontSize: '20px', color: 'black', fontWeight: '900' }}>PUNTO DE CONTROL</h4>
-                          <div style={{ width: '150px', height: '150px', border: '1px solid #000', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px' }}>CÓDIGO QR</div>
+                          {isGeneratingQr ? (
+                            <div style={{ width: '150px', height: '150px', border: '1px dashed #ccc', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', color: '#999' }}>GENERANDO...</div>
+                          ) : (
+                            <img 
+                              src={generatedQrImages[qrPoints.find(p => !selectedQrObjective || p.objectiveId === selectedQrObjective)?.id] || ''} 
+                              style={{ width: '150px', height: '150px' }} 
+                              alt="PREVIEW" 
+                            />
+                          )}
                           <div style={{ marginTop: '20px', fontSize: '8px', color: '#94a3b8' }}>SISTEMA DE GESTIÓN OPERATIVA</div>
                        </div>
                     ) : (
@@ -5373,12 +5423,12 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
             </tbody>
           </table>
         </div>
-        <QRPrintSystem 
+        <QRPrintView 
           points={qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective)} 
           objectives={objectives} 
           companyName={companyData?.nombre || user?.company} 
           config={qrExportConfig}
-          qrImages={qrImages}
+          qrImages={generatedQrImages}
         />
       </div>
     </div>
