@@ -713,6 +713,7 @@ const CompanyDashboard = () => {
   const [resolutionText, setResolutionText] = useState('');
   const alertedMissedRoundsRef = useRef(new Set());
   const [activeMissedRounds, setActiveMissedRounds] = useState([]);
+  const [activePanics, setActivePanics] = useState([]);
   // Pre-generar imágenes QR (Base64) al abrir el modal para evitar canvas vacíos en preview/print
   useEffect(() => {
     if (showQrExportModal) {
