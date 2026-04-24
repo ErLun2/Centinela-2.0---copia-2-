@@ -2857,9 +2857,8 @@ const CompanyDashboard = () => {
                     <button 
                       disabled={isGeneratingQr}
                       onClick={async () => {
-                        // NO cerramos el modal inmediatamente para asegurar que React mantenga el estado de las imágenes
-                        // La regla @media print se encarga de ocultar el modal en el PDF
-                        await new Promise(r => setTimeout(r, 500));
+                        // Aumentamos el delay para asegurar renderizado total en el portal
+                        await new Promise(r => setTimeout(r, 2000));
                         window.print();
                       }}
                       className="primary" 
