@@ -2901,14 +2901,26 @@ const CompanyDashboard = () => {
                           <div style={{ marginTop: '20px', fontSize: '8px', color: '#94a3b8' }}>SISTEMA DE GESTIÓN OPERATIVA</div>
                        </div>
                     ) : (
-                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '5px' }}>
-                          {Array.from({ length: 9 }).map((_, i) => (
-                             <div key={i} style={{ border: '0.5pt dashed #ccc', padding: '5px', textAlign: 'center' }}>
-                                <div style={{ fontSize: '5px', fontWeight: '900', color: '#3b82f6' }}>CENTINELA</div>
-                                <div style={{ fontSize: '6px', fontWeight: 'bold', margin: '2px 0' }}>PUNTO {i+1}</div>
-                                <div style={{ width: '40px', height: '40px', border: '1px solid #eee', margin: '0 auto' }} />
-                             </div>
+                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', padding: '10px' }}>
+                          {qrPoints
+                           .filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective)
+                           .slice(0, 9)
+                           .map((p, i) => (
+                            <div key={p.id} style={{ border: '0.5pt dashed #ccc', padding: '8px', textAlign: 'center', background: 'white' }}>
+                               <div style={{ fontSize: '5px', fontWeight: '900', color: '#3b82f6', textTransform: 'uppercase' }}>CENTINELA</div>
+                               <div style={{ fontSize: '6px', fontWeight: 'bold', margin: '2px 0', color: '#333', whiteSpace: 'nowrap', overflow: 'hidden' }}>{p.name}</div>
+                               <div style={{ width: '45px', height: '45px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                 {generatedQrImages[p.id] ? (
+                                   <img src={generatedQrImages[p.id]} style={{ width: '100%', height: '100%' }} alt="QR" />
+                                 ) : (
+                                   <div style={{ width: '100%', height: '100%', background: '#eee' }} />
+                                 )}
+                               </div>
+                            </div>
                           ))}
+                          {qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective).length === 0 && (
+                            <div style={{ gridColumn: 'span 3', textAlign: 'center', padding: '20px', fontSize: '10px', color: '#999' }}>No hay puntos para mostrar</div>
+                          )}
                        </div>
                     )}
                   </div>
