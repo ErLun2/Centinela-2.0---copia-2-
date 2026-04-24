@@ -852,27 +852,6 @@ const CompanyDashboard = () => {
     printWindow.document.close();
   };
 
-  const handleExportQR_CSV = () => {
-    const pointsToExport = qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective);
-    if (pointsToExport.length === 0) return;
-
-    let csv = "ID,Nombre,Codigo,Objetivo,Tipo\n";
-    pointsToExport.forEach(p => {
-      const obj = objectives.find(o => o.id === p.objectiveId);
-      csv += `"${p.id}","${p.name}","${p.code || ''}","${obj?.nombre || 'General'}","ronda_qr"\n`;
-    });
-
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "centinela_qr_points.csv");
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
   useEffect(() => {
     // El loop de voz y sonido ahora se gestiona centralizado en SoundContext
     // para evitar solapamientos. 
@@ -2981,25 +2960,14 @@ const CompanyDashboard = () => {
                       </p>
                     </div>
 
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: 'auto' }}>
-                      <button 
-                        disabled={isGeneratingQr}
-                        onClick={handleExportQR_PDF}
-                        className="primary" 
-                        style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '0.9rem', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)', opacity: isGeneratingQr ? 0.5 : 1 }}
-                      >
-                        <Download size={18} /> {isGeneratingQr ? 'ESPERE...' : 'EXP. PDF'}
-                      </button>
-
-                      <button 
-                        disabled={isGeneratingQr}
-                        onClick={handleExportQR_CSV}
-                        className="secondary" 
-                        style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '0.9rem', opacity: isGeneratingQr ? 0.5 : 1 }}
-                      >
-                        <FileText size={18} /> CSV
-                      </button>
-                    </div>
+                    <button 
+                      disabled={isGeneratingQr}
+                      onClick={handleExportQR_PDF}
+                      className="primary" 
+                      style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)', opacity: isGeneratingQr ? 0.5 : 1, cursor: isGeneratingQr ? 'not-allowed' : 'pointer', width: '100%' }}
+                    >
+                      <Download size={20} /> {isGeneratingQr ? 'PROCESANDO...' : 'GENERAR E IMPRIMIR'}
+                    </button>
                   </div>
                 </div>
 
