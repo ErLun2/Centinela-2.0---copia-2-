@@ -696,7 +696,8 @@ const CompanyDashboard = () => {
     assignedQrIds: [] 
   });
   const [showQrExportModal, setShowQrExportModal] = useState(false);
-  const [qrExportConfig, setQrExportConfig] = useState({ size: 400, perPage: 1, layout: 'full' });
+  const [qrExportConfig, setQrExportConfig] = useState({ perPage: 1, layout: 'full' });
+  const [qrSizePrint, setQrSizePrint] = useState(300);
   const [generatedQrImages, setGeneratedQrImages] = useState({}); // { [pointId]: base64 }
   const [isGeneratingQr, setIsGeneratingQr] = useState(false);
 
@@ -2556,7 +2557,7 @@ const CompanyDashboard = () => {
                         <div className="qr-container" style={{ position: 'relative', background: 'white', padding: '15px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', marginTop: '10px', marginBottom: '10px' }}>
                           <QRCodeSVG
                             value={JSON.stringify({ id: point.id, type: 'ronda_qr' })}
-                            size={qrExportConfig.size}
+                            size={180}
                             level="H"
                             includeMargin={true}
                             fgColor="#000000"
@@ -2830,11 +2831,11 @@ const CompanyDashboard = () => {
 
                     {qrExportConfig.layout === 'full' && (
                       <div>
-                        <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', display: 'block', marginBottom: '15px' }}>TAMAÑO DEL CÓDIGO QR ({qrExportConfig.size}px)</label>
+                        <label style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', letterSpacing: '1px', display: 'block', marginBottom: '15px' }}>TAMAÑO DEL CÓDIGO QR ({qrSizePrint}px)</label>
                         <input 
                           type="range" min="150" max="450" step="5"
-                          value={qrExportConfig.size}
-                          onChange={e => setQrExportConfig({...qrExportConfig, size: parseInt(e.target.value)})}
+                          value={qrSizePrint}
+                          onChange={e => setQrSizePrint(parseInt(e.target.value))}
                           style={{ width: '100%', accentColor: '#00d2ff' }}
                         />
                       </div>
@@ -5432,6 +5433,7 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
           companyName={companyData?.nombre || user?.company} 
           config={qrExportConfig}
           qrImages={generatedQrImages}
+          qrSizePrint={qrSizePrint}
         />
       </div>
     </div>
