@@ -11,7 +11,7 @@ import {
   Mail, Phone, UserCircle, BadgeCheck, ShieldX, RotateCw, Edit3, Folder, HardDrive
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
-import { QRPrintView } from '../components/QRPrintSystem';
+import { QRPrintSystem, QrCard } from '../components/QRComponents';
 import { 
   BarChart as ReBarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area 
@@ -695,7 +695,7 @@ const CompanyDashboard = () => {
     assignedQrIds: [] 
   });
   const [showQrExportModal, setShowQrExportModal] = useState(false);
-  const [qrExportConfig, setQrExportConfig] = useState({ size: 400, perPage: 1, layout: 'full' });
+  const [qrExportConfig, setQrExportConfig] = useState({ size: 350, perPage: 1, layout: 'full' });
 
 
   // Resumen States
@@ -2510,66 +2510,25 @@ const CompanyDashboard = () => {
                 </div>
               </div>
 
-              <div className="printable-qr-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '25px' }}>
+              <div className="printable-qr-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
                 {Array.isArray(qrPoints) && qrPoints
                   .filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective)
-                  .map(point => {
-                    const obj = Array.isArray(objectives) ? objectives.find(o => o.id === point.objectiveId) : null;
-                    return (
-                      <div key={point.id} className="qr-card fade-up" style={{ padding: '30px', background: 'rgba(255,255,255,0.02)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', textAlign: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.5)', transition: '0.3s' }}>
-                        <div className="qr-header" style={{ color: '#00d2ff', fontWeight: '900', fontSize: '0.7rem', letterSpacing: '2px', textTransform: 'uppercase' }}>CENTINELA SECURITY</div>
-                        <div className="qr-obj-name" style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.5)', fontWeight: 'bold', textTransform: 'uppercase' }}>{obj?.nombre || 'General'}</div>
-                        <h4 style={{ margin: 0, fontSize: '1.4rem', color: 'white', fontWeight: 900 }}>{point.name}</h4>
-                        <div className="qr-container" style={{ position: 'relative', background: 'white', padding: '15px', borderRadius: '15px', boxShadow: '0 5px 15px rgba(0,0,0,0.3)', marginTop: '10px', marginBottom: '10px' }}>
-                          <QRCodeSVG
-                            value={JSON.stringify({ id: point.id, type: 'ronda_qr' })}
-                            size={qrExportConfig.size}
-                            level="H"
-                            includeMargin={true}
-                            fgColor="#000000"
-                            bgColor="#ffffff"
-                          />
-                        </div>
-
-                        {/* INDICADOR DE ASIGNACIÓN A RONDAS */}
-                        <div className="noprint" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                           {(() => {
-                              const assigned = rondas.filter(r => r.assignedQrIds?.includes(point.id));
-                              if (assigned.length === 0) {
-                                 return (
-                                    <span style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(255,255,255,0.05)', padding: '5px 12px', borderRadius: '8px', fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)' }}>
-                                       <X size={10} /> SIN RONDA ASIGNADA
-                                    </span>
-                                 )
-                              }
-                              return assigned.map(r => (
-                                 <span key={r.id} style={{ display: 'flex', alignItems: 'center', gap: '5px', background: 'rgba(16,185,129,0.1)', padding: '5px 12px', borderRadius: '8px', fontSize: '0.65rem', color: '#10b981', fontWeight: 'bold', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                                    <CheckCircle size={10} /> {r.nombre.toUpperCase()}
-                                 </span>
-                              ))
-                           })()}
-                        </div>
-
-                        <div className="noprint" style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontFamily: 'monospace' }}>PT-ID: {point.id.toUpperCase()}</div>
-                        <button
-                          onClick={async () => {
-                            if (confirm(`¿Eliminar definitivamente el punto "${point.name}"? Los guardias no podrán escanearlo.`)) {
-                              const allQrPoints = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
-                              const updated = allQrPoints.filter(p => p.id !== point.id);
-                              localStorage.setItem('centinela_qr_points', JSON.stringify(updated));
-                              setQrPoints(qrPoints.filter(p => p.id !== point.id));
-                            }
-                          }}
-                          className="noprint"
-                          style={{ marginTop: '15px', background: 'transparent', border: '1px solid rgba(239, 68, 68, 0.4)', color: '#ef4444', padding: '8px 15px', borderRadius: '10px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', width: '100%' }}
-                          onMouseOver={(e) => e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'}
-                          onMouseOut={(e) => e.currentTarget.style.background = 'transparent'}
-                        >
-                          ELIMINAR PUNTO
-                        </button>
-                      </div>
-                    );
-                  })}
+                  .map(point => (
+                    <QrCard 
+                      key={point.id}
+                      point={point}
+                      objective={objectives.find(o => o.id === point.objectiveId)}
+                      assignedRondas={rondas.filter(r => r.assignedQrIds?.includes(point.id))}
+                      onDelete={async (p) => {
+                        if (confirm(`¿Eliminar definitivamente el punto "${p.name}"? Los guardias no podrán escanearlo.`)) {
+                          const allQrPoints = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
+                          const updated = allQrPoints.filter(x => x.id !== p.id);
+                          localStorage.setItem('centinela_qr_points', JSON.stringify(updated));
+                          setQrPoints(qrPoints.filter(x => x.id !== p.id));
+                        }
+                      }}
+                    />
+                  ))}
               </div>
 
               {qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective).length === 0 && (
@@ -5379,7 +5338,7 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
             </tbody>
           </table>
         </div>
-        <QRPrintView 
+        <QRPrintSystem 
           points={qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective)} 
           objectives={objectives} 
           companyName={companyData?.nombre || user?.company} 
