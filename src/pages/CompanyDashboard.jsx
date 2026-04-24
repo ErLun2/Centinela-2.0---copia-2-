@@ -3078,7 +3078,7 @@ const CompanyDashboard = () => {
 
                   if (!isOnDuty) return null; // No mostrar fuera de turno
 
-                  // 2. Determinar posición: GPS real o fallback a objetivo asignado
+                  // 2. Determinar posición: GPS real o fallback a objetivo asignado (SOLO SI ESTÁ ACTIVO)
                   const loc = locations.find(l => l.usuarioId === (u.id || u.uid));
                   const assignedObj = objectives.find(o => String(o.id) === String(u.schedule?.objectiveId));
                   
@@ -3087,12 +3087,12 @@ const CompanyDashboard = () => {
 
                   if (loc && loc.latitud && loc.longitud) {
                     pos = [parseFloat(loc.latitud), parseFloat(loc.longitud)];
-                  } else if (assignedObj && assignedObj.lat && assignedObj.lng) {
+                  } else if (assignedObj && assignedObj.activo !== false && assignedObj.lat && assignedObj.lng) {
                     pos = [parseFloat(assignedObj.lat), parseFloat(assignedObj.lng)];
                     posSource = 'objetivo';
                   }
 
-                  if (!pos) return null; // Sin GPS ni objetivo con coordenadas
+                  if (!pos) return null; // Sin GPS ni objetivo activo con coordenadas
 
                   return (
                     <Marker key={u.id || u.uid || idx} position={pos} icon={guardIcon}>
