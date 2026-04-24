@@ -5572,7 +5572,6 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
             </tbody>
           </table>
         </div>
-        </div>
       </div>
     </div>
   );
