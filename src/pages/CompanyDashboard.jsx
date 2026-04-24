@@ -856,10 +856,10 @@ const CompanyDashboard = () => {
     const pointsToExport = qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective);
     if (pointsToExport.length === 0) return;
 
-    let csv = "ID,Nombre,Codigo,Objetivo,Tipo\\n";
+    let csv = "ID,Nombre,Codigo,Objetivo,Tipo\n";
     pointsToExport.forEach(p => {
       const obj = objectives.find(o => o.id === p.objectiveId);
-      csv += \`"\${p.id}","\${p.name}","\${p.code || ''}","\${obj?.nombre || 'General'}","ronda_qr"\\n\`;
+      csv += `"${p.id}","${p.name}","${p.code || ''}","${obj?.nombre || 'General'}","ronda_qr"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
