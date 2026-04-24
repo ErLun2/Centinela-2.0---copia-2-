@@ -203,7 +203,7 @@ const EnterpriseConfigPanel = ({
   // Local state for company data to handle editing
   const [localCompany, setLocalCompany] = React.useState({
     id: companyData?.id || companyData?.uid || '',
-    nombre: companyData?.nombre || companyData?.name || user?.company || '',
+    nombre: companyData?.nombre || companyData?.name || user?.company || 'STARK INDUSTRIES',
     email: companyData?.appEmail || companyData?.email || user?.email || '',
     timezone: companyData?.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
     logo: companyData?.logo || ''
@@ -214,7 +214,7 @@ const EnterpriseConfigPanel = ({
     if (companyData) {
       setLocalCompany({
         id: companyData.id || companyData.uid || '',
-        nombre: companyData.nombre || companyData.name || user?.company || '',
+        nombre: companyData.nombre || companyData.name || user?.company || 'STARK INDUSTRIES',
         email: companyData.appEmail || companyData.email || user?.email || '',
         timezone: companyData.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
         logo: companyData.logo || ''
