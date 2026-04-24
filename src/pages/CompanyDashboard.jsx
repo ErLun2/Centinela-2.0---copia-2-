@@ -2857,9 +2857,9 @@ const CompanyDashboard = () => {
                     <button 
                       disabled={isGeneratingQr}
                       onClick={async () => {
-                        setShowQrExportModal(false);
-                        // Esperar a que el DOM se actualice y las imágenes se rendericen en el componente de impresión
-                        await new Promise(r => setTimeout(r, 1000));
+                        // NO cerramos el modal inmediatamente para asegurar que React mantenga el estado de las imágenes
+                        // La regla @media print se encarga de ocultar el modal en el PDF
+                        await new Promise(r => setTimeout(r, 500));
                         window.print();
                       }}
                       className="primary" 
