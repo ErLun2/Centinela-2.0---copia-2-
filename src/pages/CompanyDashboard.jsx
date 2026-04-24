@@ -715,7 +715,6 @@ const CompanyDashboard = () => {
   const alertedMissedRoundsRef = useRef(new Set());
   const [activeMissedRounds, setActiveMissedRounds] = useState([]);
   const [activePanics, setActivePanics] = useState([]);
-  // Pre-generar imágenes QR (Base64) al abrir el modal para evitar canvas vacíos en preview/print
   useEffect(() => {
     if (showQrExportModal) {
       const generateImages = async () => {
@@ -745,6 +744,134 @@ const CompanyDashboard = () => {
       generateImages();
     }
   }, [showQrExportModal, qrPoints, selectedQrObjective]);
+
+  const handleExportQR_PDF = () => {
+    const pointsToExport = qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective);
+    if (pointsToExport.length === 0) {
+      showToast("No hay puntos para exportar", "warning");
+      return;
+    }
+
+    const printWindow = window.open('', '_blank');
+    const companyName = companyData?.nombre || user?.company || 'CENTINELA SECURITY';
+
+    let html = `
+      <html>
+        <head>
+          <title>Exportación de QR - ${companyName}</title>
+          <style>
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; margin: 0; padding: 0; background: white; }
+            @page { size: A4 portrait; margin: 0; }
+            
+            /* Una por página */
+            .page {
+              width: 210mm; height: 297mm;
+              page-break-after: always;
+              display: flex; flex-direction: column; align-items: center; justify-content: center;
+              text-align: center; box-sizing: border-box;
+            }
+            .page-inner {
+              width: 180mm; height: 260mm; border: 2pt solid #000; border-radius: 10mm;
+              display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+              padding: 20mm; box-sizing: border-box;
+            }
+            .brand { font-size: 18pt; font-weight: 900; letter-spacing: 5pt; text-transform: uppercase; color: #000; }
+            .obj { font-size: 24pt; font-weight: 700; color: #666; text-transform: uppercase; }
+            .point-name { font-size: 44pt; font-weight: 900; color: #000; margin: 20mm 0; text-transform: uppercase; line-height: 1.1; }
+            .qr-wrap img { display: block; margin: 0 auto; }
+            .meta { font-family: monospace; font-size: 12pt; font-weight: bold; color: #888; margin-top: 10mm; }
+            .footer { font-size: 11pt; font-weight: bold; color: #ccc; border-top: 1pt solid #eee; width: 80%; padding-top: 5mm; }
+
+            /* Etiquetas (Grid) */
+            .labels-grid {
+              width: 210mm; padding: 10mm; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm;
+            }
+            .label-item {
+              border: 1pt dashed #000; padding: 5mm; display: flex; flex-direction: column; align-items: center; text-align: center;
+              page-break-inside: avoid; background: white;
+            }
+            .l-brand { font-size: 10pt; font-weight: 900; color: #3b82f6; margin-bottom: 2mm; text-transform: uppercase; }
+            .l-name { font-size: 13pt; font-weight: 900; height: 14mm; display: flex; align-items: center; justify-content: center; line-height: 1.1; text-transform: uppercase; margin-bottom: 2mm; }
+            .l-qr img { width: 90px; height: 90px; }
+          </style>
+        </head>
+        <body>
+    `;
+
+    if (qrExportConfig.layout === 'full') {
+      pointsToExport.forEach(p => {
+        const obj = objectives.find(o => o.id === p.objectiveId);
+        const qrImg = generatedQrImages[p.id];
+        html += `
+          <div class="page">
+            <div class="page-inner">
+              <div class="brand">${companyName}</div>
+              <div class="obj">${obj?.nombre || 'OBJETIVO GENERAL'}</div>
+              <div class="point-name">${p.name}</div>
+              <div class="qr-wrap">
+                <img src="${qrImg}" style="width:${qrSizePrint}px; height:${qrSizePrint}px" />
+              </div>
+              <div class="meta">ID: ${p.id} | CODE: ${p.code || 'N/A'}</div>
+              <div class="footer">CENTINELA 2.0 - SISTEMA DE MONITOREO</div>
+            </div>
+          </div>
+        `;
+      });
+    } else {
+      html += '<div class="labels-grid">';
+      pointsToExport.forEach(p => {
+        const obj = objectives.find(o => o.id === p.objectiveId);
+        const qrImg = generatedQrImages[p.id];
+        html += `
+          <div class="label-item">
+            <div class="l-brand">CENTINELA</div>
+            <div class="l-name">${p.name}</div>
+            <div class="l-qr"><img src="${qrImg}" /></div>
+            <div style="font-size:7pt; margin-top:5px; font-family:monospace;">${p.code}</div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+
+    html += `
+          <script>
+            window.onload = function() {
+              setTimeout(() => {
+                window.print();
+                window.close();
+              }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
+  const handleExportQR_CSV = () => {
+    const pointsToExport = qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective);
+    if (pointsToExport.length === 0) return;
+
+    let csv = "ID,Nombre,Codigo,Objetivo,Tipo\\n";
+    pointsToExport.forEach(p => {
+      const obj = objectives.find(o => o.id === p.objectiveId);
+      csv += \`"\${p.id}","\${p.name}","\${p.code || ''}","\${obj?.nombre || 'General'}","ronda_qr"\\n\`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "centinela_qr_points.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   useEffect(() => {
     // El loop de voz y sonido ahora se gestiona centralizado en SoundContext
@@ -2854,18 +2981,25 @@ const CompanyDashboard = () => {
                       </p>
                     </div>
 
-                    <button 
-                      disabled={isGeneratingQr}
-                      onClick={async () => {
-                        // Aumentamos el delay para asegurar renderizado total en el portal
-                        await new Promise(r => setTimeout(r, 2000));
-                        window.print();
-                      }}
-                      className="primary" 
-                      style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '1rem', letterSpacing: '1px', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)', opacity: isGeneratingQr ? 0.5 : 1, cursor: isGeneratingQr ? 'not-allowed' : 'pointer' }}
-                    >
-                      <Download size={20} /> {isGeneratingQr ? 'PROCESANDO...' : 'GENERAR E IMPRIMIR'}
-                    </button>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: 'auto' }}>
+                      <button 
+                        disabled={isGeneratingQr}
+                        onClick={handleExportQR_PDF}
+                        className="primary" 
+                        style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '0.9rem', background: 'linear-gradient(135deg, #00d2ff 0%, #3b82f6 100%)', opacity: isGeneratingQr ? 0.5 : 1 }}
+                      >
+                        <Download size={18} /> {isGeneratingQr ? 'ESPERE...' : 'EXP. PDF'}
+                      </button>
+
+                      <button 
+                        disabled={isGeneratingQr}
+                        onClick={handleExportQR_CSV}
+                        className="secondary" 
+                        style={{ padding: '20px', borderRadius: '18px', fontWeight: '900', fontSize: '0.9rem', opacity: isGeneratingQr ? 0.5 : 1 }}
+                      >
+                        <FileText size={18} /> CSV
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -5438,14 +5572,7 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
             </tbody>
           </table>
         </div>
-        <QRPrintView 
-          points={qrPoints.filter(p => !selectedQrObjective || p.objectiveId === selectedQrObjective)} 
-          objectives={objectives} 
-          companyName={companyData?.nombre || user?.company} 
-          config={qrExportConfig}
-          qrImages={generatedQrImages}
-          qrSizePrint={qrSizePrint}
-        />
+        </div>
       </div>
     </div>
   );
