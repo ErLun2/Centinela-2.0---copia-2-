@@ -194,7 +194,9 @@ const EnterpriseConfigPanel = ({
   setSelectedUserForView,
   setNewObjective,
   setNewObjectiveCoords,
-  setShowNewObjectiveModal
+  setShowNewObjectiveModal,
+  setObjectives,
+  setCompanyUsers
 }) => {
   const { user } = useAuth();
   const { settings, saveSettings, testSound, stopPanic, isPanicActive } = useSound();
@@ -290,19 +292,20 @@ const EnterpriseConfigPanel = ({
   };
 
   const toggleUserStatus = async (userId, currentStatus) => {
-    try {
-      // Usamos el servicio de base de datos para alternar el estado
-      // Nota: asumimos que dbServices tiene una forma de actualizar, o usamos crearUsuarioSaaS para update
-      // Si no hay endpoint de "update", usamos el patrón de reenviar el objeto con el campo cambiado.
-      const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
-      if (!targetUser) return;
+    const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
+    if (!targetUser) return;
 
-      const updatedUser = { ...targetUser, activo: !currentStatus };
+    // Actualización optimista
+    const newStatus = !currentStatus;
+    setCompanyUsers(prev => prev.map(u => (u.id === userId || u.uid === userId) ? { ...u, activo: newStatus } : u));
+
+    try {
+      const updatedUser = { ...targetUser, activo: newStatus };
       await db.crearUsuarioSaaS(updatedUser); 
-      
       showToast("Estado de usuario actualizado correctamente.");
-      refreshData();
     } catch (error) {
+      // Revertir
+      setCompanyUsers(prev => prev.map(u => (u.id === userId || u.uid === userId) ? { ...u, activo: currentStatus } : u));
       showToast("Error al actualizar estado: " + error.message, "error");
     }
   };
