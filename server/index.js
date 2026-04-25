@@ -1028,6 +1028,16 @@ app.get('/api/pagos/config', async (req, res) => {
 app.post('/api/pagos/config', async (req, res) => {
     try {
         const value = JSON.stringify(req.body);
+        
+        // Auto-reparación: Asegurar que la tabla existe antes de insertar
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS sistema_config (
+                \`key\` VARCHAR(100) PRIMARY KEY,
+                value TEXT,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
+            )
+        `).catch(e => console.error("Error creating table on-the-fly:", e));
+
         console.log(`[CONFIG] Guardando mp_config. Tamaño: ${value.length} bytes`);
         await pool.query('INSERT INTO sistema_config (`key`, value) VALUES ("mp_config", ?) ON DUPLICATE KEY UPDATE value = ?', [value, value]);
         res.json({ success: true });
