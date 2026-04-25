@@ -2666,11 +2666,20 @@ const PaymentConfigPanel = ({ isSaving, setIsSaving }) => {
    }, []);
 
    const handleSaveConfig = async (e) => {
-      e.preventDefault();
+      if (e) e.preventDefault();
       setIsSaving(true);
-      await db.guardarConfiguracionPagos(config);
-      setIsSaving(false);
-      alert("✅ Configuración de pagos guardada correctamente.");
+      try {
+         await db.guardarConfiguracionPagos(config);
+         alert("✅ Configuración de pagos guardada correctamente.");
+         // Recargar datos para confirmar persistencia y actualizar UI
+         const freshData = await db.obtenerConfiguracionPagos();
+         if (freshData) setConfig(prev => ({ ...prev, ...freshData }));
+      } catch (error) {
+         console.error("Error saving payment config:", error);
+         alert("❌ Error al guardar la configuración. Verifique la conexión.");
+      } finally {
+         setIsSaving(false);
+      }
    };
 
    return (
