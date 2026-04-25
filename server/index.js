@@ -439,6 +439,24 @@ app.get('/api/empresas', async (req, res) => {
     }
 });
 
+app.post('/api/empresas/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const data = req.body;
+        // Construir query dinámica para solo actualizar lo que viene
+        const fields = Object.keys(data).filter(k => k !== 'id');
+        if (fields.length === 0) return res.json({ success: true });
+        
+        const sql = `UPDATE empresas SET ${fields.map(f => `${f} = ?`).join(', ')} WHERE id = ?`;
+        const params = [...fields.map(f => data[f]), id];
+        
+        await pool.query(sql, params);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.get('/api/empresas/:id', async (req, res) => {
     try {
         const [rows] = await pool.query('SELECT * FROM empresas WHERE id = ?', [req.params.id]);
@@ -1029,6 +1047,48 @@ app.get('/api/payments', async (req, res) => {
         res.json(rows);
     } catch (err) {
         res.json([]);
+    }
+});
+
+app.post('/api/payments/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const data = req.body;
+        const { status, estado } = data;
+        const finalStatus = status || estado;
+
+        // Si solo viene status/estado, hacemos update simple
+        if (Object.keys(data).length <= 1 && finalStatus) {
+            await pool.query('UPDATE payments SET estado = ? WHERE id = ?', [finalStatus, id]);
+            return res.json({ success: true });
+        }
+
+        // Si vienen más campos, hacemos upsert completo
+        const fields = Object.keys(data).filter(k => k !== 'id');
+        const sql = `INSERT INTO payments (id, ${fields.join(', ')}) 
+                    VALUES (?, ${fields.map(() => '?').join(', ')})
+                    ON DUPLICATE KEY UPDATE ${fields.map(f => `${f} = VALUES(${f})`).join(', ')}`;
+        
+        await pool.query(sql, [id, ...fields.map(f => data[f])]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/suscripciones/:id', async (req, res) => {
+    try {
+        const id = req.params.id;
+        const data = req.body;
+        const fields = Object.keys(data).filter(k => k !== 'id');
+        const sql = `INSERT INTO suscripciones (id, ${fields.join(', ')}) 
+                    VALUES (?, ${fields.map(() => '?').join(', ')})
+                    ON DUPLICATE KEY UPDATE ${fields.map(f => `${f} = VALUES(${f})`).join(', ')}`;
+        
+        await pool.query(sql, [id, ...fields.map(f => data[f])]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
