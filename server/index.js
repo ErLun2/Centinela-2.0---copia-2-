@@ -282,14 +282,15 @@ pool.getConnection()
                     metodo VARCHAR(50),
                     estado VARCHAR(50) DEFAULT 'pending',
                     fecha DATETIME,
+                    mp_payment_id VARCHAR(100),
                     comprobante LONGTEXT,
                     numero_operacion VARCHAR(100),
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
             // Patch de columnas por si la tabla ya existía
-            await conn.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS comprobante LONGTEXT`).catch(()=>{});
-            await conn.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS numero_operacion VARCHAR(100)`).catch(()=>{});
+            await conn.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS mp_payment_id VARCHAR(100)`);
+            await conn.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS planId VARCHAR(100)`);
             console.log('  [DB] Estructura de pagos OK');
         } catch (e) { console.error('  [DB-ERROR] Pagos:', e.message); }
 
@@ -484,7 +485,10 @@ app.post('/api/empresas/:id', async (req, res) => {
         if (fields.length === 0) return res.json({ success: true });
         
         const sql = `UPDATE empresas SET ${fields.map(f => `${f} = ?`).join(', ')} WHERE id = ?`;
-        const params = [...fields.map(f => data[f]), id];
+        const params = [...fields.map(f => {
+            if (f.toLowerCase().includes('fecha') || f.toLowerCase().includes('date')) return toMySQLDate(data[f]);
+            return data[f];
+        }), id];
         
         await pool.query(sql, params);
         res.json({ success: true });
@@ -1110,7 +1114,12 @@ app.post('/api/suscripciones/:id', async (req, res) => {
                     VALUES (?, ${fields.map(() => '?').join(', ')})
                     ON DUPLICATE KEY UPDATE ${fields.map(f => `${f} = VALUES(${f})`).join(', ')}`;
         
-        await pool.query(sql, [id, ...fields.map(f => data[f])]);
+        const params = [id, ...fields.map(f => {
+            if (f.toLowerCase().includes('fecha') || f.toLowerCase().includes('date')) return toMySQLDate(data[f]);
+            return data[f];
+        })];
+        
+        await pool.query(sql, params);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1365,10 +1374,22 @@ app.post('/api/qr_points', async (req, res) => {
 
 // --- HISTORIAL DE PAGOS ---
 app.get('/api/payments/history', async (req, res) => {
+    const { companyId, empresaId } = req.query;
+    const filterId = companyId || empresaId;
     try {
-        const [rows] = await pool.query('SELECT * FROM payments ORDER BY created_at DESC');
+        let sql = 'SELECT * FROM payments';
+        let params = [];
+        if (filterId) {
+            sql += ' WHERE empresaId = ?';
+            params.push(filterId);
+        }
+        sql += ' ORDER BY created_at DESC';
+        const [rows] = await pool.query(sql, params);
         res.json(rows);
-    } catch (err) { res.json([]); }
+    } catch (err) { 
+        console.error("Error en historial:", err);
+        res.json([]); 
+    }
 });
 
 // ========================
