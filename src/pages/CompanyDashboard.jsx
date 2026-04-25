@@ -955,36 +955,44 @@ const CompanyDashboard = () => {
   const [showTrashModal, setShowTrashModal] = useState(false);
   const [trashItems, setTrashItems] = useState([]);
 
-  // Validación de Licencia Estratégica
+  // Validación de Licencia Estratégica (Bloqueo Total)
   const isLicenseDisabled = useMemo(() => {
     // REGLA DE ORO: El Super Admin tiene inmunidad total de acceso
-    if (user?.role === 'SUPERADMIN' || (user?.role || '').toUpperCase() === 'SUPERADMIN' || user?.email === 'vidal@master.com') return false;
+    if (user?.rol === 'SUPER_ADMIN' || user?.role === 'SUPER_ADMIN' || (user?.role || '').toUpperCase() === 'SUPERADMIN' || user?.email === 'vidal@master.com') return false;
     
     if (!companyData) return false; // No bloqueamos mientras carga
     
-    // 1. Si el estado es activa y no hay fecha, permitimos el paso preventivamente
     const currentStatus = (companyData.status || '').toLowerCase();
-    if (currentStatus === 'activa' && !companyData.expiryDate) return false;
-
-    // 2. Verificar existencia de licencia definida
-    if (!companyData.expiryDate) return true; 
     
-    // 3. Verificar que el estado sea explícitamente 'activa'
+    // 1. Si el estado no es activa, bloqueamos de inmediato
     if (currentStatus !== 'activa') return true;
+
+    // 2. Verificar vigencia temporal (Parsing robusto)
+    if (!companyData.expiryDate) return true; // Si no hay fecha, bloqueamos por seguridad
     
-    // 4. Verificar vigencia temporal (Parsing seguro de fecha)
     try {
         const expiry = new Date(companyData.expiryDate);
-        if (isNaN(expiry.getTime())) return false; // Si la fecha es inválida, no bloqueamos preventivamente
+        if (isNaN(expiry.getTime())) return true; 
         
         const today = new Date();
-        expiry.setHours(23, 59, 59, 999);
+        today.setHours(0,0,0,0);
         
-        return expiry < today;
-    } catch(e) {
-        return false;
+        // Normalizar expiry a medianoche para comparación justa
+        const expiryNorm = new Date(expiry);
+        expiryNorm.setHours(0,0,0,0);
+        
+        // Si el string es YYYY-MM-DD, asegurar que se tome como local
+        if (typeof companyData.expiryDate === 'string' && companyData.expiryDate.length === 10) {
+           const parts = companyData.expiryDate.split('-');
+           expiryNorm.setFullYear(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        }
+
+        return expiryNorm < today; // Retorna TRUE si está vencido (Desactivado)
+    } catch (e) {
+        return true; 
     }
   }, [companyData, user]);
+
   const [selectedUserForView, setSelectedUserForView] = useState(null);
   const [fullscreenMedia, setFullscreenMedia] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -1198,14 +1206,28 @@ const CompanyDashboard = () => {
 
     const unsubCompanies = db.subscribeToCompanies((allCompanies) => {
       const compId = user.empresaId || user.companyId;
+      console.log(`[LICENSE-SYNC] Buscando empresa: ${compId}`, allCompanies);
       const found = allCompanies.find(c => String(c.id || c.uid) === String(compId));
       if (found) {
+        console.log(`[LICENSE-SYNC] Empresa encontrada:`, found);
         // NORMALIZACIÓN ESTRATÉGICA (Evitar 'PREMIUM'/'CLIENTE' fantasmas)
         setCompanyData({
           ...found,
           nombre: found.name || found.nombre || user?.company || '',
           email: found.appEmail || found.email || user?.email || '',
-          plan: (found.plan || found.planId || 'demo').toLowerCase()
+          plan: (found.plan || found.planId || 'demo').toLowerCase(),
+          expiryDate: found.expiryDate || found.vencimiento || null // Asegurar campo correcto de MySQL
+        });
+      } else {
+        console.warn(`[LICENSE-SYNC] Empresa ${compId} no encontrada en la DB local.`);
+        // Fallback: Si no se encuentra en la tabla de empresas, usamos el objeto de usuario como base
+        // pero marcamos como incompleto para que bloquee si es necesario
+        setCompanyData({
+          id: compId,
+          nombre: user?.company || 'Cargando...',
+          plan: 'demo',
+          status: 'activa',
+          expiryDate: null
         });
       }
     });
@@ -5262,7 +5284,7 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
     } catch (e) { return 0; }
   })();
 
-  const isExpired = companyData?.expiryDate ? (daysLeft <= 0) : false;
+  const isExpiredInBilling = companyData?.expiryDate ? (daysLeft <= 0) : true;
 
   return (
     <div className="fade-in" style={{ color: 'white' }}>
@@ -5296,16 +5318,16 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
               <h3 style={{ fontSize: '1.6rem', fontWeight: '900', margin: 0 }}>{currentPlanInfo.nombre}</h3>
               <span style={{ 
                 padding: '6px 15px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: '900',
-                background: isExpired ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                color: isExpired ? '#ef4444' : '#10b981',
-                border: `1px solid ${isExpired ? '#ef444433' : '#10b98133'}`
+                background: isExpiredInBilling ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                color: isExpiredInBilling ? '#ef4444' : '#10b981',
+                border: `1px solid ${isExpiredInBilling ? '#ef444433' : '#10b98133'}`
               }}>
-                {isExpired ? 'LICENCIA VENCIDA' : 'SERVICIO ACTIVO'}
+                {isExpiredInBilling ? 'LICENCIA VENCIDA' : 'SERVICIO ACTIVO'}
               </span>
             </div>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1rem', display: 'flex', gap: '20px' }}>
               <span>Vencimiento: <b style={{ color: 'white' }}>{expiryDisplay}</b></span>
-              <span>Días restantes: <b style={{ color: isExpired ? '#ef4444' : '#00d2ff' }}>{daysLeft}</b></span>
+              <span>Días restantes: <b style={{ color: isExpiredInBilling ? '#ef4444' : '#00d2ff' }}>{daysLeft}</b></span>
             </div>
           </div>
         </div>
