@@ -1039,9 +1039,15 @@ app.get('/api/payments', async (req, res) => {
                 estado VARCHAR(50),
                 fecha DATETIME,
                 mp_payment_id VARCHAR(100),
+                comprobante LONGTEXT,
+                numero_operacion VARCHAR(100),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `).catch(()=>{});
+
+        // Patch por si la tabla ya existía sin estas columnas
+        await pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS comprobante LONGTEXT`).catch(()=>{});
+        await pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS numero_operacion VARCHAR(100)`).catch(()=>{});
         
         const [rows] = await pool.query('SELECT * FROM payments ORDER BY created_at DESC');
         res.json(rows);
@@ -1096,10 +1102,20 @@ app.post('/api/payments/webhook', async (req, res) => {
     try {
         const data = req.body;
         const id = data.id || `pay_${Date.now()}`;
-        // REGLA DE ORO: Persistir notificación de pago para auditoría
+        // REGLA DE ORO: Persistir notificación de pago con comprobante para validación
         await pool.query(
-            'INSERT INTO payments (id, empresaId, planId, monto, metodo, estado, fecha) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-            [id, data.empresaId, data.planId, data.monto, data.metodo, data.estado || 'pending', new Date()]
+            'INSERT INTO payments (id, empresaId, planId, monto, metodo, estado, fecha, comprobante, numero_operacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+            [
+                id, 
+                data.empresaId, 
+                data.planId, 
+                data.monto, 
+                data.metodo, 
+                data.estado || 'pending', 
+                new Date(),
+                data.comprobante || null,
+                data.numero_operacion || null
+            ]
         );
         res.json({ success: true });
     } catch (err) {
