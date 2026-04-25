@@ -5226,19 +5226,48 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
     }
   };
 
-  const isExpired = companyData?.expiryDate ? (new Date(companyData.expiryDate) < new Date().setHours(0,0,0,0)) : false;
+  const expiryDisplay = (() => {
+    if (!companyData?.expiryDate) return 'N/A';
+    try {
+      const d = new Date(companyData.expiryDate);
+      if (isNaN(d.getTime())) return companyData.expiryDate;
+      // Ajustar para evitar desvío de zona horaria si viene como YYYY-MM-DD
+      const dateToUse = typeof companyData.expiryDate === 'string' && companyData.expiryDate.length === 10
+        ? new Date(companyData.expiryDate + 'T12:00:00')
+        : d;
+      return new Intl.DateTimeFormat('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(dateToUse);
+    } catch (e) { return 'N/A'; }
+  })();
+
   const daysLeft = (() => {
     if (!companyData?.expiryDate) return 0;
-    const expiry = new Date(companyData.expiryDate);
-    if (isNaN(expiry.getTime())) return 0;
-    const diff = expiry - new Date();
-    return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+    try {
+      const expiry = new Date(companyData.expiryDate);
+      if (isNaN(expiry.getTime())) return 0;
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const expiryDateOnly = new Date(expiry);
+      expiryDateOnly.setHours(0, 0, 0, 0);
+      
+      if (typeof companyData.expiryDate === 'string' && companyData.expiryDate.length === 10) {
+         const parts = companyData.expiryDate.split('-');
+         expiryDateOnly.setFullYear(parts[0], parts[1] - 1, parts[2]);
+      }
+
+      const diffTime = expiryDateOnly - today;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      return Math.max(0, diffDays);
+    } catch (e) { return 0; }
   })();
+
+  const isExpired = companyData?.expiryDate ? (daysLeft <= 0) : false;
 
   return (
     <div className="fade-in" style={{ color: 'white' }}>
       <div style={{ marginBottom: '40px' }}>
-        <h2 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '10px' }}>Gestión de Licencia</h2>
+        <h2 style={{ fontSize: '2.2rem', fontWeight: '900', marginBottom: '10px' }}>Gestión de Facturación</h2>
         <p style={{ color: 'rgba(255,255,255,0.5)', fontSize: '1.1rem' }}>Administra tu plan, pagos y estado del servicio profesional.</p>
       </div>
 
@@ -5275,7 +5304,7 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
               </span>
             </div>
             <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '1rem', display: 'flex', gap: '20px' }}>
-              <span>Vencimiento: <b style={{ color: 'white' }}>{companyData?.expiryDate || 'N/A'}</b></span>
+              <span>Vencimiento: <b style={{ color: 'white' }}>{expiryDisplay}</b></span>
               <span>Días restantes: <b style={{ color: isExpired ? '#ef4444' : '#00d2ff' }}>{daysLeft}</b></span>
             </div>
           </div>
