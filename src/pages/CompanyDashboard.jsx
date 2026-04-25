@@ -1226,6 +1226,10 @@ const CompanyDashboard = () => {
             plan: (found.plan || found.planId || 'demo').toLowerCase().replace('plan ', '').trim(),
             expiryDate: found.expiryDate || found.vencimiento || null 
           }));
+          // REGLA DE ORO: Limpiar cualquier rastro de fecha antigua en cache si la nueva es distinta
+          if (found.expiryDate && localStorage.getItem('centinela_stale_expiry') !== found.expiryDate) {
+             localStorage.setItem('centinela_stale_expiry', found.expiryDate);
+          }
         }
       } catch (e) {
         console.warn("[LICENSE-SYNC] Error en sincronización directa:", e);
