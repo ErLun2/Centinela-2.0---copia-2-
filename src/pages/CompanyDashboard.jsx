@@ -1208,13 +1208,23 @@ const CompanyDashboard = () => {
 
     // MOTOR DE SINCRONIZACIÓN DE LICENCIA (Impacto Inmediato)
     const syncCompanyData = async () => {
-      const compId = user.empresaId || user.companyId;
+      let compId = user.empresaId || user.companyId;
       if (!compId) return;
 
       try {
-        const { getEmpresaById } = await import('../lib/dbServices');
-        const found = await getEmpresaById(compId);
+        const { getEmpresaById, apiRequest } = await import('../lib/dbServices');
+        let found = await getEmpresaById(compId);
         
+        // REGLA DE ORO: Si el ID falla o es 'demo', intentamos sanar el vínculo por NOMBRE
+        if (!found || String(compId).includes('demo')) {
+           const compName = (user.company || '').toLowerCase().trim();
+           if (compName) {
+              const allComps = await apiRequest('/empresas');
+              found = allComps.find(c => (c.name || c.nombre || '').toLowerCase().trim() === compName);
+              if (found) console.log(`[LICENSE-HEALER] Vínculo sanado por nombre:`, found.id);
+           }
+        }
+
         if (found) {
           console.log(`[LICENSE-SYNC] Datos frescos recibidos:`, found);
           setCompanyData(prev => ({
@@ -1232,7 +1242,7 @@ const CompanyDashboard = () => {
           }
         }
       } catch (e) {
-        console.warn("[LICENSE-SYNC] Error en sincronización directa:", e);
+        console.warn("[LICENSE-SYNC] Error en sincronización:", e);
       }
     };
 

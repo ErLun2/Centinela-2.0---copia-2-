@@ -148,10 +148,25 @@ export const AuthProvider = ({ children }) => {
           else if (r.includes('GUARD') || r.includes('VIGILADOR') || r.includes('SERENO')) finalRole = ROLES.GUARD;
         }
 
+        let finalEmpresaId = u.companyId || u.empresaId;
+        
+        // REGLA DE ORO: Si el ID es genérico (demo_001) o falta, intentamos vincular por NOMBRE real
+        if (!finalEmpresaId || finalEmpresaId.includes('demo')) {
+           try {
+              const { apiRequest } = await import('../lib/dbServices');
+              const allComps = await apiRequest('/empresas');
+              const realComp = allComps.find(c => (c.name || c.nombre || '').toLowerCase() === (u.company || '').toLowerCase());
+              if (realComp) {
+                 finalEmpresaId = realComp.id;
+                 console.log(`[AUTH-SYNC] Vinculación exitosa por nombre: ${finalEmpresaId}`);
+              }
+           } catch(e) { console.warn("Falla en vinculación automática de ID empresa"); }
+        }
+
         const normalizedUser = {
           ...u,
           rol: finalRole,
-          empresaId: u.companyId || u.empresaId,
+          empresaId: finalEmpresaId,
           nombre: u.name || u.nombre,
           mustChangePassword: u.password === '123456' || u.password === 'password123' || !u.password
         };
