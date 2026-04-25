@@ -176,7 +176,14 @@ export const eliminarRonda = async (id) => await apiRequest(`/rondas/${id}`, 'DE
 export const subscribeToRondas = (cb) => subscribeToResource('/rondas', cb, 45000);
 
 // Empresas
-export const actualizarEmpresa = async (data) => await apiRequest('/empresas', 'POST', data);
+export const actualizarEmpresa = async (idOrData, data) => {
+    if (data) {
+        // Si se pasan dos argumentos, es una actualización quirúrgica por ID
+        return await apiRequest(`/empresas/${idOrData}`, 'POST', data);
+    }
+    // Si se pasa uno, es el objeto completo (formato legacy/full)
+    return await apiRequest('/empresas', 'POST', idOrData);
+};
 
 // ========================
 // TICKETS DE SOPORTE
