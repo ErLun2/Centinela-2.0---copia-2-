@@ -22,6 +22,14 @@ app.use(bodyParser.json({ limit: '15mb' }));
 app.use(bodyParser.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.json({ limit: '15mb' }));
 
+// Helper para fechas MySQL (Regla de Oro: Estabilidad de Datos)
+const toMySQLDate = (val) => {
+    if (!val) return null;
+    const d = new Date(val);
+    if (isNaN(d.getTime())) return null;
+    return d.toISOString().slice(0, 19).replace('T', ' ');
+};
+
 // --- CONFIGURACIÓN DE CORREO ---
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -1075,7 +1083,12 @@ app.post('/api/payments/:id', async (req, res) => {
                     VALUES (?, ${fields.map(() => '?').join(', ')})
                     ON DUPLICATE KEY UPDATE ${fields.map(f => `${f} = VALUES(${f})`).join(', ')}`;
         
-        await pool.query(sql, [id, ...fields.map(f => data[f])]);
+        const params = [id, ...fields.map(f => {
+            if (f.toLowerCase().includes('fecha') || f.toLowerCase().includes('date')) return toMySQLDate(data[f]);
+            return data[f];
+        })];
+        
+        await pool.query(sql, params);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1112,7 +1125,7 @@ app.post('/api/payments/webhook', async (req, res) => {
                 data.monto, 
                 data.metodo, 
                 data.estado || 'pending', 
-                new Date(),
+                toMySQLDate(new Date()),
                 data.comprobante || null,
                 data.numero_operacion || null
             ]
