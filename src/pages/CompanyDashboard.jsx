@@ -5215,7 +5215,7 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
       setHistory(payHistory);
     } catch (error) {
       console.error(error);
-      showToast("Error al procesar el envío del pago", "error");
+      showToast(`Error al procesar el envío: ${error.message || 'Error del servidor'}`, "error");
     } finally {
       setLoading(false);
     }

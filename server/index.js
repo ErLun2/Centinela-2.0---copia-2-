@@ -16,11 +16,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const app = express();
-app.use(compression()); // Optimización Lite: Comprime respuestas
+app.use(compression()); 
 app.use(cors());
-app.use(bodyParser.json({ limit: '10mb' }));
-app.use(bodyParser.urlencoded({ limit: '10mb', extended: true }));
-app.use(express.json({ limit: '10mb' }));
+app.use(bodyParser.json({ limit: '15mb' }));
+app.use(bodyParser.urlencoded({ limit: '15mb', extended: true }));
+app.use(express.json({ limit: '15mb' }));
 
 // --- CONFIGURACIÓN DE CORREO ---
 const transporter = nodemailer.createTransport({
@@ -256,6 +256,28 @@ pool.getConnection()
             `);
             console.log('  [DB] Configuración OK');
         } catch (e) { console.error('  [DB-ERROR] Config:', e.message); }
+        
+        // 9. Pagos (Comprobantes)
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS payments (
+                    id VARCHAR(100) PRIMARY KEY,
+                    empresaId VARCHAR(100),
+                    planId VARCHAR(100),
+                    monto FLOAT,
+                    metodo VARCHAR(50),
+                    estado VARCHAR(50) DEFAULT 'pending',
+                    fecha DATETIME,
+                    comprobante LONGTEXT,
+                    numero_operacion VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            // Patch de columnas por si la tabla ya existía
+            await conn.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS comprobante LONGTEXT`).catch(()=>{});
+            await conn.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS numero_operacion VARCHAR(100)`).catch(()=>{});
+            console.log('  [DB] Estructura de pagos OK');
+        } catch (e) { console.error('  [DB-ERROR] Pagos:', e.message); }
 
         // 9. Objectives (Puestos/Sedes)
         try {
@@ -1027,28 +1049,6 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', db: pool.state }))
 // --- RUTAS DE FACTURACIÓN Y PAGOS (RESTAURADAS) ---
 app.get('/api/payments', async (req, res) => {
     try {
-        // Auto-reparación agresiva: Asegurar existencia de tablas críticas
-        await pool.query(`CREATE TABLE IF NOT EXISTS sistema_config (\`key\` VARCHAR(100) PRIMARY KEY, value TEXT)`).catch(()=>{});
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS payments (
-                id VARCHAR(100) PRIMARY KEY,
-                empresaId VARCHAR(100),
-                planId VARCHAR(100),
-                monto FLOAT,
-                metodo VARCHAR(50),
-                estado VARCHAR(50),
-                fecha DATETIME,
-                mp_payment_id VARCHAR(100),
-                comprobante LONGTEXT,
-                numero_operacion VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        `).catch(()=>{});
-
-        // Patch por si la tabla ya existía sin estas columnas
-        await pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS comprobante LONGTEXT`).catch(()=>{});
-        await pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS numero_operacion VARCHAR(100)`).catch(()=>{});
-        
         const [rows] = await pool.query('SELECT * FROM payments ORDER BY created_at DESC');
         res.json(rows);
     } catch (err) {
