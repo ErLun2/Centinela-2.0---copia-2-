@@ -194,9 +194,7 @@ const EnterpriseConfigPanel = ({
   setSelectedUserForView,
   setNewObjective,
   setNewObjectiveCoords,
-  setShowNewObjectiveModal,
-  setObjectives,
-  setCompanyUsers
+  setShowNewObjectiveModal
 }) => {
   const { user } = useAuth();
   const { settings, saveSettings, testSound, stopPanic, isPanicActive } = useSound();
@@ -271,41 +269,39 @@ const EnterpriseConfigPanel = ({
     }
   };
 
-   const toggleBranchStatus = async (branchId) => {
+  const toggleBranchStatus = async (branchId) => {
     const obj = objectives.find(o => o.id === branchId);
     if (!obj) return;
-
-    // Actualización optimista para feedback instantáneo
-    const newStatus = obj.activo === false ? true : false;
-    setObjectives(prev => prev.map(o => o.id === branchId ? { ...o, activo: newStatus } : o));
-
     try {
-      const updatedObj = { ...obj, activo: newStatus };
+      // Si activo es undefined o null, se considera true (por defecto)
+      const currentStatus = obj.activo !== false;
+      const updatedObj = { ...obj, activo: !currentStatus };
+      
       await db.crearObjective(updatedObj);
-      showToast("Estado de sucursal actualizado.");
-      // No necesitamos llamar a refreshData() inmediatamente porque ya actualizamos el estado localmente
+      showToast(updatedObj.activo ? "Sucursal activada" : "Sucursal desactivada");
+      
+      // Intentar refrescar datos inmediatamente
+      if (refreshData) refreshData();
     } catch (e) {
-      // Revertir en caso de error
-      setObjectives(prev => prev.map(o => o.id === branchId ? { ...o, activo: !newStatus } : o));
+      console.error("Error toggling branch:", e);
       showToast("Error al actualizar sucursal", "error");
     }
   };
 
   const toggleUserStatus = async (userId, currentStatus) => {
-    const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
-    if (!targetUser) return;
-
-    // Actualización optimista
-    const newStatus = !currentStatus;
-    setCompanyUsers(prev => prev.map(u => (u.id === userId || u.uid === userId) ? { ...u, activo: newStatus } : u));
-
     try {
-      const updatedUser = { ...targetUser, activo: newStatus };
+      // Usamos el servicio de base de datos para alternar el estado
+      // Nota: asumimos que dbServices tiene una forma de actualizar, o usamos crearUsuarioSaaS para update
+      // Si no hay endpoint de "update", usamos el patrón de reenviar el objeto con el campo cambiado.
+      const targetUser = companyUsers.find(u => (u.id === userId || u.uid === userId));
+      if (!targetUser) return;
+
+      const updatedUser = { ...targetUser, activo: !currentStatus };
       await db.crearUsuarioSaaS(updatedUser); 
+      
       showToast("Estado de usuario actualizado correctamente.");
+      refreshData();
     } catch (error) {
-      // Revertir
-      setCompanyUsers(prev => prev.map(u => (u.id === userId || u.uid === userId) ? { ...u, activo: currentStatus } : u));
       showToast("Error al actualizar estado: " + error.message, "error");
     }
   };
@@ -3088,7 +3084,7 @@ const CompanyDashboard = () => {
 
                   if (!isOnDuty) return null; // No mostrar fuera de turno
 
-                  // 2. Determinar posición: GPS real o fallback a objetivo asignado (SOLO SI ESTÁ ACTIVO)
+                  // 2. Determinar posición: GPS real o fallback a objetivo asignado
                   const loc = locations.find(l => l.usuarioId === (u.id || u.uid));
                   const assignedObj = objectives.find(o => String(o.id) === String(u.schedule?.objectiveId));
                   
@@ -3097,12 +3093,15 @@ const CompanyDashboard = () => {
 
                   if (loc && loc.latitud && loc.longitud) {
                     pos = [parseFloat(loc.latitud), parseFloat(loc.longitud)];
-                  } else if (assignedObj && assignedObj.activo !== false && assignedObj.lat && assignedObj.lng) {
+                  } else if (assignedObj && assignedObj.lat && assignedObj.lng) {
                     pos = [parseFloat(assignedObj.lat), parseFloat(assignedObj.lng)];
                     posSource = 'objetivo';
                   }
 
-                  if (!pos) return null; // Sin GPS ni objetivo activo con coordenadas
+                  // REGLA DE ORO: Si el objetivo asignado está desactivado, no mostrar el marcador en el mapa
+                  if (assignedObj && assignedObj.activo === false) return null;
+
+                  if (!pos) return null; // Sin GPS ni objetivo con coordenadas
 
                   return (
                     <Marker key={u.id || u.uid || idx} position={pos} icon={guardIcon}>
