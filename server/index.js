@@ -115,11 +115,17 @@ pool.getConnection()
                     lat FLOAT,
                     lng FLOAT,
                     dni VARCHAR(50),
-                    appEmail VARCHAR(100)
+                    appEmail VARCHAR(100),
+                    fechaInicio DATETIME,
+                    fechaFin DATETIME,
+                    lastPaymentRef VARCHAR(100)
                 )
             `);
             await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
             await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS appEmail VARCHAR(100)`);
+            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS fechaInicio DATETIME`);
+            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS fechaFin DATETIME`);
+            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS lastPaymentRef VARCHAR(100)`);
             console.log('  [DB] Estructura de empresas OK');
         } catch (e) { console.error('  [DB-ERROR] Empresas:', e.message); }
 
