@@ -999,6 +999,9 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', db: pool.state }))
 // --- RUTAS DE FACTURACIÓN Y PAGOS (RESTAURADAS) ---
 app.get('/api/payments', async (req, res) => {
     try {
+        // Auto-reparación agresiva: Asegurar existencia de tabla config en cada carga
+        await pool.query(`CREATE TABLE IF NOT EXISTS sistema_config (\`key\` VARCHAR(100) PRIMARY KEY, value TEXT)`).catch(()=>{});
+        
         const [rows] = await pool.query('SELECT * FROM payments ORDER BY created_at DESC');
         res.json(rows);
     } catch (err) {
