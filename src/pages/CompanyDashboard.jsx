@@ -272,12 +272,23 @@ const EnterpriseConfigPanel = ({
    const toggleBranchStatus = async (branchId) => {
     const obj = objectives.find(o => o.id === branchId);
     if (!obj) return;
+    
+    // Optimistic Update: Actualizamos el estado local inmediatamente
+    const newStatus = obj.activo === false ? true : false;
+    const updatedObjectives = objectives.map(o => 
+      o.id === branchId ? { ...o, activo: newStatus } : o
+    );
+    setObjectives(updatedObjectives);
+
     try {
-      const updatedObj = { ...obj, activo: obj.activo === false ? true : false };
+      const updatedObj = { ...obj, activo: newStatus };
       await db.crearObjective(updatedObj);
       showToast("Estado de sucursal actualizado.");
-      refreshData();
+      // No necesitamos llamar a refreshData() inmediatamente si la suscripción lo hará luego,
+      // pero el estado local ya está actualizado.
     } catch (e) {
+      // Revertir en caso de error
+      setObjectives(objectives);
       showToast("Error al actualizar sucursal", "error");
     }
   };
