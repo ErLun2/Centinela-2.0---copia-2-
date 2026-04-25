@@ -3106,9 +3106,11 @@ const PaymentsValidationPanel = ({ companies }) => {
       const expiryDate = new Date();
       expiryDate.setDate(today.getDate() + 30);
 
-      // Identificar datos clave
+      // Identificar datos clave y Normalizar Plan (Regla de Oro: Estabilidad de IDs)
       const empresaId = payment.empresaId;
-      const plan = (payment.planId || 'basico').toLowerCase();
+      let plan = (payment.planId || payment.plan || 'basico').toLowerCase();
+      // Limpiar ruidos comunes: "Plan Enterprise" -> "enterprise"
+      plan = plan.replace('plan ', '').replace('licencia ', '').trim();
       const paymentRef = payment.id;
 
       // 1. Actualizar estado del pago a Aprobado
