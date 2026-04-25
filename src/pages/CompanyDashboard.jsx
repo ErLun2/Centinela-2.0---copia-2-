@@ -1210,40 +1210,44 @@ const CompanyDashboard = () => {
       
       console.log(`[LICENSE-SYNC] Buscando empresa: ID=${compId}, Nombre=${compName}`, allCompanies);
       
-      // 1. Intento por ID exacto
-      let found = allCompanies.find(c => String(c.id || c.uid) === String(compId));
+      // 1. Intento por ID exacto (Normalizado)
+      let found = allCompanies.find(c => {
+         const dbId = String(c.id || c.uid || '');
+         return dbId === String(compId) || dbId === String(user.id);
+      });
       
-      // 2. REGLA DE ORO: Si falla por ID (común en migraciones), intentar por NOMBRE coincidente
+      // 2. REGLA DE ORO: Si falla por ID, intentar por NOMBRE (Fuzzy matching robusto)
       if (!found && compName) {
          found = allCompanies.find(c => {
             const dbName = (c.name || c.nombre || '').toLowerCase().trim();
+            // Coincidencia exacta o contenida (Stark Industries vs STARK INDUSTRIES)
             return dbName === compName || dbName.includes(compName) || compName.includes(dbName);
          });
-         if (found) console.log(`[LICENSE-SYNC] Match por nombre exitoso:`, found);
       }
 
       if (found) {
-        console.log(`[LICENSE-SYNC] Empresa encontrada:`, found);
-        // NORMALIZACIÓN ESTRATÉGICA (Evitar 'PREMIUM'/'CLIENTE' fantasmas)
+        console.log(`[LICENSE-SYNC] Sincronización exitosa:`, found);
+        // NORMALIZACIÓN ESTRATÉGICA (Capturar cambios de plan instantáneos)
         setCompanyData({
           ...found,
+          id: found.id || found.uid,
           nombre: found.name || found.nombre || user?.company || '',
           email: found.appEmail || found.email || user?.email || '',
-          plan: (found.plan || found.planId || 'demo').toLowerCase(),
+          // Normalizar plan para que coincida con las keys de PLANES
+          plan: (found.plan || found.planId || 'demo').toLowerCase().replace('plan ', '').trim(),
           expiryDate: found.expiryDate || found.vencimiento || null 
         });
       } else {
-        console.warn(`[LICENSE-SYNC] Empresa no encontrada en la DB local.`);
-        // Fallback: Si no se encuentra en la tabla de empresas, usamos el objeto de usuario como base
+        console.warn(`[LICENSE-SYNC] No se encontró coincidencia para ${compName}. Usando datos de sesión.`);
         setCompanyData({
           id: compId,
-          nombre: user?.company || 'STARK INDUSTRIES',
+          nombre: user?.company || 'Empresa',
           plan: 'demo',
           status: 'activa',
           expiryDate: null
         });
       }
-    });
+    }, 10000); // Polling cada 10 segundos para impacto inmediato
     const unsubEvents = db.subscribeToAllEventsGroup((allEvents) => {
       // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro y marcador de 'Hoy'
       const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
