@@ -1208,51 +1208,27 @@ const CompanyDashboard = () => {
 
     // MOTOR DE SINCRONIZACIÓN DE LICENCIA (Impacto Inmediato)
     const syncCompanyData = async () => {
-      let compId = user.empresaId || user.companyId;
-      const compName = (user.company || '').toLowerCase().trim();
-      
+      const compId = user.empresaId || user.companyId;
+      if (!compId) return;
+
       try {
-        const { getEmpresaById, apiRequest } = await import('../lib/dbServices');
-        let found = null;
+        const { getEmpresaById } = await import('../lib/dbServices');
+        const found = await getEmpresaById(compId);
         
-        // 1. Intentar por ID directo
-        if (compId && !String(compId).includes('demo')) {
-           found = await getEmpresaById(compId);
-        }
-        
-        // 2. REGLA DE ORO: Si falla o es demo, buscar por nombre y tomar EL MÁS RECIENTE
-        if (!found && compName) {
-           const allComps = await apiRequest('/empresas');
-           const matches = allComps.filter(c => (c.name || c.nombre || '').toLowerCase().trim() === compName);
-           if (matches.length > 0) {
-              // Ordenar por fecha de vencimiento descendente (el más nuevo)
-              matches.sort((a, b) => new Date(b.expiryDate || b.vencimiento) - new Date(a.expiryDate || a.vencimiento));
-              found = matches[0];
-              console.log(`[LICENSE-HEALER] Vinculando a registro más reciente:`, found.id);
-           }
-        }
-
         if (found) {
-          const cleanPlan = (found.plan || found.planId || 'demo').toLowerCase().replace('plan ', '').trim();
-          
-          // REGLA DE ORO: Actualizar el objeto de usuario local si el ID o Plan cambió
-          if (found.id !== user.empresaId || cleanPlan !== (user.plan || '').toLowerCase()) {
-             const updatedUser = { ...user, empresaId: found.id, plan: cleanPlan };
-             localStorage.setItem('centinela_current_user', JSON.stringify(updatedUser));
-             // Nota: No usamos setUser aquí para evitar loops, pero el próximo refresco/efecto lo tomará
-          }
-
+          console.log(`[LICENSE-SYNC] Datos frescos recibidos:`, found);
           setCompanyData(prev => ({
             ...prev,
             ...found,
             id: found.id || found.uid,
             nombre: found.name || found.nombre || user?.company || '',
-            plan: cleanPlan,
+            email: found.appEmail || found.email || user?.email || '',
+            plan: (found.plan || found.planId || 'demo').toLowerCase().replace('plan ', '').trim(),
             expiryDate: found.expiryDate || found.vencimiento || null 
           }));
         }
       } catch (e) {
-        console.warn("[LICENSE-SYNC] Error en sincronización:", e);
+        console.warn("[LICENSE-SYNC] Error en sincronización directa:", e);
       }
     };
 

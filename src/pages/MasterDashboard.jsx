@@ -382,15 +382,11 @@ const MasterDashboard = () => {
 
         const finalId = editingCompany ? editingCompany.id : Date.now().toString();
         
-        // REGLA DE ORO: Si no hay fecha de vencimiento, asignamos 30 días (o 15 para Demo)
+        // REGLA DE ORO: Si no hay fecha de vencimiento, asignamos 30 días por defecto
         let finalExpiry = newCompany.expiryDate;
         if (!finalExpiry) {
            const d = new Date();
-           if ((newCompany.plan || '').toLowerCase().includes('demo')) {
-              d.setDate(d.getDate() + 15); // Máximo 15 días para Demo
-           } else {
-              d.setMonth(d.getMonth() + 1); // 30 días para otros planes
-           }
+           d.setMonth(d.getMonth() + 1);
            finalExpiry = d.toISOString().split('T')[0];
         }
 
@@ -398,7 +394,6 @@ const MasterDashboard = () => {
             ...newCompany,
             id: finalId,
             expiryDate: finalExpiry,
-            vencimiento: finalExpiry, // Sincronización doble para evitar fallos de lectura
             lat: coords.lat,
             lng: coords.lng
         };
