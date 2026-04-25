@@ -293,8 +293,25 @@ pool.getConnection()
             await conn.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS planId VARCHAR(100)`);
             console.log('  [DB] Estructura de pagos OK');
         } catch (e) { console.error('  [DB-ERROR] Pagos:', e.message); }
+        
+        // 10. Suscripciones (Control Centralizado)
+        try {
+            await conn.query(`
+                CREATE TABLE IF NOT EXISTS suscripciones (
+                    id VARCHAR(100) PRIMARY KEY,
+                    planId VARCHAR(50),
+                    estado VARCHAR(50),
+                    fechaInicio DATETIME,
+                    fechaFin DATETIME,
+                    fechaProximoPago DATETIME,
+                    paymentId VARCHAR(100),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            `);
+            console.log('  [DB] Estructura de suscripciones OK');
+        } catch (e) { console.error('  [DB-ERROR] Suscripciones:', e.message); }
 
-        // 9. Objectives (Puestos/Sedes)
+        // 11. Objectives (Puestos/Sedes)
         try {
             await conn.query(`
                 CREATE TABLE IF NOT EXISTS objectives (
