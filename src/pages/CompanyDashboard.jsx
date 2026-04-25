@@ -194,7 +194,8 @@ const EnterpriseConfigPanel = ({
   setSelectedUserForView,
   setNewObjective,
   setNewObjectiveCoords,
-  setShowNewObjectiveModal
+  setShowNewObjectiveModal,
+  toggleBranchStatus
 }) => {
   const { user } = useAuth();
   const { settings, saveSettings, testSound, stopPanic, isPanicActive } = useSound();
@@ -269,24 +270,8 @@ const EnterpriseConfigPanel = ({
     }
   };
 
-  const toggleBranchStatus = async (branchId) => {
-    const obj = objectives.find(o => o.id === branchId);
-    if (!obj) return;
-    try {
-      // Si activo es undefined o null, se considera true (por defecto)
-      const currentStatus = obj.activo !== false;
-      const updatedObj = { ...obj, activo: !currentStatus };
-      
-      await db.crearObjective(updatedObj);
-      showToast(updatedObj.activo ? "Sucursal activada" : "Sucursal desactivada");
-      
-      // Intentar refrescar datos inmediatamente
-      if (refreshData) refreshData();
-    } catch (e) {
-      console.error("Error toggling branch:", e);
-      showToast("Error al actualizar sucursal", "error");
-    }
-  };
+  // Nota: toggleBranchStatus se movió al componente padre (CompanyDashboard) 
+  // para mejor gestión de estado y sincronización con el mapa.
 
   const toggleUserStatus = async (userId, currentStatus) => {
     try {
@@ -1152,6 +1137,31 @@ const CompanyDashboard = () => {
     printWindow.document.write(content);
     printWindow.document.close();
     showToast("Preparando vista de PDF...");
+  };
+
+  const toggleBranchStatus = async (branchId) => {
+    // 1. Obtener objeto actual
+    const obj = objectives.find(o => o.id === branchId);
+    if (!obj) return;
+
+    // 2. Determinar nuevo estado (Optimista)
+    const currentStatus = obj.activo !== false;
+    const nextStatus = !currentStatus;
+
+    // 3. Actualización Optimista del Estado Local para respuesta INSTANTÁNEA
+    setObjectives(prev => prev.map(o => o.id === branchId ? { ...o, activo: nextStatus } : o));
+    
+    try {
+      // 4. Persistir en Base de Datos
+      const updatedObj = { ...obj, activo: nextStatus };
+      await db.crearObjective(updatedObj);
+      showToast(nextStatus ? "✅ Sucursal activada" : "🌑 Sucursal desactivada");
+    } catch (e) {
+      console.error("Error toggling branch:", e);
+      showToast("Error al sincronizar estado", "error");
+      // Revertir en caso de fallo crítico
+      setObjectives(prev => prev.map(o => o.id === branchId ? { ...o, activo: currentStatus } : o));
+    }
   };
 
   // CARGA DE DATOS (REGLA DE ORO: Sincronización Real)
@@ -4718,6 +4728,7 @@ const CompanyDashboard = () => {
               setNewObjective={setNewObjective}
               setNewObjectiveCoords={setNewObjectiveCoords}
               setShowNewObjectiveModal={setShowNewObjectiveModal}
+              toggleBranchStatus={toggleBranchStatus}
            />
         )}
 
