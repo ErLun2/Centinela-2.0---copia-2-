@@ -1021,14 +1021,50 @@ app.get('/api/payments', async (req, res) => {
                 estado VARCHAR(50),
                 fecha DATETIME,
                 mp_payment_id VARCHAR(100),
+                comprobante LONGTEXT,
+                numero_operacion VARCHAR(100),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         `).catch(()=>{});
+        await pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS comprobante LONGTEXT`).catch(()=>{});
+        await pool.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS numero_operacion VARCHAR(100)`).catch(()=>{});
         
         const [rows] = await pool.query('SELECT * FROM payments ORDER BY created_at DESC');
         res.json(rows);
     } catch (err) {
         res.json([]);
+    }
+});
+
+app.post('/api/payments/:id', async (req, res) => {
+    try {
+        const { status } = req.body;
+        await pool.query('UPDATE payments SET estado = ? WHERE id = ?', [status, req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/suscripciones/:id', async (req, res) => {
+    try {
+        const data = req.body;
+        const empresaId = req.params.id;
+        // Upsert de suscripción
+        await pool.query(`
+            INSERT INTO suscripciones (empresaId, planId, estado, fechaInicio, fechaFin, fechaProximoPago, paymentId)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE 
+                planId = VALUES(planId),
+                estado = VALUES(estado),
+                fechaInicio = VALUES(fechaInicio),
+                fechaFin = VALUES(fechaFin),
+                fechaProximoPago = VALUES(fechaProximoPago),
+                paymentId = VALUES(paymentId)
+        `, [empresaId, data.planId, data.estado, data.fechaInicio, data.fechaFin, data.fechaProximoPago, data.paymentId]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
@@ -1038,8 +1074,8 @@ app.post('/api/payments/webhook', async (req, res) => {
         const id = data.id || `pay_${Date.now()}`;
         // REGLA DE ORO: Persistir notificación de pago para auditoría
         await pool.query(
-            'INSERT INTO payments (id, empresaId, planId, monto, metodo, estado, fecha) VALUES (?, ?, ?, ?, ?, ?, ?)', 
-            [id, data.empresaId, data.planId, data.monto, data.metodo, data.estado || 'pending', new Date()]
+            'INSERT INTO payments (id, empresaId, planId, monto, metodo, estado, fecha, comprobante, numero_operacion) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', 
+            [id, data.empresaId, data.planId, data.monto, data.metodo, data.estado || 'pending', new Date(), data.comprobante || null, data.numero_operacion || null]
         );
         res.json({ success: true });
     } catch (err) {
