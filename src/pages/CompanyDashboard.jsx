@@ -958,17 +958,18 @@ const CompanyDashboard = () => {
   // Validación de Licencia Estratégica (Bloqueo Total)
   const isLicenseDisabled = useMemo(() => {
     // REGLA DE ORO: El Super Admin tiene inmunidad total de acceso
-    if (user?.rol === 'SUPER_ADMIN' || user?.role === 'SUPER_ADMIN' || (user?.role || '').toUpperCase() === 'SUPERADMIN' || user?.email === 'vidal@master.com') return false;
+    const userRole = (user?.rol || user?.role || '').toUpperCase();
+    if (userRole === 'SUPERADMIN' || userRole === 'SUPER_ADMIN' || user?.email === 'vidal@master.com') return false;
     
-    if (!companyData) return false; // No bloqueamos mientras carga
+    if (!companyData) return false; 
     
     const currentStatus = (companyData.status || '').toLowerCase();
     
-    // 1. Si el estado no es activa, bloqueamos de inmediato
-    if (currentStatus !== 'activa') return true;
+    // 1. Bloqueo manual explícito
+    if (currentStatus === 'suspendida' || currentStatus === 'bloqueada') return true;
 
     // 2. Verificar vigencia temporal (Parsing robusto)
-    if (!companyData.expiryDate) return true; // Si no hay fecha, bloqueamos por seguridad
+    if (!companyData.expiryDate) return true; 
     
     try {
         const expiry = new Date(companyData.expiryDate);
@@ -977,17 +978,18 @@ const CompanyDashboard = () => {
         const today = new Date();
         today.setHours(0,0,0,0);
         
-        // Normalizar expiry a medianoche para comparación justa
+        // Normalizar expiry a medianoche para comparación justa (Argentina Timezone Safe)
         const expiryNorm = new Date(expiry);
         expiryNorm.setHours(0,0,0,0);
         
-        // Si el string es YYYY-MM-DD, asegurar que se tome como local
-        if (typeof companyData.expiryDate === 'string' && companyData.expiryDate.length === 10) {
-           const parts = companyData.expiryDate.split('-');
+        // Si el string es YYYY-MM-DD (Formato estándar MySQL), asegurar lectura literal
+        if (typeof companyData.expiryDate === 'string' && companyData.expiryDate.length >= 10) {
+           const parts = companyData.expiryDate.substring(0, 10).split('-');
            expiryNorm.setFullYear(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         }
 
-        return expiryNorm < today; // Retorna TRUE si está vencido (Desactivado)
+        // REGLA DE ORO: Si aún le quedan días, NO bloqueamos aunque el estado sea incierto
+        return expiryNorm < today; 
     } catch (e) {
         return true; 
     }
