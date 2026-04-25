@@ -999,22 +999,88 @@ app.get('/api/health', (req, res) => res.json({ status: 'ok', db: pool.state }))
 // --- RUTAS DE FACTURACIÓN Y PAGOS (RESTAURADAS) ---
 app.get('/api/payments', async (req, res) => {
     try {
-        // Auto-reparación agresiva: Asegurar existencia de tabla config en cada carga
+        // Auto-reparación agresiva: Asegurar existencia de tablas críticas
         await pool.query(`CREATE TABLE IF NOT EXISTS sistema_config (\`key\` VARCHAR(100) PRIMARY KEY, value TEXT)`).catch(()=>{});
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS payments (
+                id VARCHAR(100) PRIMARY KEY,
+                empresaId VARCHAR(100),
+                planId VARCHAR(100),
+                monto FLOAT,
+                metodo VARCHAR(50),
+                estado VARCHAR(50),
+                fecha DATETIME,
+                mp_payment_id VARCHAR(100),
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        `).catch(()=>{});
         
         const [rows] = await pool.query('SELECT * FROM payments ORDER BY created_at DESC');
         res.json(rows);
     } catch (err) {
-        res.json([]); // Fallback para evitar 500 si la tabla no existe
+        res.json([]);
     }
 });
 
 app.post('/api/payments/webhook', async (req, res) => {
     try {
         const data = req.body;
-        await pool.query('INSERT INTO payments (id, data, status) VALUES (?, ?, ?)', [Date.now(), JSON.stringify(data), 'webhook_received']);
+        const id = data.id || `pay_${Date.now()}`;
+        // REGLA DE ORO: Persistir notificación de pago para auditoría
+        await pool.query(
+            'INSERT INTO payments (id, empresaId, planId, monto, metodo, estado, fecha) VALUES (?, ?, ?, ?, ?, ?, ?)', 
+            [id, data.empresaId, data.planId, data.monto, data.metodo, data.estado || 'pending', new Date()]
+        );
         res.json({ success: true });
     } catch (err) {
+        console.error("Error en webhook:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// NUEVO: Generación de Preferencia Real de Mercado Pago
+app.post('/api/payments/create-preference', async (req, res) => {
+    const { planId, monto, empresaId } = req.body;
+    try {
+        // 1. Obtener credenciales de sistema_config
+        const [rows] = await pool.query('SELECT value FROM sistema_config WHERE `key` = "mp_config"');
+        if (rows.length === 0) throw new Error("Mercado Pago no configurado en el Panel Maestro");
+        
+        const config = JSON.parse(rows[0].value);
+        if (!config.mp_access_token) throw new Error("Access Token de Mercado Pago faltante");
+
+        // 2. Inicializar SDK de Mercado Pago
+        const client = new MercadoPagoConfig({ 
+            accessToken: config.mp_access_token,
+            options: { timeout: 5000 }
+        });
+        
+        const preference = new Preference(client);
+
+        // 3. Crear Preferencia
+        const body = {
+            items: [{
+                id: planId,
+                title: `Licencia Centinela 2.0 - Plan ${planId.toUpperCase()}`,
+                quantity: 1,
+                unit_price: parseFloat(monto),
+                currency_id: 'USD' // O ARS según configuración
+            }],
+            back_urls: {
+                success: `${req.headers.origin}/company`,
+                failure: `${req.headers.origin}/company`,
+                pending: `${req.headers.origin}/company`
+            },
+            auto_return: 'approved',
+            external_reference: empresaId,
+            notification_url: `https://centinela-backend.onrender.com/api/payments/webhook` // Ajustar a URL real
+        };
+
+        const result = await preference.create({ body });
+        res.json({ id: result.id, init_point: result.init_point });
+
+    } catch (err) {
+        console.error("Error creando preferencia MP:", err);
         res.status(500).json({ error: err.message });
     }
 });

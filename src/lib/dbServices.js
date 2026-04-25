@@ -189,7 +189,11 @@ export const subscribeToTickets = (cb) => subscribeToResource('/tickets', cb, 40
 // FACTURACIÓN
 // ========================
 export const registrarPago = async (data) => {
-    await apiRequest('/payments/webhook', 'POST', { data });
+    await apiRequest('/payments/webhook', 'POST', data);
+};
+
+export const crearPreferenciaPago = async (data) => {
+    return await apiRequest('/payments/create-preference', 'POST', data);
 };
 
 export const subscribeToAllPayments = (cb) => subscribeToResource('/payments', cb, 60000);

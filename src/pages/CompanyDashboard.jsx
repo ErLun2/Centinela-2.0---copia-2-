@@ -5205,30 +5205,23 @@ const BillingPanel = ({ companyData, showToast, refreshData, currentPlanInfo }) 
       const paymentData = {
         empresaId: companyData?.id || companyData?.uid,
         planId: selectedPlan.id,
-        monto: selectedPlan.precio,
-        metodo: 'Mercado Pago',
-        estado: 'pending', // Se activa automáticamente vía Webhook/IPN en producción
-        fecha: new Date().toISOString()
+        monto: selectedPlan.precio
       };
       
-      await db.registrarPago(paymentData);
+      // 1. Crear preferencia real en el backend
+      const preference = await db.crearPreferenciaPago(paymentData);
       
-      showToast("Redirigiendo a Checkout de Mercado Pago...");
-      
-      // Simulación de redirección / integración futura SDK
-      setTimeout(() => {
-        showToast("Simulación: Pago en proceso vía Checkout Pro. Próximamente integración con SDK real.");
-        setLoading(false);
-        setPaymentMethod(null);
-        setSelectedPlan(null);
-        
-        // Recargar historial
-        db.obtenerHistorialPagos(companyData?.id || companyData?.uid).then(setHistory);
-      }, 2000);
+      if (preference && preference.init_point) {
+        showToast("Redirigiendo a Mercado Pago...");
+        // 2. Redirección real al Checkout de MP
+        window.location.href = preference.init_point;
+      } else {
+        throw new Error("No se pudo obtener el punto de inicio de pago");
+      }
       
     } catch (error) {
-      console.error(error);
-      showToast("Error al inicializar pago online", "error");
+      console.error("Error en pago online:", error);
+      showToast(error.message || "Error al inicializar pago online", "error");
       setLoading(false);
     }
   };
