@@ -1206,8 +1206,22 @@ const CompanyDashboard = () => {
 
     const unsubCompanies = db.subscribeToCompanies((allCompanies) => {
       const compId = user.empresaId || user.companyId;
-      console.log(`[LICENSE-SYNC] Buscando empresa: ${compId}`, allCompanies);
-      const found = allCompanies.find(c => String(c.id || c.uid) === String(compId));
+      const compName = (user.company || '').toLowerCase().trim();
+      
+      console.log(`[LICENSE-SYNC] Buscando empresa: ID=${compId}, Nombre=${compName}`, allCompanies);
+      
+      // 1. Intento por ID exacto
+      let found = allCompanies.find(c => String(c.id || c.uid) === String(compId));
+      
+      // 2. REGLA DE ORO: Si falla por ID (común en migraciones), intentar por NOMBRE coincidente
+      if (!found && compName) {
+         found = allCompanies.find(c => {
+            const dbName = (c.name || c.nombre || '').toLowerCase().trim();
+            return dbName === compName || dbName.includes(compName) || compName.includes(dbName);
+         });
+         if (found) console.log(`[LICENSE-SYNC] Match por nombre exitoso:`, found);
+      }
+
       if (found) {
         console.log(`[LICENSE-SYNC] Empresa encontrada:`, found);
         // NORMALIZACIÓN ESTRATÉGICA (Evitar 'PREMIUM'/'CLIENTE' fantasmas)
@@ -1216,15 +1230,14 @@ const CompanyDashboard = () => {
           nombre: found.name || found.nombre || user?.company || '',
           email: found.appEmail || found.email || user?.email || '',
           plan: (found.plan || found.planId || 'demo').toLowerCase(),
-          expiryDate: found.expiryDate || found.vencimiento || null // Asegurar campo correcto de MySQL
+          expiryDate: found.expiryDate || found.vencimiento || null 
         });
       } else {
-        console.warn(`[LICENSE-SYNC] Empresa ${compId} no encontrada en la DB local.`);
+        console.warn(`[LICENSE-SYNC] Empresa no encontrada en la DB local.`);
         // Fallback: Si no se encuentra en la tabla de empresas, usamos el objeto de usuario como base
-        // pero marcamos como incompleto para que bloquee si es necesario
         setCompanyData({
           id: compId,
-          nombre: user?.company || 'Cargando...',
+          nombre: user?.company || 'STARK INDUSTRIES',
           plan: 'demo',
           status: 'activa',
           expiryDate: null
