@@ -1209,37 +1209,47 @@ const CompanyDashboard = () => {
     // MOTOR DE SINCRONIZACIÓN DE LICENCIA (Impacto Inmediato)
     const syncCompanyData = async () => {
       let compId = user.empresaId || user.companyId;
-      if (!compId) return;
-
+      const compName = (user.company || '').toLowerCase().trim();
+      
       try {
         const { getEmpresaById, apiRequest } = await import('../lib/dbServices');
-        let found = await getEmpresaById(compId);
+        let found = null;
         
-        // REGLA DE ORO: Si el ID falla o es 'demo', intentamos sanar el vínculo por NOMBRE
-        if (!found || String(compId).includes('demo')) {
-           const compName = (user.company || '').toLowerCase().trim();
-           if (compName) {
-              const allComps = await apiRequest('/empresas');
-              found = allComps.find(c => (c.name || c.nombre || '').toLowerCase().trim() === compName);
-              if (found) console.log(`[LICENSE-HEALER] Vínculo sanado por nombre:`, found.id);
+        // 1. Intentar por ID directo
+        if (compId && !String(compId).includes('demo')) {
+           found = await getEmpresaById(compId);
+        }
+        
+        // 2. REGLA DE ORO: Si falla o es demo, buscar por nombre y tomar EL MÁS RECIENTE
+        if (!found && compName) {
+           const allComps = await apiRequest('/empresas');
+           const matches = allComps.filter(c => (c.name || c.nombre || '').toLowerCase().trim() === compName);
+           if (matches.length > 0) {
+              // Ordenar por fecha de vencimiento descendente (el más nuevo)
+              matches.sort((a, b) => new Date(b.expiryDate || b.vencimiento) - new Date(a.expiryDate || a.vencimiento));
+              found = matches[0];
+              console.log(`[LICENSE-HEALER] Vinculando a registro más reciente:`, found.id);
            }
         }
 
         if (found) {
-          console.log(`[LICENSE-SYNC] Datos frescos recibidos:`, found);
+          const cleanPlan = (found.plan || found.planId || 'demo').toLowerCase().replace('plan ', '').trim();
+          
+          // REGLA DE ORO: Actualizar el objeto de usuario local si el ID o Plan cambió
+          if (found.id !== user.empresaId || cleanPlan !== (user.plan || '').toLowerCase()) {
+             const updatedUser = { ...user, empresaId: found.id, plan: cleanPlan };
+             localStorage.setItem('centinela_current_user', JSON.stringify(updatedUser));
+             // Nota: No usamos setUser aquí para evitar loops, pero el próximo refresco/efecto lo tomará
+          }
+
           setCompanyData(prev => ({
             ...prev,
             ...found,
             id: found.id || found.uid,
             nombre: found.name || found.nombre || user?.company || '',
-            email: found.appEmail || found.email || user?.email || '',
-            plan: (found.plan || found.planId || 'demo').toLowerCase().replace('plan ', '').trim(),
+            plan: cleanPlan,
             expiryDate: found.expiryDate || found.vencimiento || null 
           }));
-          // REGLA DE ORO: Limpiar cualquier rastro de fecha antigua en cache si la nueva es distinta
-          if (found.expiryDate && localStorage.getItem('centinela_stale_expiry') !== found.expiryDate) {
-             localStorage.setItem('centinela_stale_expiry', found.expiryDate);
-          }
         }
       } catch (e) {
         console.warn("[LICENSE-SYNC] Error en sincronización:", e);
