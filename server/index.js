@@ -789,13 +789,15 @@ app.get('/api/config/:key', async (req, res) => {
 app.post('/api/config/:key', async (req, res) => {
     try {
         const value = JSON.stringify(req.body);
+        console.log(`[CONFIG] Actualizando ${req.params.key}.`);
         await pool.query(
             'INSERT INTO sistema_config (`key`, value) VALUES (?, ?) ON DUPLICATE KEY UPDATE value = ?',
             [req.params.key, value, value]
         );
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error(`❌ Error en POST /api/config/${req.params.key}:`, err.message);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 
@@ -842,14 +844,7 @@ app.post('/api/auth/admin-password', async (req, res) => {
 app.post('/api/auth/verify-admin', async (req, res) => {
     const { password } = req.body;
     try {
-        // Asegurar que existe la tabla de configuración
-        await pool.query(`
-            CREATE TABLE IF NOT EXISTS sistema_config (
-                \`key\` VARCHAR(100) PRIMARY KEY,
-                value TEXT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON DUPLICATE KEY UPDATE updated_at = CURRENT_TIMESTAMP
-            )
-        `).catch(err => console.error("Error creando sistema_config:", err));
+        // Tabla sistema_config ya se crea al inicio del servidor
 
         const [rows] = await pool.query('SELECT value FROM sistema_config WHERE `key` = "admin_pass"');
         let savedPass = '123456';
@@ -1033,10 +1028,12 @@ app.get('/api/pagos/config', async (req, res) => {
 app.post('/api/pagos/config', async (req, res) => {
     try {
         const value = JSON.stringify(req.body);
+        console.log(`[CONFIG] Guardando mp_config. Tamaño: ${value.length} bytes`);
         await pool.query('INSERT INTO sistema_config (`key`, value) VALUES ("mp_config", ?) ON DUPLICATE KEY UPDATE value = ?', [value, value]);
         res.json({ success: true });
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        console.error("❌ Error en POST /api/pagos/config:", err.message);
+        res.status(500).json({ success: false, error: err.message });
     }
 });
 

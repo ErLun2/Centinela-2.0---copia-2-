@@ -2669,14 +2669,20 @@ const PaymentConfigPanel = ({ isSaving, setIsSaving }) => {
       if (e) e.preventDefault();
       setIsSaving(true);
       try {
-         await db.guardarConfiguracionPagos(config);
-         alert("✅ Configuración de pagos guardada correctamente.");
-         // Recargar datos para confirmar persistencia y actualizar UI
-         const freshData = await db.obtenerConfiguracionPagos();
-         if (freshData) setConfig(prev => ({ ...prev, ...freshData }));
+         const result = await db.guardarConfiguracionPagos(config);
+         if (result && (result.success || !result.error)) {
+            alert("✅ Configuración de pagos guardada correctamente.");
+            // Recargar datos para confirmar persistencia
+            const freshData = await db.obtenerConfiguracionPagos();
+            if (freshData && Object.keys(freshData).length > 0) {
+               setConfig(prev => ({ ...prev, ...freshData }));
+            }
+         } else {
+            throw new Error(result?.error || "Error desconocido del servidor");
+         }
       } catch (error) {
          console.error("Error saving payment config:", error);
-         alert("❌ Error al guardar la configuración. Verifique la conexión.");
+         alert("❌ Error al guardar: " + (error.message || "Verifique la conexión"));
       } finally {
          setIsSaving(false);
       }
