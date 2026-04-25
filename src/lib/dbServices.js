@@ -74,7 +74,16 @@ export const obtenerEmpresas = async () => {
   return data || [];
 };
 
-export const subscribeToCompanies = (cb) => subscribeToResource('/empresas', cb, 30000);
+export const getEmpresaById = async (id) => {
+    try {
+        return await apiRequest(`/empresas/${id}`);
+    } catch (error) {
+        console.error("Error fetching company by ID:", error);
+        return null;
+    }
+};
+
+export const subscribeToCompanies = (callback, interval = 30000) => subscribeToResource('/empresas', callback, interval);
 
 // ========================
 // PLANES

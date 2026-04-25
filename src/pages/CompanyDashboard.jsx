@@ -1204,50 +1204,35 @@ const CompanyDashboard = () => {
       setCompanyUsers(filtered);
     });
 
-    const unsubCompanies = db.subscribeToCompanies((allCompanies) => {
+    // MOTOR DE SINCRONIZACIÓN DE LICENCIA (Impacto Inmediato)
+    const syncCompanyData = async () => {
       const compId = user.empresaId || user.companyId;
-      const compName = (user.company || '').toLowerCase().trim();
-      
-      console.log(`[LICENSE-SYNC] Buscando empresa: ID=${compId}, Nombre=${compName}`, allCompanies);
-      
-      // 1. Intento por ID exacto (Normalizado)
-      let found = allCompanies.find(c => {
-         const dbId = String(c.id || c.uid || '');
-         return dbId === String(compId) || dbId === String(user.id);
-      });
-      
-      // 2. REGLA DE ORO: Si falla por ID, intentar por NOMBRE (Fuzzy matching robusto)
-      if (!found && compName) {
-         found = allCompanies.find(c => {
-            const dbName = (c.name || c.nombre || '').toLowerCase().trim();
-            // Coincidencia exacta o contenida (Stark Industries vs STARK INDUSTRIES)
-            return dbName === compName || dbName.includes(compName) || compName.includes(dbName);
-         });
-      }
+      if (!compId) return;
 
-      if (found) {
-        console.log(`[LICENSE-SYNC] Sincronización exitosa:`, found);
-        // NORMALIZACIÓN ESTRATÉGICA (Capturar cambios de plan instantáneos)
-        setCompanyData({
-          ...found,
-          id: found.id || found.uid,
-          nombre: found.name || found.nombre || user?.company || '',
-          email: found.appEmail || found.email || user?.email || '',
-          // Normalizar plan para que coincida con las keys de PLANES
-          plan: (found.plan || found.planId || 'demo').toLowerCase().replace('plan ', '').trim(),
-          expiryDate: found.expiryDate || found.vencimiento || null 
-        });
-      } else {
-        console.warn(`[LICENSE-SYNC] No se encontró coincidencia para ${compName}. Usando datos de sesión.`);
-        setCompanyData({
-          id: compId,
-          nombre: user?.company || 'Empresa',
-          plan: 'demo',
-          status: 'activa',
-          expiryDate: null
-        });
+      try {
+        const { getEmpresaById } = await import('../lib/dbServices');
+        const found = await getEmpresaById(compId);
+        
+        if (found) {
+          console.log(`[LICENSE-SYNC] Datos frescos recibidos:`, found);
+          setCompanyData(prev => ({
+            ...prev,
+            ...found,
+            id: found.id || found.uid,
+            nombre: found.name || found.nombre || user?.company || '',
+            email: found.appEmail || found.email || user?.email || '',
+            plan: (found.plan || found.planId || 'demo').toLowerCase().replace('plan ', '').trim(),
+            expiryDate: found.expiryDate || found.vencimiento || null 
+          }));
+        }
+      } catch (e) {
+        console.warn("[LICENSE-SYNC] Error en sincronización directa:", e);
       }
-    }, 10000); // Polling cada 10 segundos para impacto inmediato
+    };
+
+    // Ejecutar sincronización cada 5 segundos para que los cambios del SuperAdmin impacten rápido
+    const syncInterval = setInterval(syncCompanyData, 5000);
+    syncCompanyData(); // Carga inicial
     const unsubEvents = db.subscribeToAllEventsGroup((allEvents) => {
       // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro y marcador de 'Hoy'
       const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
@@ -1304,7 +1289,8 @@ const CompanyDashboard = () => {
     });
 
     return () => {
-      unsubUsers(); unsubCompanies(); unsubEvents(); unsubTickets(); unsubObjectives(); unsubQrPoints(); unsubRondas(); unsubLocations();
+      clearInterval(syncInterval);
+      unsubUsers(); unsubEvents(); unsubTickets(); unsubObjectives(); unsubQrPoints(); unsubRondas(); unsubLocations();
     };
   };
 

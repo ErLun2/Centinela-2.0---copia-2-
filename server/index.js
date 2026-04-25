@@ -439,6 +439,16 @@ app.get('/api/empresas', async (req, res) => {
     }
 });
 
+app.get('/api/empresas/:id', async (req, res) => {
+    try {
+        const [rows] = await pool.query('SELECT * FROM empresas WHERE id = ?', [req.params.id]);
+        if (rows.length === 0) return res.status(404).json({ error: 'Empresa no encontrada' });
+        res.json(rows[0]);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/empresas', async (req, res) => {
     const c = req.body;
     try {
