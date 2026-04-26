@@ -356,10 +356,11 @@ const SupportDashboard = () => {
                                {(() => {
                                  const uniqueNames = new Set();
                                  return [...users]
-                                   .filter(u => (u.uid || u.id) !== selectedTicket.usuarioId) // EXCLUDE INITIATOR
+                                   .filter(u => String(u.companyId || u.empresaId) === String(selectedTicket.empresaId))
+                                   .filter(u => (u.uid || u.id) !== selectedTicket.usuarioId)
                                    .filter(u => {
-                                     const fullName = `${u.nombre || ''} ${u.apellido || ''}`.trim();
-                                     if (uniqueNames.has(fullName)) return false;
+                                     const fullName = `${u.nombre || u.name || ''} ${u.apellido || u.surname || ''}`.trim();
+                                     if (!fullName || uniqueNames.has(fullName)) return false;
                                      uniqueNames.add(fullName);
                                      return true;
                                    })
@@ -378,20 +379,22 @@ const SupportDashboard = () => {
                         </div>
                       )}
 
-                      {diagnosticData ? (
+                      {diagnosticData || diagnosticSummary ? (
                         <div className="fade-in" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px' }}>
                           <div style={{ padding: '20px', background: 'rgba(0,0,0,0.2)', borderRadius: '15px', border: '1px solid rgba(255,255,255,0.05)' }}>
                             <h5 style={{ margin: '0 0 15px 0', fontSize: '0.7rem', color: '#94a3b8', letterSpacing: '1px' }}>RESUMEN DE DIAGNÓSTICO</h5>
-                            {diagnosticSummary?.summary.map((s, idx) => (
-                              <div key={idx} style={{ fontSize: '0.8rem', color: diagnosticSummary.score === 'ok' ? '#10b981' : '#f59e0b', marginBottom: '5px' }}>• {s}</div>
+                            {diagnosticSummary?.summary?.map((s, idx) => (
+                              <div key={idx} style={{ fontSize: '0.8rem', color: diagnosticSummary.score === 'ok' ? '#10b981' : (diagnosticSummary.score === 'error' ? '#ef4444' : '#f59e0b'), marginBottom: '5px' }}>• {s}</div>
                             ))}
                             
-                            <div style={{ marginTop: '20px', display: 'grid', gap: '10px' }}>
-                               <DiagnosticItem label="Usuario" value={diagnosticData.user.status} color="#10b981" />
-                               <DiagnosticItem label="App" value={diagnosticData.device.appVersion} />
-                               <DiagnosticItem label="Señal GPS" value={diagnosticData.gps.signalLevel} />
-                               <DiagnosticItem label="Batería" value={diagnosticData.gps.battery} />
-                            </div>
+                            {diagnosticData && (
+                              <div style={{ marginTop: '20px', display: 'grid', gap: '10px' }}>
+                                 <DiagnosticItem label="Usuario" value={diagnosticData.user.status} color="#10b981" />
+                                 <DiagnosticItem label="App" value={diagnosticData.device.appVersion} />
+                                 <DiagnosticItem label="Señal GPS" value={diagnosticData.gps.signalLevel} />
+                                 <DiagnosticItem label="Batería" value={diagnosticData.gps.battery} />
+                              </div>
+                            )}
                           </div>
 
                           <div style={{ padding: '20px', background: 'rgba(0,168,255,0.05)', borderRadius: '15px', border: '1px solid rgba(0,168,255,0.2)' }}>
