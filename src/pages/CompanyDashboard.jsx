@@ -856,27 +856,35 @@ const CompanyDashboard = () => {
   const [chatReply, setChatReply] = useState("");
 
 
-  const handleRateTicket = (stars) => {
+  const handleRateTicket = async (stars) => {
     if (!selectedTicket) return;
     const updated = { ...selectedTicket, rating: stars };
-    const allT = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
-    const newAll = allT.map(t => t.id === selectedTicket.id ? updated : t);
-    localStorage.setItem('centinela_tickets', JSON.stringify(newAll));
-    setTickets(tickets.map(t => t.id === selectedTicket.id ? updated : t));
-    setSelectedTicket(updated);
+    
+    try {
+      await db.registrarNuevoTicket(updated);
+      setTickets(tickets.map(t => t.id === selectedTicket.id ? updated : t));
+      setSelectedTicket(updated);
+      showToast("Gracias por tu calificación");
+    } catch (err) {
+      showToast("Error al enviar calificación", "error");
+    }
   };
 
-  const handleSendResponse = () => {
+  const handleSendResponse = async () => {
     if (!chatReply.trim() || !selectedTicket) return;
-    const updatedTicket = { ...selectedTicket, respuestas: [...(selectedTicket.respuestas || []), { autor: 'EMPRESA', texto: chatReply, fecha: new Date().toISOString() }] };
-    const allTickets = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
-    const newAll = allTickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
-    localStorage.setItem('centinela_tickets', JSON.stringify(newAll));
-
-    // Actualizar state
-    setTickets(tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t));
-    setSelectedTicket(updatedTicket);
-    setChatReply("");
+    const newReply = { autor: 'EMPRESA', texto: chatReply, fecha: new Date().toISOString() };
+    const updatedTicket = { ...selectedTicket, respuestas: [...(selectedTicket.respuestas || []), newReply] };
+    
+    // Actualizar en backend (MySQL)
+    try {
+      await db.registrarNuevoTicket(updatedTicket); // Usa ON DUPLICATE KEY UPDATE en el backend
+      // Actualizar state
+      setTickets(tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t));
+      setSelectedTicket(updatedTicket);
+      setChatReply("");
+    } catch (err) {
+      showToast("Error al enviar mensaje", "error");
+    }
   };
 
 
@@ -2554,7 +2562,7 @@ const CompanyDashboard = () => {
                     </div>
 
                     <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
-                      <button onClick={handleAddTicket} className="primary" style={{ flex: 1, padding: '18px', borderRadius: '15px', fontSize: '1rem', fontWeight: 'bold' }}>ENVIAR SOLICITUD</button>
+                      <button onClick={handleCreateTicket} className="primary" style={{ flex: 1, padding: '18px', borderRadius: '15px', fontSize: '1rem', fontWeight: 'bold' }}>ENVIAR SOLICITUD</button>
                       <button onClick={() => setShowNewTicketModal(false)} style={{ flex: 1, padding: '18px', borderRadius: '15px', background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', fontWeight: 'bold' }}>CANCELAR</button>
                     </div>
                   </div>

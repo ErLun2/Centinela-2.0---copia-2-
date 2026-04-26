@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }) => {
           rol: finalRole,
           empresaId: u.companyId || u.empresaId,
           nombre: u.name || u.nombre,
-          mustChangePassword: u.password === '123456' || u.password === 'password123' || !u.password
+          mustChangePassword: u.password === '123456' || u.password === 'password123' || u.password === 'soporte123' || !u.password || u.password_changed === 0
         };
 
         setUser(normalizedUser);

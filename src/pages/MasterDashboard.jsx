@@ -2413,8 +2413,8 @@ const MasterDashboard = () => {
                   <input 
                     required 
                     className="input-full" 
-                    value={editingSupportUser ? (editingSupportUser.nombre || '') : newSupportUser.nombre} 
-                    onChange={e => editingSupportUser ? setEditingSupportUser({...editingSupportUser, nombre: e.target.value}) : handleSupportNameChange('nombre', e.target.value)} 
+                    value={editingSupportUser ? (editingSupportUser.name || editingSupportUser.nombre || '') : newSupportUser.nombre} 
+                    onChange={e => editingSupportUser ? setEditingSupportUser({...editingSupportUser, name: e.target.value, nombre: e.target.value}) : handleSupportNameChange('nombre', e.target.value)} 
                   />
                 </div>
                 <div>
@@ -2422,8 +2422,8 @@ const MasterDashboard = () => {
                   <input 
                     required 
                     className="input-full" 
-                    value={editingSupportUser ? (editingSupportUser.apellido || '') : newSupportUser.apellido} 
-                    onChange={e => editingSupportUser ? setEditingSupportUser({...editingSupportUser, apellido: e.target.value}) : handleSupportNameChange('apellido', e.target.value)} 
+                    value={editingSupportUser ? (editingSupportUser.surname || editingSupportUser.apellido || '') : newSupportUser.apellido} 
+                    onChange={e => editingSupportUser ? setEditingSupportUser({...editingSupportUser, surname: e.target.value, apellido: e.target.value}) : handleSupportNameChange('apellido', e.target.value)} 
                   />
                 </div>
               </div>
