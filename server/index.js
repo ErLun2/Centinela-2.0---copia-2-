@@ -669,8 +669,9 @@ app.post('/api/usuarios', async (req, res) => {
 });
 
 app.post('/api/usuarios/update-password', async (req, res) => {
-    const { id, userId, email, newPassword } = req.body;
+    const { id, userId, email, newPassword, reset } = req.body;
     const finalId = id || userId;
+    const pwdChangedFlag = reset ? 0 : 1;
     
     if (!newPassword || (!finalId && !email)) {
         return res.status(400).json({ success: false, error: 'Datos insuficientes para actualizar' });
@@ -678,8 +679,8 @@ app.post('/api/usuarios/update-password', async (req, res) => {
 
     try {
         const [result] = await pool.query(
-            'UPDATE usuarios SET password = ?, password_changed = 1 WHERE id = ? OR (email IS NOT NULL AND LOWER(email) = LOWER(?))',
-            [newPassword, finalId || '___NOT_FOUND___', email || '___NOT_FOUND___']
+            'UPDATE usuarios SET password = ?, password_changed = ? WHERE id = ? OR (email IS NOT NULL AND LOWER(email) = LOWER(?))',
+            [newPassword, pwdChangedFlag, finalId || '___NOT_FOUND___', email || '___NOT_FOUND___']
         );
 
         if (result.affectedRows === 0) {

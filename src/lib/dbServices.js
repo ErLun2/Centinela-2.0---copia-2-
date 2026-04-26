@@ -144,6 +144,10 @@ export const obtenerUsuariosEmpresa = async (empresaId) => {
     return await apiRequest(`/usuarios?companyId=${empresaId}`);
 };
 
+export const resetearPasswordUsuario = async (userId, newPassword) => {
+    await apiRequest('/usuarios/update-password', 'POST', { userId, newPassword, reset: true });
+};
+
 export const obtenerUsuarios = async () => {
     return await apiRequest('/usuarios');
 };

@@ -220,6 +220,11 @@ const MasterDashboard = () => {
       return;
     }
 
+    if (users.some(u => u.email.toLowerCase() === newSupportUser.email.toLowerCase())) {
+      alert("Error: Ya existe un usuario con este correo electrónico.");
+      return;
+    }
+
     setIsCreatingSupportUser(true);
     try {
       const userData = {
@@ -233,13 +238,14 @@ const MasterDashboard = () => {
         status: 'activo'
       };
       
-      await db.crearUsuarioSaaS(userData, "SOPORTE_CENTRAL");
+      const newId = await db.crearUsuarioSaaS(userData, "SOPORTE_CENTRAL");
       
       // Update local state immediately
+      const savedUser = { ...userData, id: newId };
       setUsers(prev => {
-          const exists = prev.find(u => u.id === userData.id || u.email === userData.email);
-          if (exists) return prev.map(u => u.email === userData.email ? { ...u, ...userData } : u);
-          return [...prev, { ...userData, id: `temp-${Date.now()}` }]; // Fallback temp ID until sync
+          const exists = prev.find(u => u.id === newId || u.email === userData.email);
+          if (exists) return prev.map(u => u.email === userData.email ? savedUser : u);
+          return [...prev, savedUser];
       });
 
       setShowSupportUserModal(false);
@@ -300,26 +306,22 @@ const MasterDashboard = () => {
     }
   };
 
-  const handleResetSupportPassword = (userId) => {
+  const handleResetSupportPassword = async (userId) => {
     if (!window.confirm("¿Blanquear contraseña? Se restablecerá a 'soporte123' y se obligará al cambio en el próximo ingreso.")) return;
 
-    const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-    const updatedUsers = allUsers.map(u => {
-      if (u.id === userId || u.uid === userId) {
-        return { ...u, password: 'soporte123', mustChangePassword: true };
+    try {
+      // Llamar a una función de la base de datos para blanquear
+      await db.resetearPasswordUsuario(userId, 'soporte123');
+      
+      setUsers(prev => prev.map(u => (u.id === userId || u.uid === userId) ? { ...u, password: 'soporte123', password_changed: 0 } : u));
+      
+      if (editingSupportUser && (editingSupportUser.id === userId || editingSupportUser.uid === userId)) {
+          setEditingSupportUser({ ...editingSupportUser, password: 'soporte123', password_changed: 0 });
       }
-      return u;
-    });
-
-    localStorage.setItem('centinela_users', JSON.stringify(updatedUsers));
-    setUsers(updatedUsers);
-    
-    // Si estamos editando uno, actualizar el estado local de edición también
-    if (editingSupportUser && (editingSupportUser.id === userId || editingSupportUser.uid === userId)) {
-        setEditingSupportUser({ ...editingSupportUser, password: 'soporte123', mustChangePassword: true });
+      alert("✅ Contraseña blanqueada con éxito.");
+    } catch(err) {
+      alert("Error al blanquear la contraseña.");
     }
-    
-    alert("✅ Contraseña blanqueada con éxito.");
   };
 
   const handleRunDiagnostic = async (ticket) => {
