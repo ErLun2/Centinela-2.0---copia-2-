@@ -3936,7 +3936,7 @@ const CompanyDashboard = () => {
                           </div>
 
                           {(() => {
-                            const planData = getPlanPermisos(user.empresaPlan || 'basico');
+                            const planData = currentPlanInfo || getPlanPermisos(user.empresaPlan || 'basico');
                             const userQuota = planData.limite_guardias || 50;
                             const userUsagePercent = Math.min(100, Math.round((companyUsers.length / userQuota) * 100));
                             
