@@ -109,26 +109,32 @@ const SupportDashboard = () => {
     }
   };
 
-  const handleChangeStatus = (e) => {
+  const handleChangeStatus = async (e) => {
      if (!selectedTicket) return;
      const newStatus = e.target.value;
      const updatedTicket = { ...selectedTicket, status: newStatus };
-     const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
-     localStorage.setItem('centinela_tickets', JSON.stringify(allTickets));
-     setTickets(allTickets);
-     setSelectedTicket(updatedTicket);
+     
+     try {
+       await db.registrarNuevoTicket(updatedTicket);
+       const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
+       setTickets(allTickets);
+       setSelectedTicket(updatedTicket);
+     } catch(err) { alert("Error al guardar estado"); }
   };
 
-  const handleUpdateTicketMeta = (field, value) => {
+  const handleUpdateTicketMeta = async (field, value) => {
      if (!selectedTicket) return;
      const updatedTicket = { ...selectedTicket, [field]: value };
-     const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
-     localStorage.setItem('centinela_tickets', JSON.stringify(allTickets));
-     setTickets(allTickets);
-     setSelectedTicket(updatedTicket);
+     
+     try {
+       await db.registrarNuevoTicket(updatedTicket);
+       const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
+       setTickets(allTickets);
+       setSelectedTicket(updatedTicket);
+     } catch(err) { alert("Error al guardar atributo"); }
   };
 
-  const handleAdvancedReply = () => {
+  const handleAdvancedReply = async () => {
      if (!replyText.trim() || !selectedTicket) return;
      const autorObj = isInternalNote ? 'NOTA INTERNA' : 'SOPORTE';
      const updatedTicket = { 
@@ -136,19 +142,22 @@ const SupportDashboard = () => {
        respuestas: [...(selectedTicket.respuestas || []), { autor: autorObj, texto: replyText, fecha: new Date().toISOString() }],
        status: (selectedTicket.status === 'Nuevo' && !isInternalNote) ? 'En proceso' : selectedTicket.status
      };
-     const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
-     localStorage.setItem('centinela_tickets', JSON.stringify(allTickets));
-     setTickets(allTickets);
-     setSelectedTicket(updatedTicket);
-     setReplyText("");
-     setIsInternalNote(false);
-     setQuickReply('');
      
-     if (!isInternalNote) {
-       console.log(`%c[EMAIL SIMULATION] Avisando a cliente de actualización en Ticket #${selectedTicket.id}`, 'color:#10b981');
-     } else {
-       console.log(`%c[STAFF NOTIFICATION] Nota interna añadida a Ticket #${selectedTicket.id}`, 'color:#f59e0b');
-     }
+     try {
+       await db.registrarNuevoTicket(updatedTicket);
+       const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
+       setTickets(allTickets);
+       setSelectedTicket(updatedTicket);
+       setReplyText("");
+       setIsInternalNote(false);
+       setQuickReply('');
+       
+       if (!isInternalNote) {
+         console.log(`%c[EMAIL SIMULATION] Avisando a cliente de actualización en Ticket #${selectedTicket.id}`, 'color:#10b981');
+       } else {
+         console.log(`%c[STAFF NOTIFICATION] Nota interna añadida a Ticket #${selectedTicket.id}`, 'color:#f59e0b');
+       }
+     } catch(err) { alert("Error al enviar respuesta"); }
   };
 
   const handleOpenButtonEditor = (company) => {
