@@ -204,7 +204,7 @@ const EnterpriseConfigPanel = ({
   // Local state for company data to handle editing
   const [localCompany, setLocalCompany] = React.useState({
     id: companyData?.id || companyData?.uid || '',
-    nombre: companyData?.nombre || companyData?.name || user?.company || 'STARK INDUSTRIES',
+    nombre: companyData?.nombre || companyData?.name || user?.company || '',
     email: companyData?.appEmail || companyData?.email || user?.email || '',
     timezone: companyData?.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
     logo: companyData?.logo || ''
@@ -215,7 +215,7 @@ const EnterpriseConfigPanel = ({
     if (companyData) {
       setLocalCompany({
         id: companyData.id || companyData.uid || '',
-        nombre: companyData.nombre || companyData.name || user?.company || 'STARK INDUSTRIES',
+        nombre: companyData.nombre || companyData.name || user?.company || '',
         email: companyData.appEmail || companyData.email || user?.email || '',
         timezone: companyData.timezone || 'America/Argentina/Buenos_Aires (UTC-3)',
         logo: companyData.logo || ''
@@ -1852,7 +1852,7 @@ const CompanyDashboard = () => {
           <div>
             <h1 style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '2px', background: 'linear-gradient(to right, #00d2ff, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>CENTINELA</h1>
             <p style={{ fontSize: '0.75rem', color: '#00d2ff', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '900', marginTop: '2px' }}>
-              {companyData?.nombre || companyData?.name || user?.company || 'STARK INDUSTRIES'}
+              {companyData?.nombre || companyData?.name || user?.company || 'CLIENTE CENTINELA'}
             </p>
             <div style={{ marginTop: '5px' }}>
               <span style={{ 
