@@ -224,21 +224,20 @@ const MasterDashboard = () => {
     try {
       const userData = {
         ...newSupportUser,
-        name: `${newSupportUser.nombre} ${newSupportUser.apellido}`,
+        name: newSupportUser.nombre,
         surname: newSupportUser.apellido,
         role: 'SUPPORT',
-        rol: 'SUPPORT',
         password: 'soporte123',
-        mustChangePassword: true,
+        password_changed: 0,
         fechaAlta: new Date().toISOString(),
-        status: 'ACTIVO',
-        estado: 'ACTIVO'
+        status: 'activo'
       };
       
       await db.crearUsuarioSaaS(userData, "SOPORTE_CENTRAL");
       setShowSupportUserModal(false);
       setNewSupportUser({ nombre: '', apellido: '', dni: '', legajo: '', telefono: '', email: '', emailPersonal: '', telefonoPersonal: '' });
       alert("Usuario de Soporte creado con éxito");
+
     } catch (error) {
       console.error("Error al crear usuario de soporte:", error);
       alert("Error al crear el usuario: " + error.message);
@@ -272,16 +271,14 @@ const MasterDashboard = () => {
     try {
       const updatedData = {
         ...editingSupportUser,
-        name: `${editingSupportUser.nombre || editingSupportUser.name} ${editingSupportUser.apellido || editingSupportUser.surname}`,
-        role: editingSupportUser.role || editingSupportUser.rol,
-        status: editingSupportUser.status || editingSupportUser.estado
+        name: editingSupportUser.name || editingSupportUser.nombre,
+        surname: editingSupportUser.surname || editingSupportUser.apellido,
+        role: editingSupportUser.role || editingSupportUser.rol || 'SUPPORT',
+        status: editingSupportUser.status || editingSupportUser.estado || 'activo'
       };
       
-      const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
-      const updatedUsers = allUsers.map(u => (u.id === editingSupportUser.id || u.uid === editingSupportUser.uid) ? updatedData : u);
+      await db.crearUsuarioSaaS(updatedData, "SOPORTE_CENTRAL");
       
-      localStorage.setItem('centinela_users', JSON.stringify(updatedUsers));
-      setUsers(updatedUsers);
       setShowSupportUserModal(false);
       setEditingSupportUser(null);
       alert("✅ Usuario de soporte actualizado correctamente.");

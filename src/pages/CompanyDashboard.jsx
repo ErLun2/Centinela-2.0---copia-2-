@@ -891,32 +891,41 @@ const CompanyDashboard = () => {
   const [showEditUserModal, setShowEditUserModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
 
-  const handleAddTicket = () => {
+  const handleCreateTicket = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
     if (!newTicket.asunto || !newTicket.descripcion) {
       showToast("Por favor complete todos los campos", "error");
       return;
     }
 
-    const ticket = {
-      id: 'TK-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-      empresaId: companyData?.id || companyData?.uid,
-      nombreEmpresa: companyData?.nombre || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'CENTINELA'),
+    setIsSaving(true);
+    
+    const ticketData = {
       ...newTicket,
-      status: 'Abierto',
+      empresaId: companyData?.id || companyData?.uid || user.empresaId || user.companyId,
+      nombreEmpresa: companyData?.nombre || user?.company || (user?.role === 'SUPERADMIN' ? 'MASTER' : 'CENTINELA'),
+      empresaPlan: user?.empresaPlan || 'standard',
+      usuarioId: user?.id || user?.uid,
+      usuarioNombre: user?.nombre || user?.name || 'Usuario',
+      usuarioEmail: user?.email,
       fecha: new Date().toISOString(),
-      respuestas: [],
-      logs: [] // Para futuras acciones de soporte
+      status: 'Nuevo',
+      respuestas: []
     };
 
-    const allTickets = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
-    const updatedTickets = [ticket, ...allTickets];
-    localStorage.setItem('centinela_tickets', JSON.stringify(updatedTickets));
-    
-    // Solo mostramos los tickets de esta empresa en el state local
-    setTickets(updatedTickets.filter(t => t.empresaId === (companyData?.id || companyData?.uid)));
-    setShowNewTicketModal(false);
-    setNewTicket({ asunto: '', descripcion: '', prioridad: 'Media', tipo: 'Consulta' });
-    showToast("✅ Consulta enviada con éxito. Un analista revisará su caso a la brevedad.");
+    try {
+      const createdTicket = await db.registrarNuevoTicket(ticketData);
+      
+      // Actualizar estado local inmediatamente para evitar la desaparición visual
+      setTickets(prev => [createdTicket, ...prev]);
+      setShowNewTicketModal(false);
+      setNewTicket({ asunto: '', descripcion: '', prioridad: 'Media', tipo: 'Consulta' });
+      showToast("Ticket enviado con éxito. El soporte técnico ha sido notificado.");
+    } catch (err) {
+      showToast("Error al crear el ticket", "error");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleAddGuard = async (e) => {
@@ -1541,35 +1550,7 @@ const CompanyDashboard = () => {
     }
   };
 
-  const handleCreateTicket = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    
-    // Preparar data base del ticket
-    const ticketData = {
-      ...newTicket,
-      companyId: user.empresaId,
-      nombreEmpresa: user.orgName || user.empresa || 'Empresa Cliente',
-      empresaPlan: user.empresaPlan || 'standard',
-      usuarioId: user.id || user.uid,
-      usuarioNombre: user.nombre + (user.apellido ? ' ' + user.apellido : ''),
-      usuarioEmail: user.email,
-      fecha: new Date().toISOString(),
-      status: 'Nuevo',
-      respuestas: []
-    };
-
-    // Registrar vía motor de automatización
-    await db.registrarNuevoTicket(ticketData);
-
-    setTimeout(() => {
-      loadData();
-      setShowNewTicketModal(false);
-      setIsSaving(false);
-      setNewTicket({ asunto: '', descripcion: '', prioridad: 'Media', tipo: 'Consulta' });
-      showToast("Ticket enviado con éxito. El soporte técnico ha sido notificado.");
-    }, 1000);
-  };
+  // handleCreateTicket migrado a la parte superior junto a las funciones de tickets
 
   const handleOpenShift = (user) => {
     setSelectedUser(user);
