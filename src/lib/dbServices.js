@@ -203,7 +203,7 @@ export const obtenerTickets = async () => {
     return await apiRequest('/tickets');
 };
 
-export const subscribeToTickets = (cb) => subscribeToResource('/tickets', cb, 40000);
+export const subscribeToTickets = (cb) => subscribeToResource('/tickets', cb, 5000);
 
 // ========================
 // FACTURACIÓN
