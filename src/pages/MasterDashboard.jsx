@@ -260,21 +260,21 @@ const MasterDashboard = () => {
     }
   };
 
-  const handleDeleteSupportUser = (userId) => {
+  const handleDeleteSupportUser = async (userId) => {
     const userToMove = users.find(u => u.id === userId || u.uid === userId);
     if (!userToMove) return;
-    if (!window.confirm(`¿Mover a ${userToMove.name || userToMove.nombre} a la papelera?`)) return;
+    if (!window.confirm(`¿Eliminar a ${userToMove.name || userToMove.nombre}?`)) return;
 
-    const allTrash = JSON.parse(localStorage.getItem('centinela_trash') || '[]');
-    const trashItem = { ...userToMove, deletedAt: new Date().toISOString(), originalType: 'user' };
-    localStorage.setItem('centinela_trash', JSON.stringify([...allTrash, trashItem]));
-
-    const filtered = users.filter(u => u.id !== userId && u.uid !== userId);
-    setUsers(filtered);
-    localStorage.setItem('centinela_users', JSON.stringify(filtered));
-    setEditingSupportUser(null);
-    setShowSupportUserModal(false);
-    alert("✅ Usuario de soporte movido a la papelera.");
+    try {
+      await db.eliminarUsuario(userId);
+      const filtered = users.filter(u => u.id !== userId && u.uid !== userId);
+      setUsers(filtered);
+      setEditingSupportUser(null);
+      setShowSupportUserModal(false);
+      alert("✅ Usuario de soporte eliminado exitosamente.");
+    } catch(err) {
+      alert("Error al eliminar el usuario.");
+    }
   };
 
   const handleUpdateSupportUser = async (e) => {
@@ -287,6 +287,8 @@ const MasterDashboard = () => {
         ...editingSupportUser,
         name: editingSupportUser.name || editingSupportUser.nombre,
         surname: editingSupportUser.surname || editingSupportUser.apellido,
+        personal_email: editingSupportUser.personal_email || editingSupportUser.emailPersonal,
+        phone: editingSupportUser.phone || editingSupportUser.telefono,
         role: editingSupportUser.role || editingSupportUser.rol || 'SUPPORT',
         status: editingSupportUser.status || editingSupportUser.estado || 'activo'
       };
@@ -2455,8 +2457,8 @@ const MasterDashboard = () => {
                         type="email" 
                         className="input-full" 
                         placeholder="Opcional"
-                        value={editingSupportUser ? (editingSupportUser.emailPersonal || '') : newSupportUser.emailPersonal} 
-                        onChange={e => editingSupportUser ? setEditingSupportUser({...editingSupportUser, emailPersonal: e.target.value}) : setNewSupportUser({...newSupportUser, emailPersonal: e.target.value})} 
+                        value={editingSupportUser ? (editingSupportUser.personal_email || editingSupportUser.emailPersonal || '') : newSupportUser.emailPersonal} 
+                        onChange={e => editingSupportUser ? setEditingSupportUser({...editingSupportUser, personal_email: e.target.value, emailPersonal: e.target.value}) : setNewSupportUser({...newSupportUser, emailPersonal: e.target.value})} 
                     />
                 </div>
               </div>
@@ -2467,8 +2469,8 @@ const MasterDashboard = () => {
                     <input 
                         type="tel" 
                         className="input-full" 
-                        value={editingSupportUser ? (editingSupportUser.telefono || '') : newSupportUser.telefono} 
-                        onChange={e => editingSupportUser ? setEditingSupportUser({...editingSupportUser, telefono: e.target.value}) : setNewSupportUser({...newSupportUser, telefono: e.target.value})} 
+                        value={editingSupportUser ? (editingSupportUser.phone || editingSupportUser.telefono || '') : newSupportUser.telefono} 
+                        onChange={e => editingSupportUser ? setEditingSupportUser({...editingSupportUser, phone: e.target.value, telefono: e.target.value}) : setNewSupportUser({...newSupportUser, telefono: e.target.value})} 
                     />
                 </div>
                 <div>
