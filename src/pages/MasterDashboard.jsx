@@ -225,10 +225,13 @@ const MasterDashboard = () => {
       const userData = {
         ...newSupportUser,
         name: `${newSupportUser.nombre} ${newSupportUser.apellido}`,
+        surname: newSupportUser.apellido,
+        role: 'SUPPORT',
         rol: 'SUPPORT',
         password: 'soporte123',
         mustChangePassword: true,
         fechaAlta: new Date().toISOString(),
+        status: 'ACTIVO',
         estado: 'ACTIVO'
       };
       
@@ -269,7 +272,9 @@ const MasterDashboard = () => {
     try {
       const updatedData = {
         ...editingSupportUser,
-        name: `${editingSupportUser.nombre} ${editingSupportUser.apellido}`
+        name: `${editingSupportUser.nombre || editingSupportUser.name} ${editingSupportUser.apellido || editingSupportUser.surname}`,
+        role: editingSupportUser.role || editingSupportUser.rol,
+        status: editingSupportUser.status || editingSupportUser.estado
       };
       
       const allUsers = JSON.parse(localStorage.getItem('centinela_users') || '[]');
@@ -1611,7 +1616,7 @@ const MasterDashboard = () => {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px', marginBottom: '40px' }}>
-               {users.filter(u => u.rol === 'SUPPORT' || u.rol === 'SOPORTE').map((u, idx) => (
+               {users.filter(u => (u.role || u.rol) === 'SUPPORT' || (u.role || u.rol) === 'SOPORTE').map((u, idx) => (
                   <div 
                     key={idx} 
                     onClick={() => {
@@ -1624,18 +1629,18 @@ const MasterDashboard = () => {
                     onMouseOut={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                   >
                      <div style={{ width: '50px', height: '50px', borderRadius: '12px', background: 'rgba(0,210,255,0.1)', color: '#00d2ff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', fontWeight: 'bold' }}>
-                        {u.nombre?.charAt(0)}{u.apellido?.charAt(0)}
+                        {(u.nombre || u.name)?.charAt(0)}{(u.apellido || u.surname)?.charAt(0)}
                      </div>
                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{u.nombre} {u.apellido}</div>
+                        <div style={{ fontWeight: 'bold', fontSize: '1rem' }}>{u.nombre || u.name} {u.apellido || u.surname}</div>
                         <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{u.email}</div>
                         <div style={{ fontSize: '0.7rem', color: '#00d2ff', marginTop: '4px', fontWeight: 'bold' }}>ID: {u.legajo || 'S/L'}</div>
                      </div>
-                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: u.estado === 'ACTIVO' ? '#10b981' : '#ef4444' }} title={u.estado} />
+                     <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: (u.estado || u.status) === 'ACTIVO' ? '#10b981' : '#ef4444' }} title={u.estado || u.status} />
                   </div>
                ))}
-               {users.filter(u => u.rol === 'SUPPORT' || u.rol === 'SOPORTE').length === 0 && (
-                  <div colSpan="4" style={{ padding: '30px', textAlign: 'center', gridColumn: '1 / -1', opacity: 0.5, border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '15px' }}>
+               {users.filter(u => (u.role || u.rol) === 'SUPPORT' || (u.role || u.rol) === 'SOPORTE').length === 0 && (
+                  <div style={{ padding: '30px', textAlign: 'center', gridColumn: '1 / -1', opacity: 0.5, border: '1px dashed rgba(255,255,255,0.1)', borderRadius: '15px' }}>
                      No hay personal de soporte registrado aún.
                   </div>
                )}
