@@ -50,48 +50,43 @@ const SupportDashboard = () => {
   }, []);
 
   const handleRunDiagnostic = async (ticket) => {
+    if (!ticket) return;
     setIsRunningDiagnostic(true);
     setDiagnosticSummary(null);
+    setDiagnosticData(null); // Clear previous data
     
     try {
-      // Aggregating data based on scope
       const userId = targetUserId || ticket.usuarioId || 'U-772';
       
       if (targetScope === 'all') {
-         // Global check simulation
          const companyUsers = users.filter(u => u.empresaId === ticket.empresaId);
-         const summary = {
+         setDiagnosticSummary({
            score: 'warning',
            summary: [`Analizando flota de ${companyUsers.length} dispositivos...`, "Se detectaron latencias altas en 3 terminales."]
-         };
-         setTimeout(() => {
-           setDiagnosticSummary(summary);
-           setIsRunningDiagnostic(false);
-         }, 1500);
+         });
+         setIsRunningDiagnostic(false);
          return;
       }
   
-      const userDiag = await db.obtenerDiagnosticoUsuario(userId);
-      const deviceDiag = await db.obtenerDiagnosticoDispositivo(userId);
-      const gpsDiag = await db.obtenerDiagnosticoGPS(userId);
-      const logs = await db.obtenerLogsSistema(ticket.id);
-      const summary = await db.ejecutarDiagnosticoAutomatico(userId, ticket);
+      const diag = await db.obtenerFullDiagnostico(userId);
+      const logs = db.obtenerLogsSistema(ticket);
       
-      setTimeout(async () => {
-        setDiagnosticData({
-          user: userDiag,
-          device: deviceDiag,
-          gps: gpsDiag
-        });
-        setDiagnosticLogs(logs);
-        setDiagnosticSummary(summary);
-        
-        // FETCH INTELLIGENT SUGGESTIONS
-        const smartSuggest = await db.obtenerSugerenciasInteligentes(ticket.id, userId);
-        setSuggestions(smartSuggest);
-        
-        setIsRunningDiagnostic(false);
-      }, 1500);
+      setDiagnosticData({
+        user: diag.user,
+        device: diag.device,
+        gps: diag.gps
+      });
+      setDiagnosticLogs(logs);
+      setDiagnosticSummary({
+        score: diag.summary.score,
+        summary: diag.summary.messages
+      });
+      
+      // FETCH INTELLIGENT SUGGESTIONS
+      const smartSuggest = await db.obtenerSugerenciasInteligentes(ticket.id, userId);
+      setSuggestions(smartSuggest);
+      
+      setIsRunningDiagnostic(false);
     } catch (err) {
       console.error("Diagnostic Error:", err);
       setDiagnosticSummary({ score: 'error', summary: ['Error al ejecutar el diagnóstico.', err.message] });

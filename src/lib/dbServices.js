@@ -201,10 +201,20 @@ export const registrarNuevoTicket = async (ticketData) => {
 };
 
 export const obtenerTickets = async () => {
-    return await apiRequest('/tickets');
+    const data = await apiRequest('/tickets');
+    return (data || []).map(t => ({
+        ...t,
+        status: t.estado || t.status || 'Nuevo'
+    }));
 };
 
-export const subscribeToTickets = (cb) => subscribeToResource('/tickets', cb, 1500);
+export const subscribeToTickets = (cb) => subscribeToResource('/tickets', (data) => {
+    const normalized = (data || []).map(t => ({
+        ...t,
+        status: t.estado || t.status || 'Nuevo'
+    }));
+    cb(normalized);
+}, 1500);
 
 // ========================
 // FACTURACIÓN
@@ -222,21 +232,12 @@ export const subscribeToAllPayments = (cb) => subscribeToResource('/payments', c
 // ========================
 // SOPORTE & DIAGNÓSTICO REAL
 // ========================
-export const obtenerDiagnosticoUsuario = async (userId) => {
+export const obtenerFullDiagnostico = async (userId) => {
     return await apiRequest(`/soporte/diagnostico/${userId}`);
 };
-export const obtenerDiagnosticoDispositivo = async (userId) => {
-    const diag = await apiRequest(`/soporte/diagnostico/${userId}`);
-    return diag.device;
-};
-export const obtenerDiagnosticoGPS = async (userId) => {
-    const diag = await apiRequest(`/soporte/diagnostico/${userId}`);
-    return diag.gps;
-};
-export const obtenerLogsSistema = async (ticketId) => {
-    const tickets = await apiRequest('/tickets');
-    const t = tickets.find(tk => tk.id === ticketId);
-    return t ? (t.respuestas || []).filter(r => r.autor === 'LOG_SISTEMA') : [];
+
+export const obtenerLogsSistema = (ticket) => {
+    return (ticket.respuestas || []).filter(r => r.autor === 'LOG_SISTEMA');
 };
 export const ejecutarDiagnosticoAutomatico = async (userId, ticket) => {
     const diag = await apiRequest(`/soporte/diagnostico/${userId}`);
@@ -307,7 +308,7 @@ export const iniciarRonda = async (data) => await apiRequest('/rondas/start', 'P
 export const finalizarRonda = async (id) => await apiRequest(`/rondas/finish/${id}`, 'POST');
 export const registrarPuntoRuta = async (data) => await apiRequest('/rondas/point', 'POST', data);
 export const registrarEventoAudit = async (data) => await apiRequest('/audit', 'POST', data);
-export const actualizarTicket = async (id, data) => await apiRequest(`/tickets/${id}`, 'POST', data);
+export const actualizarTicket = async (id, data) => await apiRequest('/tickets', 'POST', { id, ...data });
 export const enviarPropuesta = async (proposalData) => await apiRequest('/send-proposal', 'POST', proposalData);
 export const verificarAdmin = async (password) => await apiRequest('/auth/verify-admin', 'POST', { password });
 
