@@ -530,11 +530,31 @@ const MasterDashboard = () => {
   const handleSoftDeleteCompany = async (compId) => {
     const compToMove = companies.find(c => c.id === compId);
     if (!compToMove) return;
-    if (!window.confirm(`¿Está seguro de eliminar definitivamente la empresa "${compToMove.name}" del servidor?`)) return;
+    if (!window.confirm(`¿Está seguro de eliminar definitivamente la empresa "${compToMove.name}" y TODOS sus usuarios vinculados del servidor?`)) return;
 
     try {
         await db.eliminarEmpresa(compId);
-        alert("✅ Empresa eliminada correctamente del servidor.");
+        
+        // REGLA DE ORO: Eliminación en cascada de usuarios (por dominio @nombre o por ID)
+        const companyNameClean = compToMove.name.toLowerCase().replace(/\s+/g, '');
+        const domainToMatch = `@${companyNameClean}`;
+        
+        const usersToDelete = users.filter(u => {
+            const email = (u.email || '').toLowerCase();
+            const matchesDomain = email.includes(domainToMatch);
+            const matchesId = String(u.companyId) === String(compId) || String(u.empresaId) === String(compId);
+            return matchesDomain || matchesId;
+        });
+
+        if (usersToDelete.length > 0) {
+            for (const u of usersToDelete) {
+                await db.eliminarUsuario(u.id || u.uid);
+            }
+            alert(`✅ Empresa "${compToMove.name}" y ${usersToDelete.length} usuarios vinculados eliminados correctamente.`);
+        } else {
+            alert(`✅ Empresa "${compToMove.name}" eliminada correctamente.`);
+        }
+        
         loadData();
     } catch (err) {
         alert("Error al eliminar la empresa: " + err.message);
