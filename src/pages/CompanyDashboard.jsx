@@ -4473,12 +4473,12 @@ const CompanyDashboard = () => {
                                <div style={{ background: 'rgba(0,0,0,0.3)', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.05)', padding: '25px', flex: 1, display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                      <span style={{ fontSize: '0.75rem', fontWeight: 'bold', color: 'rgba(255,255,255,0.4)', letterSpacing: '1px' }}>
-                                        {(['recorrido', 'ronda_completada', 'recorrido_completado', 'ronda'].includes(mediaModal.event?.tipo?.toLowerCase())) ? 'PUNTOS DE CONTROL RECORRIDO' : 'ARCHIVOS ADJUNTOS'}
+                                        {(['recorrido', 'ronda_completada', 'recorrido_completado', 'ronda'].includes(mediaModal.event?.tipo?.toLowerCase()) && (mediaModal.event?.puntos || mediaModal.event?.descripcion?.toUpperCase().includes('QR'))) ? 'PUNTOS DE CONTROL RECORRIDO' : 'ARCHIVOS ADJUNTOS'}
                                      </span>
-                                     <span style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 'bold' }}>{(['recorrido', 'ronda_completada', 'recorrido_completado', 'ronda'].includes(mediaModal.event?.tipo?.toLowerCase())) ? 'VERIFICACIÓN DE RONDA' : 'HAZ CLIC PARA AMPLIAR'}</span>
+                                     <span style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 'bold' }}>{(['recorrido', 'ronda_completada', 'recorrido_completado', 'ronda'].includes(mediaModal.event?.tipo?.toLowerCase()) && (mediaModal.event?.puntos || mediaModal.event?.descripcion?.toUpperCase().includes('QR'))) ? 'VERIFICACIÓN DE RONDA' : 'HAZ CLIC PARA AMPLIAR'}</span>
                                   </div>
 
-                                  {(['recorrido', 'ronda_completada', 'recorrido_completado', 'ronda'].includes(mediaModal.event?.tipo?.toLowerCase())) && (
+                                  {(['recorrido', 'ronda_completada', 'recorrido_completado', 'ronda'].includes(mediaModal.event?.tipo?.toLowerCase()) && (mediaModal.event?.puntos || mediaModal.event?.descripcion?.toUpperCase().includes('QR'))) && (
                                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '15px', marginBottom: '10px' }}>
                                          {(() => {
                                             // 1. Prioridad absoluta: Datos reales enviados por la App móvil en el objeto evento
@@ -4585,7 +4585,7 @@ const CompanyDashboard = () => {
                         </div>
                      </div>
 
-                     {(mediaModal.event?.inicio || mediaModal.event?.fin) && (
+                     {(mediaModal.event?.inicio || mediaModal.event?.fin || ['recorrido', 'ronda_completada', 'recorrido_completado', 'ronda'].includes(mediaModal.event?.tipo?.toLowerCase())) && (
                         <div className="fade-in">
                            <label style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', display: 'block', marginBottom: '8px' }}>TIEMPOS DE OPERACIÓN</label>
                            <div style={{ display: 'flex', gap: '15px', background: 'rgba(0,168,255,0.05)', padding: '15px', borderRadius: '15px', border: '1px solid rgba(0,168,255,0.1)' }}>

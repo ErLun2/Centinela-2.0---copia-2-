@@ -159,6 +159,8 @@ pool.getConnection()
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN resolution TEXT`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN history LONGTEXT`); } catch(e){}
             try { await conn.query(`ALTER TABLE eventos ADD COLUMN videoUrl LONGTEXT`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos ADD COLUMN inicio VARCHAR(50)`); } catch(e){}
+            try { await conn.query(`ALTER TABLE eventos ADD COLUMN fin VARCHAR(50)`); } catch(e){}
             
             // Forzar el tipo de dato por si ya existían con otro tipo
             try { await conn.query(`ALTER TABLE eventos MODIFY COLUMN status VARCHAR(50) DEFAULT 'Abierto'`); } catch(e){}
@@ -788,8 +790,8 @@ app.post('/api/eventos', async (req, res) => {
         const finalObjetivoId = e.objetivoId || 'base';
 
         await pool.query(
-            'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, objetivoId, fotoUrl, videoUrl, audioUrl, status) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, finalGuardiaId, finalObjetivoId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto']
+            'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, companyId, guardiaId, objetivoId, fotoUrl, videoUrl, audioUrl, status, inicio, fin) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [e.id, e.tipo, e.subtipo, e.descripcion, fechaSanitizada, horaSanitizada, e.lat, e.lng, e.companyId, finalGuardiaId, finalObjetivoId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto', e.inicio || 'S/I', e.fin || horaSanitizada]
         );
 
         // REGLA DE ORO: Si es un INGRESO con coordenadas, actualizar locations para que el mapa lo detecte al instante
