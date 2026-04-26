@@ -3942,7 +3942,7 @@ const CompanyDashboard = () => {
                             
                             // Cálculo real de actividad: Eventos de hoy vs expectativa (5 por usuario activo)
                             const todayStr = getARDateStr(new Date());
-                            const todayEvents = filteredEvents.filter(e => getARDateStr(e.timestamp || e.fecha || e.date) === todayStr).length;
+                            const todayEvents = (events || []).filter(e => getARDateStr(e.timestamp || e.fecha || e.date || e.fechaRegistro) === todayStr).length;
                             const expectedEvents = Math.max(10, companyUsers.length * 5);
                             const activityPercent = Math.min(100, Math.max(5, Math.round((todayEvents / expectedEvents) * 100)));
                             

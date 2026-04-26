@@ -93,6 +93,7 @@ pool.getConnection()
             await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS password_changed TINYINT(1) DEFAULT 0`);
             await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS schedule JSON`);
             await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS foto LONGTEXT`);
+            await conn.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS last_login DATETIME`);
             await conn.query(`ALTER TABLE usuarios MODIFY COLUMN role VARCHAR(50)`);
             console.log('  [DB] Estructura de usuarios OK');
         } catch (e) { console.error('  [DB-ERROR] Usuarios:', e.message); }
@@ -1449,7 +1450,7 @@ app.get('/api/soporte/diagnostico/:userId', async (req, res) => {
         const { userId } = req.params;
         
         // 1. Datos de Usuario
-        const [uRows] = await pool.query('SELECT id, email, name, surname, role, status, last_login FROM usuarios WHERE id = ?', [userId]);
+        const [uRows] = await pool.query('SELECT id, email, name, surname, role, status FROM usuarios WHERE id = ?', [userId]);
         const user = uRows[0] || { status: 'Desconocido' };
 
         // 2. Última ubicación GPS
