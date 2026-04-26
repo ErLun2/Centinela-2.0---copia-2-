@@ -119,10 +119,12 @@ const SupportDashboard = () => {
   const handleChangeStatus = async (e) => {
      if (!selectedTicket) return;
      const newStatus = e.target.value;
-     const updatedTicket = { ...selectedTicket, status: newStatus };
      
      try {
-       await db.registrarNuevoTicket(updatedTicket);
+       await db.actualizarTicket(selectedTicket.id, { status: newStatus });
+       // No necesitamos actualizar localmente si el polling funciona, 
+       // pero lo hacemos para feedback instantáneo
+       const updatedTicket = { ...selectedTicket, status: newStatus };
        const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
        setTickets(allTickets);
        setSelectedTicket(updatedTicket);
@@ -131,22 +133,29 @@ const SupportDashboard = () => {
 
   const handleUpdateTicketMeta = async (field, value) => {
      if (!selectedTicket) return;
-     const updatedTicket = { ...selectedTicket, [field]: value };
      
      try {
-       await db.registrarNuevoTicket(updatedTicket);
+       await db.actualizarTicket(selectedTicket.id, { [field]: value });
+       const updatedTicket = { ...selectedTicket, [field]: value };
        const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
        setTickets(allTickets);
        setSelectedTicket(updatedTicket);
      } catch(err) { alert("Error al guardar atributo"); }
   };
 
-  const handleAdvancedReply = async () => {
-     if (!replyText.trim() || !selectedTicket) return;
+  const handleAdvancedReply = async (attachment = null) => {
+     if ((!replyText.trim() && !attachment) || !selectedTicket) return;
      const autorObj = isInternalNote ? 'NOTA INTERNA' : 'SOPORTE';
+     const newReply = { 
+       autor: autorObj, 
+       texto: replyText, 
+       fecha: new Date().toISOString(),
+       adjunto: attachment 
+     };
+     
      const updatedTicket = { 
        ...selectedTicket, 
-       respuestas: [...(selectedTicket.respuestas || []), { autor: autorObj, texto: replyText, fecha: new Date().toISOString() }],
+       respuestas: [...(selectedTicket.respuestas || []), newReply],
        status: (selectedTicket.status === 'Nuevo' && !isInternalNote) ? 'En proceso' : selectedTicket.status
      };
      
@@ -158,12 +167,6 @@ const SupportDashboard = () => {
        setReplyText("");
        setIsInternalNote(false);
        setQuickReply('');
-       
-       if (!isInternalNote) {
-         console.log(`%c[EMAIL SIMULATION] Avisando a cliente de actualización en Ticket #${selectedTicket.id}`, 'color:#10b981');
-       } else {
-         console.log(`%c[STAFF NOTIFICATION] Nota interna añadida a Ticket #${selectedTicket.id}`, 'color:#f59e0b');
-       }
      } catch(err) { alert("Error al enviar respuesta"); }
   };
 
@@ -210,6 +213,13 @@ const SupportDashboard = () => {
     const unsub = loadData();
     return () => unsub && unsub();
   }, []);
+
+  useEffect(() => {
+    if (selectedTicket) {
+      const fresh = tickets.find(t => t.id === selectedTicket.id);
+      if (fresh) setSelectedTicket(fresh);
+    }
+  }, [tickets]);
 
   // SCAN FOR MASS INCIDENTS (Simulado basado en tickets vivos)
   useEffect(() => {
@@ -290,7 +300,20 @@ const SupportDashboard = () => {
                       return (
                         <div key={i} style={{ alignSelf: align, maxWidth: isLog ? '100%' : '80%', padding: '15px 20px', background: bgColor, borderRadius: radius, border: `1px solid ${borderColor}`, margin: isLog ? '10px 0' : '0' }}>
                            <div style={{ fontSize: '0.75rem', color: titleColor, fontWeight: 'bold', marginBottom: '8px' }}>{authorName}</div>
-                           <p style={{ fontSize: '0.90rem', margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{r.texto}</p>
+                           {r.texto && <p style={{ fontSize: '0.90rem', margin: 0, lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{r.texto}</p>}
+                           
+                           {r.adjunto && (
+                             <div style={{ marginTop: '10px' }}>
+                               {r.adjunto.startsWith('data:image/') ? (
+                                 <img src={r.adjunto} alt="Adjunto" style={{ maxWidth: '100%', borderRadius: '10px', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.1)' }} onClick={() => window.open(r.adjunto)} />
+                               ) : (
+                                 <a href={r.adjunto} download={`adjunto_${i}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', color: 'white', textDecoration: 'none', fontSize: '0.8rem', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                   <Paperclip size={16} /> Descargar Adjunto del Cliente
+                                 </a>
+                               )}
+                             </div>
+                           )}
+                           
                            <div style={{ fontSize: '0.65rem', opacity: 0.5, marginTop: '10px', textAlign: align==='flex-end'?'right':'left' }}>{new Date(r.fecha).toLocaleString()}</div>
                         </div>
                       );
@@ -444,8 +467,20 @@ const SupportDashboard = () => {
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAdvancedReply(); } }}
                       />
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                        <button onClick={() => alert("Simulando gestor de archivos...")} style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '10px', color: 'white', cursor: 'pointer' }}><Paperclip size={16} /></button>
-                        <button onClick={handleAdvancedReply} disabled={!replyText.trim()} style={{ padding: '10px', background: replyText.trim() ? '#00a8ff' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px', color: 'white', cursor: replyText.trim() ? 'pointer' : 'not-allowed' }}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg></button>
+                        <input 
+                          type="file" 
+                          id="support-file-input" 
+                          style={{ display: 'none' }} 
+                          onChange={(e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = (ev) => handleAdvancedReply(ev.target.result);
+                            reader.readAsDataURL(file);
+                          }} 
+                        />
+                        <button onClick={() => document.getElementById('support-file-input').click()} style={{ padding: '10px', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '10px', color: 'white', cursor: 'pointer' }}><Paperclip size={16} /></button>
+                        <button onClick={() => handleAdvancedReply()} disabled={!replyText.trim()} style={{ padding: '10px', background: replyText.trim() ? '#00a8ff' : 'rgba(255,255,255,0.1)', border: 'none', borderRadius: '10px', color: 'white', cursor: replyText.trim() ? 'pointer' : 'not-allowed' }}><Send size={16} /></button>
                       </div>
                     </div>
                 </div>

@@ -654,6 +654,7 @@ const CompanyDashboard = () => {
 
   const [activeItem, setActiveItem] = useState('Tablero');
   const [showUserModal, setShowUserModal] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     const handleOpenModal = () => setShowUserModal(true);
@@ -870,21 +871,53 @@ const CompanyDashboard = () => {
     }
   };
 
-  const handleSendResponse = async () => {
-    if (!chatReply.trim() || !selectedTicket) return;
-    const newReply = { autor: 'EMPRESA', texto: chatReply, fecha: new Date().toISOString() };
+  useEffect(() => {
+    if (selectedTicket) {
+      const fresh = tickets.find(t => t.id === selectedTicket.id);
+      if (fresh) setSelectedTicket(fresh);
+    }
+  }, [tickets]);
+
+  const handleSendResponse = async (attachment = null) => {
+    if ((!chatReply.trim() && !attachment) || !selectedTicket) return;
+    
+    const newReply = { 
+      autor: 'EMPRESA', 
+      texto: chatReply, 
+      fecha: new Date().toISOString(),
+      adjunto: attachment // base64 data
+    };
+    
     const updatedTicket = { ...selectedTicket, respuestas: [...(selectedTicket.respuestas || []), newReply] };
     
     // Actualizar en backend (MySQL)
     try {
       const savedTicket = await db.registrarNuevoTicket(updatedTicket); 
-      // Actualizar state con la versión del servidor (que ya tiene fusiones si hubo mensajes cruzados)
+      // Actualizar state con la versión del servidor
       setTickets(tickets.map(t => t.id === selectedTicket.id ? savedTicket : t));
       setSelectedTicket(savedTicket);
       setChatReply("");
     } catch (err) {
       showToast("Error al enviar mensaje", "error");
     }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) { // 2MB limit for base64
+      showToast("El archivo es demasiado grande (máx 2MB)", "error");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target.result;
+      await handleSendResponse(base64);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = ""; // Reset input
   };
 
 
@@ -2430,7 +2463,20 @@ const CompanyDashboard = () => {
                       {(selectedTicket.respuestas || []).filter(r => r.autor !== 'NOTA INTERNA').map((r, i) => (
                         <div key={i} style={{ alignSelf: r.autor === 'EMPRESA' ? 'flex-end' : 'flex-start', maxWidth: '80%', padding: '20px', background: r.autor === 'EMPRESA' ? 'rgba(0,168,255,0.1)' : 'rgba(15,23,42,0.8)', borderRadius: r.autor === 'EMPRESA' ? '20px 20px 0 20px' : '20px 20px 20px 0', border: '1px solid rgba(255,255,255,0.1)' }}>
                           <div style={{ fontSize: '0.8rem', color: r.autor === 'EMPRESA' ? 'var(--primary)' : '#10b981', fontWeight: 'bold', marginBottom: '8px' }}>{r.autor === 'EMPRESA' ? 'TÚ' : 'SOPORTE CENTINELA'}</div>
-                          <p style={{ fontSize: '0.95rem', margin: 0, lineHeight: '1.6' }}>{r.texto}</p>
+                          {r.texto && <p style={{ fontSize: '0.95rem', margin: 0, lineHeight: '1.6' }}>{r.texto}</p>}
+                          
+                          {r.adjunto && (
+                            <div style={{ marginTop: '10px' }}>
+                              {r.adjunto.startsWith('data:image/') ? (
+                                <img src={r.adjunto} alt="Adjunto" style={{ maxWidth: '100%', borderRadius: '10px', cursor: 'pointer' }} onClick={() => window.open(r.adjunto)} />
+                              ) : (
+                                <a href={r.adjunto} download={`adjunto_${i}`} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '10px', color: 'white', textDecoration: 'none', fontSize: '0.8rem' }}>
+                                  <Paperclip size={16} /> Descargar Archivo Adjunto
+                                </a>
+                              )}
+                            </div>
+                          )}
+                          
                           <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.3)', marginTop: '10px', textAlign: r.autor === 'EMPRESA' ? 'right' : 'left' }}>{new Date(r.fecha).toLocaleTimeString()}</div>
                         </div>
                       ))}
@@ -2466,8 +2512,15 @@ const CompanyDashboard = () => {
                           onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSendResponse(); } }}
                         />
                         <div style={{ position: 'absolute', right: '15px', bottom: '15px', display: 'flex', gap: '10px' }}>
-                          <button onClick={() => alert("Función visual (Adjuntar imagen/pdf)")} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '10px', color: 'white', cursor: 'pointer' }}><Paperclip size={18} /></button>
-                          <button disabled={!chatReply.trim()} onClick={handleSendResponse} style={{ padding: '8px 15px', background: chatReply.trim() ? 'var(--primary)' : 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '10px', color: 'white', cursor: chatReply.trim() ? 'pointer' : 'not-allowed' }}><Send size={18} /></button>
+                          <input 
+                            type="file" 
+                            ref={fileInputRef} 
+                            style={{ display: 'none' }} 
+                            onChange={handleFileSelect}
+                            accept="image/*,application/pdf"
+                          />
+                          <button onClick={() => fileInputRef.current.click()} style={{ padding: '8px 12px', background: 'rgba(255,255,255,0.05)', border: 'none', borderRadius: '10px', color: 'white', cursor: 'pointer' }}><Paperclip size={18} /></button>
+                          <button disabled={!chatReply.trim()} onClick={() => handleSendResponse()} style={{ padding: '8px 15px', background: chatReply.trim() ? 'var(--primary)' : 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '10px', color: 'white', cursor: chatReply.trim() ? 'pointer' : 'not-allowed' }}><Send size={18} /></button>
                         </div>
                       </div>
                     </div>
