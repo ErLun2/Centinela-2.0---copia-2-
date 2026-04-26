@@ -841,6 +841,7 @@ app.post('/api/tickets', async (req, res) => {
         const respJSON = JSON.stringify(t.respuestas || []);
         const titulo = t.titulo || t.asunto || 'Sin Título';
         const estado = t.estado || t.status || 'Nuevo';
+        const formattedFecha = new Date(t.fecha || Date.now()).toISOString().slice(0, 19).replace('T', ' ');
         
         await pool.query(
             `INSERT INTO tickets 
@@ -849,7 +850,7 @@ app.post('/api/tickets', async (req, res) => {
              ON DUPLICATE KEY UPDATE 
                 estado=?, respuestas=?, prioridad=?`,
             [
-                t.id, titulo, t.descripcion, t.asunto || titulo, t.tipo || 'Soporte', t.prioridad || 'Media', estado, t.fecha, t.usuarioId, t.usuarioNombre, t.usuarioEmail, t.empresaId, t.nombreEmpresa, t.empresaPlan, respJSON,
+                t.id, titulo, t.descripcion, t.asunto || titulo, t.tipo || 'Soporte', t.prioridad || 'Media', estado, formattedFecha, t.usuarioId, t.usuarioNombre, t.usuarioEmail, t.empresaId, t.nombreEmpresa, t.empresaPlan, respJSON,
                 estado, respJSON, t.prioridad || 'Media'
             ]
         );

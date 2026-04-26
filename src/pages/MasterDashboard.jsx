@@ -234,6 +234,14 @@ const MasterDashboard = () => {
       };
       
       await db.crearUsuarioSaaS(userData, "SOPORTE_CENTRAL");
+      
+      // Update local state immediately
+      setUsers(prev => {
+          const exists = prev.find(u => u.id === userData.id || u.email === userData.email);
+          if (exists) return prev.map(u => u.email === userData.email ? { ...u, ...userData } : u);
+          return [...prev, { ...userData, id: `temp-${Date.now()}` }]; // Fallback temp ID until sync
+      });
+
       setShowSupportUserModal(false);
       setNewSupportUser({ nombre: '', apellido: '', dni: '', legajo: '', telefono: '', email: '', emailPersonal: '', telefonoPersonal: '' });
       alert("Usuario de Soporte creado con éxito");
@@ -278,6 +286,9 @@ const MasterDashboard = () => {
       };
       
       await db.crearUsuarioSaaS(updatedData, "SOPORTE_CENTRAL");
+      
+      // Update local state immediately
+      setUsers(prev => prev.map(u => (u.id === updatedData.id || u.uid === updatedData.uid) ? { ...u, ...updatedData } : u));
       
       setShowSupportUserModal(false);
       setEditingSupportUser(null);

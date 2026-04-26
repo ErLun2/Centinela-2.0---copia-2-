@@ -189,8 +189,8 @@ export const actualizarEmpresa = async (idOrData, data) => {
 // TICKETS DE SOPORTE
 // ========================
 export const registrarNuevoTicket = async (ticketData) => {
-    const id = "TK-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-    const newTicket = { ...ticketData, id, fecha: new Date().toISOString() };
+    const id = ticketData.id || "TK-" + Math.random().toString(36).substr(2, 9).toUpperCase();
+    const newTicket = { ...ticketData, id, fecha: ticketData.fecha || new Date().toISOString() };
     await apiRequest('/tickets', 'POST', newTicket);
     return newTicket;
 };
