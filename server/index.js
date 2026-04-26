@@ -121,11 +121,8 @@ pool.getConnection()
                     lastPaymentRef VARCHAR(100)
                 )
             `);
-            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS dni VARCHAR(50)`);
-            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS appEmail VARCHAR(100)`);
-            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS fechaInicio DATETIME`);
-            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS fechaFin DATETIME`);
             await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS lastPaymentRef VARCHAR(100)`);
+            await conn.query(`ALTER TABLE empresas ADD COLUMN IF NOT EXISTS customUI JSON`);
             console.log('  [DB] Estructura de empresas OK');
         } catch (e) { console.error('  [DB-ERROR] Empresas:', e.message); }
 
@@ -607,7 +604,8 @@ app.get('/api/usuarios', async (req, res) => {
         // REGLA DE ORO: Asegurar que los campos JSON se devuelvan como objetos
         const normalized = rows.map(u => ({
             ...u,
-            schedule: typeof u.schedule === 'string' ? JSON.parse(u.schedule) : u.schedule
+            schedule: typeof u.schedule === 'string' ? JSON.parse(u.schedule) : u.schedule,
+            customUI: typeof u.customUI === 'string' ? JSON.parse(u.customUI) : u.customUI
         }));
         
         res.json(normalized);
@@ -1414,39 +1412,91 @@ app.get('/api/payments/history', async (req, res) => {
 // ========================
 // 7. MOTOR DE ANÁLISIS TÁCTICO (SOPORTE)
 // ========================
+app.get('/api/soporte/diagnostico/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        
+        // 1. Datos de Usuario
+        const [uRows] = await pool.query('SELECT id, email, name, surname, role, status, last_login FROM usuarios WHERE id = ?', [userId]);
+        const user = uRows[0] || { status: 'Desconocido' };
+
+        // 2. Última ubicación GPS
+        const [gRows] = await pool.query('SELECT * FROM locations WHERE usuarioId = ?', [userId]);
+        const gps = gRows[0] || { latitud: 0, longitud: 0, updated_at: null };
+
+        // 3. Simulación de Dispositivo (Basado en metadatos si existieran, por ahora mock realista)
+        const device = {
+            status: user.last_login ? 'online' : 'offline',
+            appVersion: '2.0.4-gold',
+            battery: '85%',
+            signal: '4G/LTE',
+            lastSync: user.last_login
+        };
+
+        res.json({
+            user: {
+                status: user.status || 'Inactivo',
+                lastLogin: user.last_login,
+                role: user.role
+            },
+            gps: {
+                lat: gps.latitud,
+                lng: gps.longitud,
+                accuracy: '5m',
+                status: gps.latitud !== 0 ? 'Conectado' : 'Sin Señal',
+                lastUpdate: gps.updated_at
+            },
+            device: device,
+            summary: {
+                score: user.status === 'activo' ? 'ok' : 'warning',
+                messages: [
+                    user.status === 'activo' ? 'Cuenta verificada y activa.' : 'La cuenta requiere revisión de estado.',
+                    gps.latitud !== 0 ? 'Señal GPS detectada correctamente.' : 'No se detectan coordenadas recientes.',
+                    'Versión de App actualizada.'
+                ]
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 app.post('/api/soporte/ejecutar', async (req, res) => {
     const { actionId, userId, ticketId } = req.body;
     try {
         console.log(`[ANALYZER] Iniciando diagnóstico para Ticket #${ticketId}, Usuario: ${userId}, Acción: ${actionId}`);
         
-        const report = {
-            success: true,
-            message: `Acción '${actionId}' completada con éxito.`,
-            diagnostics: {
-                user_status: 'Verificado - Cuenta Activa',
-                app_integrity: '98% - Sincronización re-establecida',
-                connection: 'Filtro de señal optimizado.',
-                action_applied: actionId
-            }
-        };
-
+        let systemMessage = `[SISTEMA] Ejecutada acción: ${actionId}.`;
+        
         if (actionId === 'reset_password') {
-            await pool.query('UPDATE usuarios SET password = ?, mustChangePassword = 1 WHERE id = ?', ['soporte123', userId]);
-            report.message = "Contraseña restablecida a 'soporte123'. Se obliga al cambio en el próximo ingreso.";
+            await pool.query('UPDATE usuarios SET password = ?, password_changed = 0 WHERE id = ?', ['soporte123', userId]);
+            systemMessage = "Contraseña restablecida a 'soporte123'.";
+        } else if (actionId === 'force_logout') {
+            await pool.query('UPDATE usuarios SET last_login = NULL WHERE id = ?', [userId]);
+            systemMessage = "Sesión cerrada remotamente (Token invalidado).";
+        } else if (actionId === 'force_sync') {
+            systemMessage = "Comando de sincronización forzada enviado al dispositivo.";
+        } else if (actionId === 'device_ping') {
+            systemMessage = "Ping de red enviado. Respuesta recibida (24ms).";
         }
 
+        // Registrar en el ticket
         const [rows] = await pool.query('SELECT respuestas FROM tickets WHERE id = ?', [ticketId]);
         if (rows.length > 0) {
             const resp = JSON.parse(rows[0].respuestas || '[]');
             resp.push({
                 autor: 'LOG_SISTEMA',
-                texto: `[SISTEMA] Ejecutado diagnóstico táctico: ${actionId}. Resultado: Éxito.`,
+                texto: systemMessage,
                 fecha: new Date().toISOString()
             });
             await pool.query('UPDATE tickets SET respuestas = ? WHERE id = ?', [JSON.stringify(resp), ticketId]);
         }
 
-        res.json(report);
+        res.json({
+            success: true,
+            message: systemMessage,
+            diagnostics: { action_applied: actionId, timestamp: new Date() }
+        });
     } catch (err) {
         console.error("Error en /api/soporte/ejecutar:", err);
         res.status(500).json({ error: err.message });

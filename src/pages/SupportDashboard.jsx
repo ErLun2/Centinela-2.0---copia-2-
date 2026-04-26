@@ -96,18 +96,16 @@ const SupportDashboard = () => {
     const scopeLabel = targetScope === 'all' ? 'TODA LA EMPRESA' : (users.find(u => u.id === targetUserId || u.uid === targetUserId)?.nombre || 'Usuario Seleccionado');
     if (!window.confirm(`¿Estás seguro de que deseas ejecutar: ${actionLabel} para [${scopeLabel}]?`)) return;
     
-    const result = await db.ejecutarAccionSoporte(actionType, targetUserId || selectedTicket.usuarioId || 'U-772', selectedTicket.id);
-    
-    if (result.success) {
-      loadData();
-      const allTickets = JSON.parse(localStorage.getItem('centinela_tickets') || '[]');
-      const updated = allTickets.find(t => t.id === selectedTicket.id);
-      if (updated) setSelectedTicket(updated);
-      
-      // AUTO-REFRESH DIAGNOSTIC TO SEE CHANGES
-      await handleRunDiagnostic(selectedTicket);
-      
-      alert(`✅ Acción '${actionLabel}' ejecutada en ${scopeLabel}.`);
+    try {
+        const result = await db.ejecutarAccionSoporte(actionType, targetUserId || selectedTicket.usuarioId || 'U-772', selectedTicket.id);
+        
+        if (result.success) {
+          // AUTO-REFRESH DIAGNOSTIC TO SEE CHANGES
+          await handleRunDiagnostic(selectedTicket);
+          alert(`✅ Acción '${actionLabel}' ejecutada en ${scopeLabel}.`);
+        }
+    } catch (error) {
+        alert("Error al ejecutar acción: " + error.message);
     }
   };
 
@@ -165,17 +163,18 @@ const SupportDashboard = () => {
     setShowButtonEditor(true);
   };
 
-  const handleApplyUIRepair = () => {
-    const updated = companies.map(c => {
-      if (c.id === selectedRepairCompany.id) {
-        return { ...c, customUI: tempUIConfig };
-      }
-      return c;
-    });
-    localStorage.setItem('centinela_companies', JSON.stringify(updated));
-    setCompanies(updated);
-    setShowButtonEditor(false);
-    alert(`✅ Interfaz de '${selectedRepairCompany.name}' actualizada correctamente.`);
+  const handleApplyUIRepair = async () => {
+    if (!selectedRepairCompany) return;
+    
+    try {
+        // REGLA DE ORO: Persistencia en MySQL vía dbServices
+        await db.actualizarEmpresa(selectedRepairCompany.id, { customUI: tempUIConfig });
+        
+        setShowButtonEditor(false);
+        alert(`✅ Interfaz de '${selectedRepairCompany.name}' actualizada correctamente en la Base de Datos.`);
+    } catch (err) {
+        alert("❌ Error al aplicar reparación: " + err.message);
+    }
   };
 
   const loadData = () => {
@@ -736,16 +735,51 @@ const SupportDashboard = () => {
          {activeTab === 'Reparaciones' && renderRepairs()}
          {activeTab === 'Usuarios' && renderUsers()}
          {activeTab === 'Rastreo' && (
-           <div className="fade-in">
-              <h2>Centro de Control de Rastreo</h2>
-              <p style={{color: 'rgba(255,255,255,0.5)'}}>Monitor de precisión para la App de Guardias.</p>
-              <div style={styles.emptyState}>
-                 <MapPin size={48} style={{marginBottom: '20px', opacity: 0.2}} />
-                 <p>Iniciando monitor de telemetría...</p>
-                 <button style={styles.primaryBtn} onClick={() => alert("Optimizando señales...")}>OPTIMIZAR RASTREO GLOBAL</button>
-              </div>
-           </div>
-         )}
+            <div className="fade-in">
+               <div style={styles.headerRow}>
+                  <div>
+                    <h2>Centro de Control de Rastreo</h2>
+                    <p style={{color: 'rgba(255,255,255,0.5)', margin: 0}}>Monitor de telemetría en tiempo real por dispositivo.</p>
+                  </div>
+                  <button style={styles.primaryBtn} onClick={() => alert("Optimizando señales...")}>OPTIMIZAR RASTREO GLOBAL</button>
+               </div>
+
+               <div className="glass" style={{ padding: '0', overflow: 'hidden', marginTop: '20px' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: 'rgba(0,0,0,0.4)', color: '#94a3b8', fontSize: '0.75rem' }}>
+                        <th style={{ padding: '15px 20px', textAlign: 'left' }}>USUARIO</th>
+                        <th style={{ padding: '15px', textAlign: 'left' }}>EMPRESA</th>
+                        <th style={{ padding: '15px', textAlign: 'center' }}>SEÑAL</th>
+                        <th style={{ padding: '15px', textAlign: 'center' }}>BATERÍA</th>
+                        <th style={{ padding: '15px', textAlign: 'center' }}>ESTADO APP</th>
+                        <th style={{ padding: '15px', textAlign: 'center' }}>ÚLT. CONEXIÓN</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {users.filter(u => u.role === 'GUARD' || u.rol === 'GUARDIA').map((u, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                          <td style={{ padding: '15px 20px' }}>
+                            <div style={{ fontWeight: 'bold', fontSize: '0.9rem' }}>{u.name || u.nombre} {u.surname || u.apellido}</div>
+                            <div style={{ fontSize: '0.7rem', opacity: 0.5 }}>{u.email}</div>
+                          </td>
+                          <td style={{ padding: '15px', fontSize: '0.8rem' }}>{companies.find(c => c.id === u.companyId || c.id === u.empresaId)?.name || 'S/E'}</td>
+                          <td style={{ padding: '15px', textAlign: 'center' }}><Wifi size={14} color="#10b981" /></td>
+                          <td style={{ padding: '15px', textAlign: 'center' }}><Battery size={14} color="#10b981" /> 90%</td>
+                          <td style={{ padding: '15px', textAlign: 'center' }}>
+                            <span style={{ padding: '3px 8px', background: 'rgba(16,185,129,0.1)', color: '#10b981', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold' }}>ACTIVA</span>
+                          </td>
+                          <td style={{ padding: '15px', textAlign: 'center', fontSize: '0.75rem', opacity: 0.5 }}>{u.last_login ? new Date(u.last_login).toLocaleTimeString() : '---'}</td>
+                        </tr>
+                      ))}
+                      {users.length === 0 && (
+                        <tr><td colSpan="6" style={{ padding: '40px', textAlign: 'center', opacity: 0.5 }}>No hay guardias activos para monitorear.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+               </div>
+            </div>
+          )}
           {activeTab === 'Automatizacion' && (
              <div className="fade-in">
                 <div style={styles.headerRow}>

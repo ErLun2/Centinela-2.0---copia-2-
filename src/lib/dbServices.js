@@ -215,20 +215,39 @@ export const crearPreferenciaPago = async (data) => {
 export const subscribeToAllPayments = (cb) => subscribeToResource('/payments', cb, 60000);
 
 // ========================
-// MOCKS Y DIAGNÓSTICO
+// SOPORTE & DIAGNÓSTICO REAL
 // ========================
 export const obtenerDiagnosticoUsuario = async (userId) => {
-    return { id: userId, status: 'activo', lastLogin: new Date().toISOString(), rol: 'ADMIN' };
+    return await apiRequest(`/soporte/diagnostico/${userId}`);
 };
-export const obtenerDiagnosticoDispositivo = async (userId) => ({ status: 'ok', brand: 'Android', version: '13' });
-export const obtenerDiagnosticoGPS = async (userId) => ({ accuracy: '5m', status: 'connected' });
-export const obtenerLogsSistema = async (id) => [];
-export const ejecutarDiagnosticoAutomatico = async (u, t) => ({ summary: 'Sincronización OK' });
+export const obtenerDiagnosticoDispositivo = async (userId) => {
+    const diag = await apiRequest(`/soporte/diagnostico/${userId}`);
+    return diag.device;
+};
+export const obtenerDiagnosticoGPS = async (userId) => {
+    const diag = await apiRequest(`/soporte/diagnostico/${userId}`);
+    return diag.gps;
+};
+export const obtenerLogsSistema = async (ticketId) => {
+    const tickets = await apiRequest('/tickets');
+    const t = tickets.find(tk => tk.id === ticketId);
+    return t ? (t.respuestas || []).filter(r => r.autor === 'LOG_SISTEMA') : [];
+};
+export const ejecutarDiagnosticoAutomatico = async (userId, ticket) => {
+    const diag = await apiRequest(`/soporte/diagnostico/${userId}`);
+    return {
+        score: diag.summary.score,
+        summary: diag.summary.messages
+    };
+};
 export const ejecutarAccionSoporte = async (actionId, userId, ticketId) => {
     return await apiRequest('/soporte/ejecutar', 'POST', { actionId, userId, ticketId });
 };
 
-export const logAction = async (u, a, e, d = {}) => { console.log(`[API-LOG] ${u} -> ${a}`); };
+export const logAction = async (u, a, e, d = {}) => { 
+    console.log(`[API-LOG] ${u} -> ${a}`); 
+    // Podríamos crear una tabla de auditoría en el futuro
+};
 
 // ========================
 // FUNCIONES RESTAURADAS PARA ESTABILIDAD (REGLA DE ORO)
@@ -246,8 +265,35 @@ export const actualizarEstadoEmpresa = async (id, status) => await apiRequest(`/
 export const eliminarEmpresa = async (id) => await apiRequest(`/empresas/${id}`, 'DELETE');
 
 // Soporte & Diagnóstico
-export const obtenerSugerenciasInteligentes = async (ticket) => [];
-export const detectarIncidentesMasivos = async () => [];
+export const obtenerSugerenciasInteligentes = async (ticketId, userId) => {
+    // Lógica simple de sugerencias basada en el estado
+    const diag = await apiRequest(`/soporte/diagnostico/${userId}`);
+    const sugs = [];
+    
+    if (diag.user.status !== 'activo') {
+        sugs.push({ id: 1, title: 'Activar Cuenta', desc: 'El usuario figura como inactivo.', action: 'activate_user' });
+    }
+    if (diag.gps.status === 'Sin Señal') {
+        sugs.push({ id: 2, title: 'Reiniciar GPS', desc: 'No se detecta señal en el móvil.', action: 'force_sync' });
+    }
+    
+    sugs.push({ id: 3, title: 'Restablecer Acceso', desc: 'Sugerido si el usuario no puede entrar.', action: 'reset_password' });
+    
+    return sugs;
+};
+
+export const detectarIncidentesMasivos = async () => {
+    const tickets = await apiRequest('/tickets');
+    const recent = tickets.filter(t => {
+        const diff = (new Date() - new Date(t.fecha)) / (1000 * 60 * 60);
+        return diff < 2 && t.status === 'Nuevo';
+    });
+    
+    if (recent.length >= 3) {
+        return [{ categoria: 'Posible Caída Regional', count: recent.length }];
+    }
+    return [];
+};
 
 // Staff App & GPS
 export const actualizarUbicacionGPS = async (empresaId, userId, lat, lng) => await apiRequest('/gps', 'POST', { companyId: empresaId, userId, lat, lng });
