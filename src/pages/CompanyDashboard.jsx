@@ -3116,8 +3116,9 @@ const CompanyDashboard = () => {
                     return uFull !== '' && uFull === eFull;
                   });
 
-                  const latestEventGps = userEvtsGps.length > 0 ? [...userEvtsGps].sort((a,b) => getT_gps(b) - getT_gps(a))[0] : null;
-                  const isOnDuty = latestEventGps && (latestEventGps.tipo || '').toLowerCase() === 'ingreso';
+                  const lastInGps = userEvtsGps.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
+                  const lastOutGps = userEvtsGps.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT_gps(b) - getT_gps(a))[0];
+                  const isOnDuty = lastInGps && (!lastOutGps || getT_gps(lastInGps) > getT_gps(lastOutGps));
 
                   if (!isOnDuty) return null; // No mostrar fuera de turno
 
@@ -3189,8 +3190,9 @@ const CompanyDashboard = () => {
                     if (userEvents.length === 0) return false;
                     
                     // El evento más reciente manda (Igual que la visual del Resumen)
-                    const latestEvent = [...userEvents].sort((a,b) => getT(b) - getT(a))[0];
-                    return (latestEvent.tipo || '').toLowerCase() === 'ingreso';
+                    const lastInObj = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                    const lastOutObj = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                    return lastInObj && (!lastOutObj || getT(lastInObj) > getT(lastOutObj));
                   }).length;
 
                   return (
@@ -3235,8 +3237,9 @@ const CompanyDashboard = () => {
                                   return uFull !== '' && uFull === eFull;
                                 });
                                 
-                                const latestEvent = userEvents.length > 0 ? [...userEvents].sort((a,b) => getT(b) - getT(a))[0] : null;
-                                const isPresent = latestEvent && (latestEvent.tipo || '').toLowerCase() === 'ingreso';
+                                const lastInPop = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'ingreso').sort((a,b) => getT(b) - getT(a))[0];
+                                const lastOutPop = userEvents.filter(e => (e.tipo || '').toLowerCase() === 'egreso').sort((a,b) => getT(b) - getT(a))[0];
+                                const isPresent = lastInPop && (!lastOutPop || getT(lastInPop) > getT(lastOutPop));
 
                                 return (
                                   <div key={u.id || u.uid} style={{ display: 'flex', flexDirection: 'column', background: isPresent ? 'rgba(16, 185, 129, 0.05)' : '#f8fafc', padding: '10px', borderRadius: '12px', border: isPresent ? '1px solid rgba(16, 185, 129, 0.2)' : '1px solid #e2e8f0' }}>
