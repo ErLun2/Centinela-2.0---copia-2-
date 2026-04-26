@@ -233,7 +233,7 @@ export const subscribeToAllPayments = (cb) => subscribeToResource('/payments', c
 // SOPORTE & DIAGNÓSTICO REAL
 // ========================
 export const obtenerFullDiagnostico = async (userId) => {
-    return await apiRequest(`/soporte/diagnostico/${userId}`);
+    return await apiRequest(`/soporte/diagnostico/${encodeURIComponent(userId)}`);
 };
 
 export const obtenerLogsSistema = (ticket) => {

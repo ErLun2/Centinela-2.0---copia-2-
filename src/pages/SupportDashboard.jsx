@@ -89,7 +89,7 @@ const SupportDashboard = () => {
       setIsRunningDiagnostic(false);
     } catch (err) {
       console.error("Diagnostic Error:", err);
-      setDiagnosticSummary({ score: 'error', summary: ['Error al ejecutar el diagnóstico.', err.message] });
+      setDiagnosticSummary({ score: 'error', summary: ['Error al ejecutar el diagnóstico.', err.message || 'Error de conexión con el servidor.'] });
       setIsRunningDiagnostic(false);
     }
   };
@@ -356,7 +356,18 @@ const SupportDashboard = () => {
                                {(() => {
                                  const uniqueNames = new Set();
                                  return [...users]
-                                   .filter(u => String(u.companyId || u.empresaId) === String(selectedTicket.empresaId))
+                                   .filter(u => {
+                                     const uCompId = String(u.companyId || u.empresaId || '').toLowerCase().trim();
+                                     const tCompId = String(selectedTicket.empresaId || '').toLowerCase().trim();
+                                     const tCompName = String(selectedTicket.nombreEmpresa || '').toLowerCase().trim();
+                                     
+                                     // REGLA DE ORO: Máxima flexibilidad para soporte (Match por ID, Nombre o parcial)
+                                     const matchId = uCompId && tCompId && (uCompId === tCompId);
+                                     const matchName = uCompId === tCompName || u.companyName?.toLowerCase().trim() === tCompName;
+                                     const partialMatch = (uCompId && tCompId && (uCompId.includes(tCompId) || tCompId.includes(uCompId)));
+                                     
+                                     return matchId || matchName || partialMatch;
+                                   })
                                    .filter(u => (u.uid || u.id) !== selectedTicket.usuarioId)
                                    .filter(u => {
                                      const fullName = `${u.nombre || u.name || ''} ${u.apellido || u.surname || ''}`.trim();
