@@ -877,10 +877,10 @@ const CompanyDashboard = () => {
     
     // Actualizar en backend (MySQL)
     try {
-      await db.registrarNuevoTicket(updatedTicket); // Usa ON DUPLICATE KEY UPDATE en el backend
-      // Actualizar state
-      setTickets(tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t));
-      setSelectedTicket(updatedTicket);
+      const savedTicket = await db.registrarNuevoTicket(updatedTicket); 
+      // Actualizar state con la versión del servidor (que ya tiene fusiones si hubo mensajes cruzados)
+      setTickets(tickets.map(t => t.id === selectedTicket.id ? savedTicket : t));
+      setSelectedTicket(savedTicket);
       setChatReply("");
     } catch (err) {
       showToast("Error al enviar mensaje", "error");

@@ -195,15 +195,16 @@ export const actualizarEmpresa = async (idOrData, data) => {
 export const registrarNuevoTicket = async (ticketData) => {
     const id = ticketData.id || "TK-" + Math.random().toString(36).substr(2, 9).toUpperCase();
     const newTicket = { ...ticketData, id, fecha: ticketData.fecha || new Date().toISOString() };
-    await apiRequest('/tickets', 'POST', newTicket);
-    return newTicket;
+    const result = await apiRequest('/tickets', 'POST', newTicket);
+    // Retornamos el ticket actualizado con las respuestas que el servidor fusionó
+    return result.respuestas ? { ...newTicket, respuestas: result.respuestas } : newTicket;
 };
 
 export const obtenerTickets = async () => {
     return await apiRequest('/tickets');
 };
 
-export const subscribeToTickets = (cb) => subscribeToResource('/tickets', cb, 5000);
+export const subscribeToTickets = (cb) => subscribeToResource('/tickets', cb, 2000);
 
 // ========================
 // FACTURACIÓN

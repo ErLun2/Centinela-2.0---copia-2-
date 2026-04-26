@@ -51,45 +51,52 @@ const SupportDashboard = () => {
 
   const handleRunDiagnostic = async (ticket) => {
     setIsRunningDiagnostic(true);
+    setDiagnosticSummary(null);
     
-    // Aggregating data based on scope
-    const userId = targetUserId || ticket.usuarioId || 'U-772';
-    
-    if (targetScope === 'all') {
-       // Global check simulation
-       const companyUsers = users.filter(u => u.empresaId === ticket.empresaId);
-       const summary = {
-         score: 'warning',
-         summary: [`Analizando flota de ${companyUsers.length} dispositivos...`, "Se detectaron latencias altas en 3 terminales."]
-       };
-       setTimeout(() => {
-         setDiagnosticSummary(summary);
-         setIsRunningDiagnostic(false);
-       }, 1500);
-       return;
-    }
-
-    const userDiag = await db.obtenerDiagnosticoUsuario(userId);
-    const deviceDiag = await db.obtenerDiagnosticoDispositivo(userId);
-    const gpsDiag = await db.obtenerDiagnosticoGPS(userId);
-    const logs = await db.obtenerLogsSistema(ticket.id);
-    const summary = await db.ejecutarDiagnosticoAutomatico(userId, ticket);
-    
-    setTimeout(async () => {
-      setDiagnosticData({
-        user: userDiag,
-        device: deviceDiag,
-        gps: gpsDiag
-      });
-      setDiagnosticLogs(logs);
-      setDiagnosticSummary(summary);
+    try {
+      // Aggregating data based on scope
+      const userId = targetUserId || ticket.usuarioId || 'U-772';
       
-      // FETCH INTELLIGENT SUGGESTIONS
-      const smartSuggest = await db.obtenerSugerenciasInteligentes(ticket.id, userId);
-      setSuggestions(smartSuggest);
+      if (targetScope === 'all') {
+         // Global check simulation
+         const companyUsers = users.filter(u => u.empresaId === ticket.empresaId);
+         const summary = {
+           score: 'warning',
+           summary: [`Analizando flota de ${companyUsers.length} dispositivos...`, "Se detectaron latencias altas en 3 terminales."]
+         };
+         setTimeout(() => {
+           setDiagnosticSummary(summary);
+           setIsRunningDiagnostic(false);
+         }, 1500);
+         return;
+      }
+  
+      const userDiag = await db.obtenerDiagnosticoUsuario(userId);
+      const deviceDiag = await db.obtenerDiagnosticoDispositivo(userId);
+      const gpsDiag = await db.obtenerDiagnosticoGPS(userId);
+      const logs = await db.obtenerLogsSistema(ticket.id);
+      const summary = await db.ejecutarDiagnosticoAutomatico(userId, ticket);
       
+      setTimeout(async () => {
+        setDiagnosticData({
+          user: userDiag,
+          device: deviceDiag,
+          gps: gpsDiag
+        });
+        setDiagnosticLogs(logs);
+        setDiagnosticSummary(summary);
+        
+        // FETCH INTELLIGENT SUGGESTIONS
+        const smartSuggest = await db.obtenerSugerenciasInteligentes(ticket.id, userId);
+        setSuggestions(smartSuggest);
+        
+        setIsRunningDiagnostic(false);
+      }, 1500);
+    } catch (err) {
+      console.error("Diagnostic Error:", err);
+      setDiagnosticSummary({ score: 'error', summary: ['Error al ejecutar el diagnóstico.', err.message] });
       setIsRunningDiagnostic(false);
-    }, 1500);
+    }
   };
 
   const handleExecuteAction = async (actionType, actionLabel) => {
@@ -144,10 +151,10 @@ const SupportDashboard = () => {
      };
      
      try {
-       await db.registrarNuevoTicket(updatedTicket);
-       const allTickets = tickets.map(t => t.id === selectedTicket.id ? updatedTicket : t);
+       const savedTicket = await db.registrarNuevoTicket(updatedTicket);
+       const allTickets = tickets.map(t => t.id === selectedTicket.id ? savedTicket : t);
        setTickets(allTickets);
-       setSelectedTicket(updatedTicket);
+       setSelectedTicket(savedTicket);
        setReplyText("");
        setIsInternalNote(false);
        setQuickReply('');
