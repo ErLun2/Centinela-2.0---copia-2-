@@ -3256,9 +3256,9 @@ const CompanyDashboard = () => {
                                         {isPresent ? '✅ PRESENTE' : '❌ AUSENTE'}
                                       </span>
                                     </div>
-                                    {isPresent && latestEvent && (
+                                    {isPresent && lastInPop && (
                                       <div style={{ fontSize: '9px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Clock size={10} /> INGRESO: {latestEvent.hora || new Date(getT(latestEvent)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                                        <Clock size={10} /> INGRESO: {lastInPop.hora || new Date(getT(lastInPop)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                       </div>
                                     )}
                                   </div>
