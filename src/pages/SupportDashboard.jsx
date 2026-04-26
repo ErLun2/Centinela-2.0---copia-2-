@@ -209,6 +209,22 @@ const SupportDashboard = () => {
     return () => unsub && unsub();
   }, []);
 
+  // REGLA DE ORO: Carga bajo demanda de la dotación de la empresa seleccionada
+  useEffect(() => {
+    if (selectedTicket?.empresaId) {
+      db.obtenerUsuariosEmpresa(selectedTicket.empresaId).then(data => {
+        if (data && Array.isArray(data)) {
+          setUsers(prev => {
+            // Combinar evitando duplicados por ID
+            const existingIds = new Set(data.map(u => u.id || u.uid));
+            const filteredPrev = prev.filter(u => !existingIds.has(u.id || u.uid));
+            return [...filteredPrev, ...data];
+          });
+        }
+      }).catch(err => console.error("Error loading company users:", err));
+    }
+  }, [selectedTicket?.id]); // Solo recargar si cambia el ID del ticket
+
   useEffect(() => {
     if (selectedTicket) {
       const fresh = tickets.find(t => t.id === selectedTicket.id);
@@ -351,40 +367,44 @@ const SupportDashboard = () => {
                              onChange={e => setTargetUserId(e.target.value)}
                              style={{ width: '100%', background: '#020617', color: '#ffffff', border: '1px solid rgba(255,255,255,0.2)', padding: '12px', borderRadius: '12px', outline: 'none', fontSize: '0.9rem', fontWeight: '500' }}
                            >
-                             <option value={selectedTicket.usuarioId}>{selectedTicket.usuarioNombre || selectedTicket.usuarioEmail || 'Iniciador del Ticket'} (Iniciador)</option>
-                             <optgroup label="SISTEMA: SELECCIONAR USUARIO AFECTADO" style={{ background: '#020617', color: '#94a3b8' }}>
-                               {(() => {
-                                 const uniqueNames = new Set();
-                                 return [...users]
-                                   .filter(u => {
-                                     const uCompId = String(u.companyId || u.empresaId || '').toLowerCase().trim();
-                                     const tCompId = String(selectedTicket.empresaId || '').toLowerCase().trim();
-                                     const tCompName = String(selectedTicket.nombreEmpresa || '').toLowerCase().trim();
-                                     
-                                     // REGLA DE ORO: Máxima flexibilidad para soporte (Match por ID, Nombre o parcial)
-                                     const matchId = uCompId && tCompId && (uCompId === tCompId);
-                                     const matchName = uCompId === tCompName || u.companyName?.toLowerCase().trim() === tCompName;
-                                     const partialMatch = (uCompId && tCompId && (uCompId.includes(tCompId) || tCompId.includes(uCompId)));
-                                     
-                                     return matchId || matchName || partialMatch;
-                                   })
-                                   .filter(u => (u.uid || u.id) !== selectedTicket.usuarioId)
-                                   .filter(u => {
-                                     const fullName = `${u.nombre || u.name || ''} ${u.apellido || u.surname || ''}`.trim();
-                                     if (!fullName || uniqueNames.has(fullName)) return false;
-                                     uniqueNames.add(fullName);
-                                     return true;
-                                   })
-                                   .sort((a,b) => (a.nombre || '').localeCompare(b.nombre || ''))
-                                   .map(u => {
-                                     const isGeneric = ['Admin', 'Personal', 'Demo'].some(word => (u.nombre || '').includes(word));
-                                     return (
-                                       <option key={u.uid || u.id} value={u.uid || u.id} style={{ background: '#020617', color: 'white', padding: '10px' }}>
-                                         {u.nombre} {u.apellido || ''} {isGeneric ? `(${u.email})` : ''} - [{u.empresaName || u.organizacion || 'Sistema'}]
-                                       </option>
-                                     );
-                                   });
-                               })()}
+                              <option value={selectedTicket.usuarioId}>{selectedTicket.usuarioNombre || selectedTicket.usuarioEmail || 'Iniciador del Ticket'} (Iniciador)</option>
+                              <optgroup label="SISTEMA: SELECCIONAR USUARIO AFECTADO" style={{ background: '#020617', color: '#94a3b8' }}>
+                                {(() => {
+                                  const uniqueNames = new Set();
+                                  const companyUsers = users.filter(u => {
+                                    const uCompId = String(u.companyId || u.empresaId || '').toLowerCase().trim();
+                                    const tCompId = String(selectedTicket.empresaId || '').toLowerCase().trim();
+                                    const tCompName = String(selectedTicket.nombreEmpresa || '').toLowerCase().trim();
+                                    const matchId = uCompId && tCompId && (uCompId === tCompId);
+                                    const matchName = uCompId === tCompName || u.companyName?.toLowerCase().trim() === tCompName;
+                                    const partialMatch = (uCompId && tCompId && (uCompId.includes(tCompId) || tCompId.includes(uCompId)));
+                                    return matchId || matchName || partialMatch;
+                                  });
+
+                                  const renderUserOption = (u) => {
+                                    const isGeneric = ['Admin', 'Personal', 'Demo'].some(word => (u.nombre || u.name || '').includes(word));
+                                    const name = u.nombre || u.name || 'Usuario';
+                                    const surname = u.apellido || u.surname || '';
+                                    return (
+                                      <option key={u.uid || u.id} value={u.uid || u.id} style={{ background: '#020617', color: 'white', padding: '10px' }}>
+                                        {name} {surname} {isGeneric ? `(${u.email})` : ''} - [{u.empresaName || u.organizacion || u.companyName || 'Sistema'}]
+                                      </option>
+                                    );
+                                  };
+
+                                  const displayUsers = companyUsers.length > 0 ? companyUsers : users;
+                                  
+                                  return displayUsers
+                                    .filter(u => (u.uid || u.id) !== selectedTicket.usuarioId)
+                                    .filter(u => {
+                                      const fullName = `${u.nombre || u.name || ''} ${u.apellido || u.surname || ''}`.trim();
+                                      if (!fullName || uniqueNames.has(fullName)) return false;
+                                      uniqueNames.add(fullName);
+                                      return true;
+                                    })
+                                    .sort((a,b) => (a.nombre || a.name || '').localeCompare(b.nombre || b.name || ''))
+                                    .map(renderUserOption);
+                                })()}
                              </optgroup>
                            </select>
                         </div>

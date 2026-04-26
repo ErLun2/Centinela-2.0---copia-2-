@@ -3930,58 +3930,75 @@ const CompanyDashboard = () => {
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                               <div>
                                 <h4 style={{ margin: 0, fontSize: '1rem', fontWeight: '900', color: 'white' }}>ACTIVIDAD DEL SISTEMA</h4>
-                                <p style={{ margin: '5px 0 0', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>Uso de almacenamiento y cuotas</p>
+                                <p style={{ margin: '5px 0 0', fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', letterSpacing: '1px' }}>Monitor de Recursos en Vivo</p>
                               </div>
                               <div style={{ padding: '10px', background: 'rgba(168,85,247,0.1)', borderRadius: '12px', color: '#a855f7' }}><Server size={20} /></div>
                           </div>
 
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', height: '180px' }}>
-                              <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '15px' }}>
-                                <div style={{ padding: '15px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Uso del sistema</div>
-                                    <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#f59e0b', marginTop: '5px' }}>Nivel medio</div>
-                                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '8px', overflow: 'hidden' }}>
-                                      <div style={{ width: '50%', height: '100%', background: '#f59e0b' }} />
-                                    </div>
-                                </div>
-                                <div style={{ padding: '15px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                                    <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>CUOTA DE USUARIOS</div>
-                                    <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#a855f7', marginTop: '5px' }}>{companyUsers.length} <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>/ 100</span></div>
-                                    <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '8px', overflow: 'hidden' }}>
-                                      <div style={{ width: `${(companyUsers.length / 100) * 100}%`, height: '100%', background: '#a855f7' }} />
-                                    </div>
-                                </div>
-                              </div>
+                          {(() => {
+                            const planData = getPlanPermisos(user.empresaPlan || 'basico');
+                            const userQuota = planData.limite_guardias || 50;
+                            const userUsagePercent = Math.min(100, Math.round((companyUsers.length / userQuota) * 100));
+                            
+                            // Cálculo real de actividad: Eventos de hoy vs expectativa (5 por usuario activo)
+                            const todayStr = getARDateStr(new Date());
+                            const todayEvents = filteredEvents.filter(e => getARDateStr(e.timestamp || e.fecha || e.date) === todayStr).length;
+                            const expectedEvents = Math.max(10, companyUsers.length * 5);
+                            const activityPercent = Math.min(100, Math.max(5, Math.round((todayEvents / expectedEvents) * 100)));
+                            
+                            const systemLevel = activityPercent < 20 ? 'Nivel inicial' : (activityPercent < 60 ? 'Nivel medio' : 'Operación óptima');
+                            const systemColor = activityPercent < 20 ? '#3b82f6' : (activityPercent < 60 ? '#f59e0b' : '#10b981');
 
-                              <div style={{ position: 'relative' }}>
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                      <Pie
-                                          data={[
-                                            { name: 'Nivel', value: 50 },
-                                            { name: 'Resto', value: 50 }
-                                          ]}
-                                          cx="50%"
-                                          cy="50%"
-                                          innerRadius={60}
-                                          outerRadius={80}
-                                          paddingAngle={5}
-                                          dataKey="value"
-                                      >
-                                          <Cell fill="#f59e0b" />
-                                          <Cell fill="rgba(255,255,255,0.05)" />
-                                      </Pie>
-                                      <Tooltip 
-                                          contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
-                                      />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                                <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-                                    <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'white' }}>50%</div>
-                                    <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Nivel de actividad</div>
+                            return (
+                              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', height: '180px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '15px' }}>
+                                  <div style={{ padding: '15px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                      <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Uso del sistema</div>
+                                      <div style={{ fontSize: '1.2rem', fontWeight: '900', color: systemColor, marginTop: '5px' }}>{systemLevel}</div>
+                                      <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '8px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${activityPercent}%`, height: '100%', background: systemColor }} />
+                                      </div>
+                                  </div>
+                                  <div style={{ padding: '15px', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                                      <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>CUOTA DE USUARIOS</div>
+                                      <div style={{ fontSize: '1.2rem', fontWeight: '900', color: '#a855f7', marginTop: '5px' }}>{companyUsers.length} <span style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>/ {userQuota}</span></div>
+                                      <div style={{ height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '8px', overflow: 'hidden' }}>
+                                        <div style={{ width: `${userUsagePercent}%`, height: '100%', background: '#a855f7' }} />
+                                      </div>
+                                  </div>
+                                </div>
+
+                                <div style={{ position: 'relative' }}>
+                                  <ResponsiveContainer width="100%" height="100%">
+                                      <PieChart>
+                                        <Pie
+                                            data={[
+                                              { name: 'Nivel', value: activityPercent },
+                                              { name: 'Resto', value: 100 - activityPercent }
+                                            ]}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={60}
+                                            outerRadius={80}
+                                            paddingAngle={5}
+                                            dataKey="value"
+                                        >
+                                            <Cell fill={systemColor} />
+                                            <Cell fill="rgba(255,255,255,0.05)" />
+                                        </Pie>
+                                        <Tooltip 
+                                            contentStyle={{ background: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', fontSize: '12px' }}
+                                        />
+                                      </PieChart>
+                                  </ResponsiveContainer>
+                                  <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+                                      <div style={{ fontSize: '1.4rem', fontWeight: '900', color: 'white' }}>{activityPercent}%</div>
+                                      <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold' }}>Nivel de actividad</div>
+                                  </div>
                                 </div>
                               </div>
-                          </div>
+                            );
+                          })()}
                         </div>
                       </div>
 
