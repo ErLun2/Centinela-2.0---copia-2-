@@ -1052,9 +1052,9 @@ app.post('/api/send-proposal', async (req, res) => {
         const plan = planRows[0] || { nombre: planId.toUpperCase(), precio: 'Consultar' };
 
         const mailOptions = {
-            from: `"Administración Centinela" <${process.env.SMTP_USER}>`,
+            from: `"Administración Centinela" <cristianangel_vidal@centinela-security.com>`,
             to: email,
-            replyTo: 'admin@centinela-security.com',
+            replyTo: 'cristianangel_vidal@centinela-security.com',
             subject: `📋 Propuesta Comercial: Sistema Inteligente Centinela - ${companyName}`,
             html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 15px; overflow: hidden; background: #ffffff;">
@@ -1088,7 +1088,7 @@ app.post('/api/send-proposal', async (req, res) => {
                         
                         <div style="text-align: center; margin-top: 40px;">
                             <p style="font-size: 13px; color: #94a3b8;">Para activar este plan o solicitar una reunión técnica:</p>
-                            <p style="font-weight: bold; color: #0f172a;">admin@centinela-security.com</p>
+                            <p style="font-weight: bold; color: #0f172a;">cristianangel_vidal@centinela-security.com</p>
                         </div>
                     </div>
                     <div style="background: #f1f5f9; padding: 20px; text-align: center; font-size: 12px; color: #64748b;">
@@ -1098,13 +1098,8 @@ app.post('/api/send-proposal', async (req, res) => {
             `
         };
 
-        if (process.env.SMTP_USER && process.env.SMTP_PASS) {
-            await transporter.sendMail(mailOptions);
-            res.json({ success: true, message: 'Propuesta enviada correctamente' });
-        } else {
-            console.warn("⚠️ SMTP no configurado. Propuesta no enviada via email.");
-            res.json({ success: true, message: 'Simulado: Propuesta generada (SMTP no configurado)' });
-        }
+        await transporter.sendMail(mailOptions);
+        res.json({ success: true, message: 'Propuesta enviada correctamente' });
     } catch (err) {
         console.error("Error enviando propuesta:", err);
         res.status(500).json({ error: 'Error al enviar la propuesta comercial' });
