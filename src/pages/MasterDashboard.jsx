@@ -2245,7 +2245,7 @@ const MasterDashboard = () => {
                 <div>
                   <label>Plan Sugerido</label>
                   <select className="input-full" value={proposalData.planId} onChange={e => setProposalData({ ...proposalData, planId: e.target.value })} style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}>
-                    {Object.values(PLANES).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                    {Object.values(localPlanes).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
                   </select>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
@@ -2266,17 +2266,34 @@ const MasterDashboard = () => {
                 <div style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
                   <button
                     className="primary"
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}
+                    disabled={isProcessing}
                     onClick={async () => {
-                      const res = await enviarPropuesta(proposalData);
-                      if (res) {
-                        alert(`¡Propuesta enviada con éxito a ${proposalData.email}!`);
-                        setShowProposalModal(false);
-                      } else {
-                        alert("Error al enviar la propuesta. Verifica la conexión.");
+                      if (!proposalData.email) {
+                        alert("Por favor ingresa un email de destino.");
+                        return;
+                      }
+                      setIsProcessing(true);
+                      try {
+                        const res = await db.enviarPropuesta(proposalData);
+                        if (res && res.success) {
+                          alert(`¡Propuesta enviada con éxito a ${proposalData.email}!`);
+                          setShowProposalModal(false);
+                          setProposalData({ companyName: '', email: '', planId: 'profesional', guards: '', panicUsers: '', message: '' });
+                        } else {
+                          alert(res?.message || "Error al enviar la propuesta.");
+                        }
+                      } catch (err) {
+                        console.error("Error en propuesta:", err);
+                        alert("Error de conexión: " + err.message);
+                      } finally {
+                        setIsProcessing(false);
                       }
                     }}
-                  >Enviar Propuesta</button>
+                  >
+                    {isProcessing ? <Loader2 className="animate-spin" size={18} /> : null}
+                    {isProcessing ? 'Enviando...' : 'Enviar Propuesta'}
+                  </button>
                   <button className="secondary" style={{ flex: 1 }} onClick={() => setShowProposalModal(false)}>Cancelar</button>
                 </div>
               </div>
