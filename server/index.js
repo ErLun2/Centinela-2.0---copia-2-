@@ -2,15 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
 import { MercadoPagoConfig, Preference } from 'mercadopago';
-import pg from 'pg';
-import nodemailer from 'nodemailer';
 import dotenv from 'dotenv';
+dotenv.config();
+import pool from './db.js';
+import nodemailer from 'nodemailer';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import compression from 'compression';
-
-const { Pool } = pg;
-dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -42,14 +40,6 @@ const transporter = nodemailer.createTransport({
     tls: {
         rejectUnauthorized: false
     }
-});
-
-// --- CONEXIÓN A POSTGRESQL (RENDER) ---
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: {
-    rejectUnauthorized: false
-  }
 });
 
 // Probar conexión e Inicializar Tablas automáticamente (Regla de Oro para estabilidad)
