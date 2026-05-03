@@ -30,6 +30,13 @@ const toPGDate = (val) => {
 
 const sanitizeTime = (val) => {
     if (!val) return new Date().toISOString();
+    if (typeof val !== 'string') return val;
+    // REGLA DE ORO: Si el cliente envía un formato localizado (am/pm), lo convertimos a ISO actual para evitar error de PG
+    const low = val.toLowerCase();
+    if (low.includes('am') || low.includes('pm') || low.includes('a.m.') || low.includes('p.m.')) {
+        console.warn('⚠️ [SISTEMA] Formato am/pm detectado, forzando ISO:', val);
+        return new Date().toISOString();
+    }
     return val;
 };
 
