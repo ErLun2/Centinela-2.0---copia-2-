@@ -30,12 +30,6 @@ const toPGDate = (val) => {
 
 const sanitizeTime = (val) => {
     if (!val) return new Date().toISOString();
-    if (typeof val !== 'string') return val;
-    // Si contiene AM/PM, PostgreSQL fallará al parsear si el campo es TIMESTAMP o TIME sin zona horaria configurada
-    if (val.toLowerCase().includes('am') || val.toLowerCase().includes('pm') || val.toLowerCase().includes('a.m.') || val.toLowerCase().includes('p.m.')) {
-        console.log('⚠️ [SISTEMA] Formato de hora inválido detectado:', val, '- Usando fallback ISO');
-        return new Date().toISOString();
-    }
     return val;
 };
 
@@ -77,7 +71,7 @@ pool.connect()
                 personal_email VARCHAR(150),
                 birth_date DATE,
                 phone VARCHAR(100),
-                last_login TIMESTAMP,
+                last_login TIMESTAMPTZ,
                 schedule JSONB,
                 foto TEXT
             )
@@ -93,9 +87,11 @@ pool.connect()
             ['password_changed', 'BOOLEAN DEFAULT FALSE'],
             ['schedule', 'JSONB'],
             ['foto', 'TEXT'],
-            ['last_login', 'TIMESTAMP']
+            ['last_login', 'TIMESTAMPTZ'],
+            ['created_at', 'TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP']
         ];
         for (const [col, type] of colsUsuarios) {
+            try { await client.query(`ALTER TABLE usuarios ALTER COLUMN "${col}" TYPE ${type} USING "${col}"::${type}`); } catch(e){}
             try { await client.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS "${col}" ${type}`); } catch(e){}
         }
 
@@ -112,17 +108,26 @@ pool.connect()
                 guards INT DEFAULT 0,
                 status VARCHAR(50) DEFAULT 'activa',
                 "expiryDate" DATE,
-                fecha_alta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_alta TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 lat FLOAT,
                 lng FLOAT,
                 dni VARCHAR(50),
                 "appEmail" VARCHAR(100),
-                "fechaInicio" TIMESTAMP,
-                "fechaFin" TIMESTAMP,
+                "fechaInicio" TIMESTAMPTZ,
+                "fechaFin" TIMESTAMPTZ,
                 "lastPaymentRef" VARCHAR(100),
                 "customUI" JSONB
             )
         `);
+        const colsEmpresasFix = [
+            ['fecha_alta', 'TIMESTAMPTZ'],
+            ['fechaInicio', 'TIMESTAMPTZ'],
+            ['fechaFin', 'TIMESTAMPTZ'],
+            ['expiryDate', 'DATE']
+        ];
+        for (const [col, type] of colsEmpresasFix) {
+            try { await client.query(`ALTER TABLE empresas ALTER COLUMN "${col}" TYPE ${type} USING "${col}"::${type}`); } catch(e){}
+        }
         const colsEmpresas = [
             ['lastPaymentRef', 'VARCHAR(100)'],
             ['customUI', 'JSONB']
@@ -138,8 +143,8 @@ pool.connect()
                 tipo VARCHAR(50),
                 subtipo VARCHAR(50),
                 descripcion TEXT,
-                fecha TIMESTAMP,
-                hora TIMESTAMP,
+                fecha TIMESTAMPTZ,
+                hora TIMESTAMPTZ,
                 lat FLOAT,
                 lng FLOAT,
                 "companyId" VARCHAR(100),
@@ -153,7 +158,7 @@ pool.connect()
                 history TEXT,
                 inicio VARCHAR(50),
                 fin VARCHAR(50),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
         const colsEventos = [
@@ -164,8 +169,8 @@ pool.connect()
             ['videoUrl', 'TEXT'],
             ['inicio', 'VARCHAR(50)'],
             ['fin', 'VARCHAR(50)'],
-            ['fecha', 'TIMESTAMP'],
-            ['hora', 'TIMESTAMP']
+            ['fecha', 'TIMESTAMPTZ'],
+            ['hora', 'TIMESTAMPTZ']
         ];
         for (const [col, type] of colsEventos) {
             try { await client.query(`ALTER TABLE eventos ALTER COLUMN "${col}" TYPE ${type} USING "${col}"::${type}`); } catch(e){}
@@ -184,9 +189,10 @@ pool.connect()
                 empleados INT DEFAULT 0,
                 mensaje TEXT,
                 source VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        try { await client.query('ALTER TABLE demo_requests ALTER COLUMN created_at TYPE TIMESTAMPTZ USING created_at::TIMESTAMPTZ'); } catch(e){}
 
         // 5. Planes
         await client.query(`
@@ -222,32 +228,36 @@ pool.connect()
         // 6. Tickets
         await client.query(`
             CREATE TABLE IF NOT EXISTS tickets (
-                id VARCHAR(50) PRIMARY KEY,
+                id VARCHAR(100) PRIMARY KEY,
                 titulo VARCHAR(255),
                 descripcion TEXT,
                 asunto VARCHAR(255),
-                tipo VARCHAR(50),
+                tipo VARCHAR(100),
                 prioridad VARCHAR(50),
                 estado VARCHAR(50) DEFAULT 'Nuevo',
-                fecha TIMESTAMP,
+                fecha TIMESTAMPTZ,
                 "usuarioId" VARCHAR(100),
                 "usuarioNombre" VARCHAR(255),
-                "usuarioEmail" VARCHAR(150),
+                "usuarioEmail" VARCHAR(255),
                 "empresaId" VARCHAR(100),
                 "nombreEmpresa" VARCHAR(255),
-                "empresaPlan" VARCHAR(50),
-                respuestas TEXT
+                "empresaPlan" VARCHAR(100),
+                respuestas TEXT,
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        try { await client.query('ALTER TABLE tickets ALTER COLUMN fecha TYPE TIMESTAMPTZ USING fecha::TIMESTAMPTZ'); } catch(e){}
+        try { await client.query('ALTER TABLE tickets ALTER COLUMN created_at TYPE TIMESTAMPTZ USING created_at::TIMESTAMPTZ'); } catch(e){}
 
         // 7. Sistema Config
         await client.query(`
             CREATE TABLE IF NOT EXISTS sistema_config (
                 key VARCHAR(100) PRIMARY KEY,
                 value TEXT,
-                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        try { await client.query('ALTER TABLE sistema_config ALTER COLUMN updated_at TYPE TIMESTAMPTZ USING updated_at::TIMESTAMPTZ'); } catch(e){}
         
         // 8. Pagos
         await client.query(`
@@ -258,11 +268,11 @@ pool.connect()
                 monto FLOAT,
                 metodo VARCHAR(50),
                 estado VARCHAR(50) DEFAULT 'pending',
-                fecha TIMESTAMP,
+                fecha TIMESTAMPTZ,
                 mp_payment_id VARCHAR(100),
                 comprobante TEXT,
                 numero_operacion VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
         
@@ -272,11 +282,11 @@ pool.connect()
                 id VARCHAR(100) PRIMARY KEY,
                 "planId" VARCHAR(50),
                 estado VARCHAR(50),
-                "fechaInicio" TIMESTAMP,
-                "fechaFin" TIMESTAMP,
-                "fechaProximoPago" TIMESTAMP,
+                "fechaInicio" TIMESTAMPTZ,
+                "fechaFin" TIMESTAMPTZ,
+                "fechaProximoPago" TIMESTAMPTZ,
                 "paymentId" VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
@@ -291,7 +301,7 @@ pool.connect()
                 lng FLOAT,
                 "companyId" VARCHAR(100),
                 activo BOOLEAN DEFAULT TRUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
@@ -303,7 +313,7 @@ pool.connect()
                 "objectiveId" VARCHAR(100),
                 code VARCHAR(255),
                 "companyId" VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
@@ -318,7 +328,7 @@ pool.connect()
                 days JSONB,
                 "assignedQrIds" JSONB,
                 "companyId" VARCHAR(100),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
 
@@ -329,9 +339,10 @@ pool.connect()
                 "companyId" VARCHAR(100),
                 latitud FLOAT,
                 longitud FLOAT,
-                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        try { await client.query('ALTER TABLE locations ALTER COLUMN timestamp TYPE TIMESTAMPTZ USING timestamp::TIMESTAMPTZ'); } catch(e){}
 
         // 14. Usuario Maestro (REGLA DE ORO)
         const adminCheck = await client.query('SELECT id FROM usuarios WHERE email = $1', ['vidal@master.com']);
