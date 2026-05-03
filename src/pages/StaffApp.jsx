@@ -1239,7 +1239,7 @@ const StaffApp = () => {
                               <div style={{ color: 'black', fontSize: '12px' }}>
                                  <strong>MI POSICIÓN</strong><br/>
                                  Lectura Satelital en Tiempo Real<br/>
-                                 {new Date().toLocaleTimeString()}
+                                 {new Date().toISOString()}
                               </div>
                            </Popup>
                         </Marker>
@@ -1581,7 +1581,7 @@ const StaffApp = () => {
                         fotoUrl: capturedPhoto || undefined,
                         videoUrl: capturedVideo || undefined,
                         audioUrl: capturedAudio || undefined,
-                        hora: new Date().toLocaleTimeString()
+                        hora: new Date().toISOString()
                      });
 
                      alert("✅ REPORTE ENVIADO. El centro de operaciones ha recibido la evidencia exitosamente.");
@@ -1673,8 +1673,8 @@ const StaffApp = () => {
                                         escaneado: scannedPoints.includes(pt.id)
                                      })),
                                      inicio: session.rondaStartTime || "S/I",
-                                  fin: new Date().toLocaleTimeString(),
-                                  hora: new Date().toLocaleTimeString()
+                                     fin: new Date().toISOString(),
+                                     hora: new Date().toISOString()
                                  });
                                  alert("✅ RONDA COMPLETADA Y ENVIADA CON ÉXITO.");
                                  setScannedPoints([]);
@@ -1718,7 +1718,7 @@ const StaffApp = () => {
                              apellido: fullUserData?.apellido || user?.apellido || '',
                              legajo: fullUserData?.legajo || ''
                            },
-                           hora: new Date().toLocaleTimeString()
+                           hora: new Date().toISOString()
                          });
                        }
                      } catch(err) {}

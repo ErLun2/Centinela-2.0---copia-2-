@@ -28,6 +28,17 @@ const toPGDate = (val) => {
     return d.toISOString();
 };
 
+const sanitizeTime = (val) => {
+    if (!val) return new Date().toISOString();
+    if (typeof val !== 'string') return val;
+    // Si contiene AM/PM, PostgreSQL fallará al parsear si el campo es TIMESTAMP o TIME sin zona horaria configurada
+    if (val.toLowerCase().includes('am') || val.toLowerCase().includes('pm') || val.toLowerCase().includes('a.m.') || val.toLowerCase().includes('p.m.')) {
+        console.log('⚠️ [SISTEMA] Formato de hora inválido detectado:', val, '- Usando fallback ISO');
+        return new Date().toISOString();
+    }
+    return val;
+};
+
 // --- CONFIGURACIÓN DE CORREO ---
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -607,9 +618,12 @@ app.post('/api/eventos', async (req, res) => {
         const finalObjetivoId = e.objetivoId || 'base';
 
         const nowISO = new Date().toISOString();
+        const finalFecha = sanitizeTime(e.fecha || nowISO);
+        const finalHora = sanitizeTime(e.hora || nowISO);
+
         await pool.query(
             'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, "companyId", "guardiaId", "objetivoId", "fotoUrl", "videoUrl", "audioUrl", status, inicio, fin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)',
-            [e.id, e.tipo, e.subtipo, e.descripcion, e.fecha || nowISO, e.hora || nowISO, e.lat, e.lng, e.companyId, finalGuardiaId, finalObjetivoId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto', e.inicio || 'S/I', e.fin || e.hora || nowISO]
+            [e.id, e.tipo, e.subtipo, e.descripcion, finalFecha, finalHora, e.lat, e.lng, e.companyId, finalGuardiaId, finalObjetivoId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto', e.inicio || 'S/I', e.fin || finalHora]
         );
 
         if (e.tipo === 'ingreso' && finalGuardiaId && e.lat && e.lng) {
