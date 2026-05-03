@@ -15,13 +15,9 @@ services:
         value: production
       - key: PORT
         value: 10000
-      - key: DB_HOST
+      - key: DATABASE_URL
+        sync: true # Requiere configuración en el Dashboard de Render
+      - key: SMTP_USER
         sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASS
-        sync: false
-      - key: DB_NAME
-        sync: false
-      - key: WEBHOOK_URL
+      - key: SMTP_PASS
         sync: false

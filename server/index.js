@@ -42,10 +42,10 @@ const transporter = nodemailer.createTransport({
     }
 });
 
-// Probar conexión e Inicializar Tablas automáticamente (Regla de Oro para estabilidad)
+// Probar conexión e Inicializar Tablas automáticamente
 pool.connect()
   .then(async client => {
-    console.log('✅ Conectado a PostgreSQL en Render');
+    console.log("🚀 [SISTEMA] USANDO POSTGRESQL - Conectado correctamente");
     
     // --- INICIALIZACIÓN DE ESQUEMA (Auto-reparación) ---
     try {

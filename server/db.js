@@ -11,4 +11,6 @@ const pool = new Pool({
   }
 });
 
+console.log("🐘 [DB] USANDO POSTGRESQL - Pool Inicializado");
+
 export default pool;
