@@ -127,8 +127,8 @@ pool.connect()
                 tipo VARCHAR(50),
                 subtipo VARCHAR(50),
                 descripcion TEXT,
-                fecha DATE,
-                hora TIME,
+                fecha TIMESTAMP,
+                hora TIMESTAMP,
                 lat FLOAT,
                 lng FLOAT,
                 "companyId" VARCHAR(100),
@@ -152,9 +152,12 @@ pool.connect()
             ['history', 'TEXT'],
             ['videoUrl', 'TEXT'],
             ['inicio', 'VARCHAR(50)'],
-            ['fin', 'VARCHAR(50)']
+            ['fin', 'VARCHAR(50)'],
+            ['fecha', 'TIMESTAMP'],
+            ['hora', 'TIMESTAMP']
         ];
         for (const [col, type] of colsEventos) {
+            try { await client.query(`ALTER TABLE eventos ALTER COLUMN "${col}" TYPE ${type} USING "${col}"::${type}`); } catch(e){}
             try { await client.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS "${col}" ${type}`); } catch(e){}
         }
 
@@ -603,9 +606,10 @@ app.post('/api/eventos', async (req, res) => {
         const finalGuardiaId = e.guardiaId || e.usuarioId || e.userId;
         const finalObjetivoId = e.objetivoId || 'base';
 
+        const nowISO = new Date().toISOString();
         await pool.query(
             'INSERT INTO eventos (id, tipo, subtipo, descripcion, fecha, hora, lat, lng, "companyId", "guardiaId", "objetivoId", "fotoUrl", "videoUrl", "audioUrl", status, inicio, fin) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)',
-            [e.id, e.tipo, e.subtipo, e.descripcion, e.fecha, e.hora, e.lat, e.lng, e.companyId, finalGuardiaId, finalObjetivoId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto', e.inicio || 'S/I', e.fin || e.hora]
+            [e.id, e.tipo, e.subtipo, e.descripcion, e.fecha || nowISO, e.hora || nowISO, e.lat, e.lng, e.companyId, finalGuardiaId, finalObjetivoId, e.fotoUrl, e.videoUrl, e.audioUrl, 'Abierto', e.inicio || 'S/I', e.fin || e.hora || nowISO]
         );
 
         if (e.tipo === 'ingreso' && finalGuardiaId && e.lat && e.lng) {

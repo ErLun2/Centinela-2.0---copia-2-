@@ -108,13 +108,14 @@ export const eliminarPlan = async (id) => {
 // EVENTOS Y BITÁCORA
 // ========================
 export const crearEvento = async (empresaId, dataEvento) => {
+  const nowISO = new Date().toISOString();
   const newEvent = { 
       ...dataEvento, 
       id: `evt_${Date.now()}_${Math.floor(Math.random() * 1000)}`, 
       companyId: empresaId,
-      fecha: dataEvento.fecha || new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date()),
-      fechaRegistro: dataEvento.fechaRegistro || new Date().toISOString(),
-      hora: dataEvento.hora || new Date().toLocaleTimeString('es-AR', { hour12: false }).split(' ')[0]
+      fecha: dataEvento.fecha || nowISO,
+      fechaRegistro: dataEvento.fechaRegistro || nowISO,
+      hora: dataEvento.hora || nowISO
   };
   await apiRequest('/eventos', 'POST', newEvent);
   return newEvent.id;

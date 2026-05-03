@@ -1070,7 +1070,7 @@ const StaffApp = () => {
         gps: currentGps ? `${currentGps.lat},${currentGps.lng}` : "0,0",
         lat: currentGps ? parseFloat(currentGps.lat) : 0,
         lng: currentGps ? parseFloat(currentGps.lng) : 0,
-        hora: new Date().toLocaleTimeString(),
+        hora: new Date().toISOString(),
         manual: false
       });
       setSession(prev => ({ ...prev, isCheckedIn: newStatus, inRuta: false, inRonda: false }));
@@ -1126,7 +1126,7 @@ const StaffApp = () => {
         lat: currentGps ? parseFloat(currentGps.lat) : 0,
         lng: currentGps ? parseFloat(currentGps.lng) : 0
       });
-      setSession(prev => ({ ...prev, inRonda: true, activeRondaId: id, rondaStartTime: new Date().toLocaleTimeString() }));
+      setSession(prev => ({ ...prev, inRonda: true, activeRondaId: id, rondaStartTime: new Date().toISOString() }));
     } catch (e) { 
       console.error("Error al iniciar ronda:", e);
       alert("Error al iniciar ronda: " + (e.message || "Error desconocido")); 
@@ -1156,8 +1156,8 @@ const StaffApp = () => {
           lng: currentGps ? parseFloat(currentGps.lng) : 0,
           descripcion: `Ronda Libre Finalizada exitosamente.`,
           inicio: session.rondaStartTime || "S/I",
-          fin: new Date().toLocaleTimeString(),
-          hora: new Date().toLocaleTimeString()
+          fin: new Date().toISOString(),
+          hora: new Date().toISOString()
       });
 
       await finalizarRonda(session.activeRondaId);
@@ -1314,7 +1314,7 @@ const StaffApp = () => {
             label={session.inRuta ? "EN RECORRIDO" : "INICIAR RUTA"} 
             color="#3b82f6"
             onClick={() => {
-                setSession(prev => ({...prev, inRuta: true, rondaStartTime: new Date().toLocaleTimeString()}));
+                setSession(prev => ({...prev, inRuta: true, rondaStartTime: new Date().toISOString()}));
                 setShowTourModal(true);
             }}
           />
