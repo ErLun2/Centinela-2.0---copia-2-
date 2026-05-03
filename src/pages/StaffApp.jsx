@@ -864,6 +864,12 @@ const mediaPanelStyles = {
   }
 };
 
+const getLocalISO = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString();
+};
+
 const StaffApp = () => {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -1070,7 +1076,7 @@ const StaffApp = () => {
         gps: currentGps ? `${currentGps.lat},${currentGps.lng}` : "0,0",
         lat: currentGps ? parseFloat(currentGps.lat) : 0,
         lng: currentGps ? parseFloat(currentGps.lng) : 0,
-        hora: new Date().toISOString(),
+        hora: getLocalISO(),
         manual: false
       });
       setSession(prev => ({ ...prev, isCheckedIn: newStatus, inRuta: false, inRonda: false }));
@@ -1126,7 +1132,7 @@ const StaffApp = () => {
         lat: currentGps ? parseFloat(currentGps.lat) : 0,
         lng: currentGps ? parseFloat(currentGps.lng) : 0
       });
-      setSession(prev => ({ ...prev, inRonda: true, activeRondaId: id, rondaStartTime: new Date().toISOString() }));
+      setSession(prev => ({ ...prev, inRonda: true, activeRondaId: id, rondaStartTime: getLocalISO() }));
     } catch (e) { 
       console.error("Error al iniciar ronda:", e);
       alert("Error al iniciar ronda: " + (e.message || "Error desconocido")); 
@@ -1156,8 +1162,8 @@ const StaffApp = () => {
           lng: currentGps ? parseFloat(currentGps.lng) : 0,
           descripcion: `Ronda Libre Finalizada exitosamente.`,
           inicio: session.rondaStartTime || "S/I",
-          fin: new Date().toISOString(),
-          hora: new Date().toISOString()
+          fin: getLocalISO(),
+          hora: getLocalISO()
       });
 
       await finalizarRonda(session.activeRondaId);
@@ -1239,7 +1245,7 @@ const StaffApp = () => {
                               <div style={{ color: 'black', fontSize: '12px' }}>
                                  <strong>MI POSICIÓN</strong><br/>
                                  Lectura Satelital en Tiempo Real<br/>
-                                 {new Date().toISOString()}
+                                 {getLocalISO()}
                               </div>
                            </Popup>
                         </Marker>
@@ -1314,7 +1320,7 @@ const StaffApp = () => {
             label={session.inRuta ? "EN RECORRIDO" : "INICIAR RUTA"} 
             color="#3b82f6"
             onClick={() => {
-                setSession(prev => ({...prev, inRuta: true, rondaStartTime: new Date().toISOString()}));
+                setSession(prev => ({...prev, inRuta: true, rondaStartTime: getLocalISO()}));
                 setShowTourModal(true);
             }}
           />
@@ -1581,7 +1587,7 @@ const StaffApp = () => {
                         fotoUrl: capturedPhoto || undefined,
                         videoUrl: capturedVideo || undefined,
                         audioUrl: capturedAudio || undefined,
-                        hora: new Date().toISOString()
+                        hora: getLocalISO()
                      });
 
                      alert("✅ REPORTE ENVIADO. El centro de operaciones ha recibido la evidencia exitosamente.");
@@ -1673,8 +1679,8 @@ const StaffApp = () => {
                                         escaneado: scannedPoints.includes(pt.id)
                                      })),
                                      inicio: session.rondaStartTime || "S/I",
-                                     fin: new Date().toISOString(),
-                                     hora: new Date().toISOString()
+                                     fin: getLocalISO(),
+                                     hora: getLocalISO()
                                  });
                                  alert("✅ RONDA COMPLETADA Y ENVIADA CON ÉXITO.");
                                  setScannedPoints([]);
@@ -1718,7 +1724,7 @@ const StaffApp = () => {
                              apellido: fullUserData?.apellido || user?.apellido || '',
                              legajo: fullUserData?.legajo || ''
                            },
-                           hora: new Date().toISOString()
+                           hora: getLocalISO()
                          });
                        }
                      } catch(err) {}

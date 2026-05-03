@@ -168,6 +168,28 @@ pool.connect()
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        // REGLA DE ORO: Forzar migración de tipos de datos en eventos para evitar "invalid input syntax for type time"
+        const checkHoraType = await client.query(`
+            SELECT data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'eventos' AND column_name = 'hora'
+        `);
+        if (checkHoraType.rows.length > 0 && checkHoraType.rows[0].data_type === 'time without time zone') {
+            console.log('🔄 [SISTEMA] Detectada columna HORA como TIME. Forzando conversión a TIMESTAMPTZ...');
+            try {
+                // Intentar conversión directa
+                await client.query('ALTER TABLE eventos ALTER COLUMN hora TYPE TIMESTAMPTZ USING hora::TIMESTAMPTZ');
+                await client.query('ALTER TABLE eventos ALTER COLUMN fecha TYPE TIMESTAMPTZ USING fecha::TIMESTAMPTZ');
+            } catch (err) {
+                console.warn('⚠️ [SISTEMA] Falló conversión directa. Recreando columnas...');
+                // Si falla (por datos corruptos), borramos y recreamos
+                await client.query('ALTER TABLE eventos DROP COLUMN IF EXISTS hora');
+                await client.query('ALTER TABLE eventos DROP COLUMN IF EXISTS fecha');
+                await client.query('ALTER TABLE eventos ADD COLUMN fecha TIMESTAMPTZ');
+                await client.query('ALTER TABLE eventos ADD COLUMN hora TIMESTAMPTZ');
+            }
+        }
+
         const colsEventos = [
             ['objetivoId', 'VARCHAR(100)'],
             ['status', 'VARCHAR(50) DEFAULT \'Abierto\''],
@@ -180,9 +202,11 @@ pool.connect()
             ['hora', 'TIMESTAMPTZ']
         ];
         for (const [col, type] of colsEventos) {
-            try { await client.query(`ALTER TABLE eventos ALTER COLUMN "${col}" TYPE ${type} USING "${col}"::${type}`); } catch(e){}
             try { await client.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS "${col}" ${type}`); } catch(e){}
         }
+
+        // Configurar Zona Horaria por defecto para la base de datos
+        await client.query("SET TIME ZONE 'America/Argentina/Buenos_Aires'");
 
         // 4. Leads de Demo
         await client.query(`

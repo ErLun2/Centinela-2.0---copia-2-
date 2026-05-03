@@ -65,8 +65,17 @@ const subscribeToResource = (endpoint, callback, interval = 30000) => {
 // ========================
 // EMPRESAS
 // ========================
+// Helper para obtener fecha ISO en hora local (Argentina) para evitar desfase de 3hs en los reportes
+const getLocalISO = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString();
+};
+
 export const crearEmpresa = async (empresaId, data) => {
-  await apiRequest('/empresas', 'POST', { ...data, id: empresaId, fecha_alta: new Date().toISOString().split('T')[0] });
+  const id = empresaId || `emp_${Date.now()}`;
+  await apiRequest('/empresas', 'POST', { ...data, id: empresaId, fecha_alta: getLocalISO() });
+  return id;
 };
 
 export const obtenerEmpresas = async () => {
@@ -108,7 +117,7 @@ export const eliminarPlan = async (id) => {
 // EVENTOS Y BITÁCORA
 // ========================
 export const crearEvento = async (empresaId, dataEvento) => {
-  const nowISO = new Date().toISOString();
+  const nowISO = getLocalISO();
   const newEvent = { 
       ...dataEvento, 
       id: `evt_${Date.now()}_${Math.floor(Math.random() * 1000)}`, 
