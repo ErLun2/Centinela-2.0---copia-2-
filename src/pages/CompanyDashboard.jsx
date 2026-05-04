@@ -185,7 +185,6 @@ const getARDateStr = (dateInput) => {
 
 const formatEventTime = (timeStr) => {
   if (!timeStr) return '--:--';
-  if (typeof timeStr !== 'string') return '--:--';
   if (timeStr === 'S/H' || timeStr === 'S/I') return timeStr;
   
   try {
@@ -193,17 +192,13 @@ const formatEventTime = (timeStr) => {
     if (timeStr.includes('T') || timeStr.includes('Z')) {
       const d = new Date(timeStr);
       if (!isNaN(d.getTime())) {
-        return d.toLocaleTimeString('es-AR', { 
-            hour: '2-digit', 
-            minute: '2-digit', 
-            hour12: false,
-            timeZone: 'America/Argentina/Buenos_Aires' 
-        });
+        return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
       }
     }
-    // Si ya es un HH:mm:ss o algo parecido, intentar limpiar
-    const match = timeStr.match(/(\d{2}:\d{2})/);
-    if (match) return match[1];
+    // Intentar tomar los primeros 5 caracteres si parece HH:mm
+    if (/^\d{2}:\d{2}/.test(timeStr)) {
+      return timeStr.substring(0, 5);
+    }
   } catch (e) {}
   return timeStr;
 };
@@ -1204,7 +1199,7 @@ const CompanyDashboard = () => {
                 
                 return `
                   <tr>
-                    <td>${new Date(e.fechaRegistro || e.fecha || 0).toLocaleDateString()} ${formatEventTime(e.hora)}</td>
+                    <td>${new Date(e.fechaRegistro || e.fecha || 0).toLocaleDateString()} ${e.hora || ''}</td>
                     <td>${u ? `${u.nombre || u.name} ${u.apellido || u.surname || ''}` : 'S/N'}</td>
                     <td>${e.tipo?.toUpperCase()}</td>
                     <td>${obj?.nombre || 'General'}</td>
@@ -3325,7 +3320,7 @@ const CompanyDashboard = () => {
                                     </div>
                                     {isPresent && lastInPop && (
                                       <div style={{ fontSize: '9px', color: '#64748b', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                        <Clock size={10} /> INGRESO: {formatEventTime(lastInPop.hora)}
+                                        <Clock size={10} /> INGRESO: {lastInPop.hora || new Date(getT(lastInPop)).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                       </div>
                                     )}
                                   </div>
@@ -3771,7 +3766,7 @@ const CompanyDashboard = () => {
                           })}
                           style={{ borderBottom: '1px solid rgba(255,255,255,0.03)', fontSize: '0.85rem' }}
                         >
-                          <td style={{ padding: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>{formatEventTime(event.hora)}</td>
+                          <td style={{ padding: '20px', fontWeight: 'bold', color: 'var(--primary)' }}>{event.hora || '--:--'}</td>
                           <td>
                             {(() => {
                               const uId = event.usuarioId || event.guardiaId || (typeof event.usuario === 'object' ? (event.usuario.id || event.usuario.uid) : event.usuario);
@@ -4678,7 +4673,7 @@ const CompanyDashboard = () => {
                            <div style={{ display: 'flex', gap: '15px', background: 'rgba(0,168,255,0.05)', padding: '15px', borderRadius: '15px', border: '1px solid rgba(0,168,255,0.1)' }}>
                               <div style={{ flex: 1 }}>
                                  <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Hora Inicio</div>
-                                 <div style={{ fontSize: '0.95rem', fontWeight: '900', color: '#00d2ff', marginTop: '2px' }}>{formatEventTime(mediaModal.event?.inicio)}</div>
+                                 <div style={{ fontSize: '0.95rem', fontWeight: '900', color: '#00d2ff', marginTop: '2px' }}>{mediaModal.event?.inicio || '--:--'}</div>
                               </div>
                               <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
                               <div style={{ flex: 1 }}>
