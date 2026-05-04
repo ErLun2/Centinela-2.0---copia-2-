@@ -34,38 +34,26 @@ const getLocalISO = () => {
 };
 
 const sanitizeTime = (val) => {
-    // REGLA DE ORO: Función centralizada para obtener hora de Argentina (UTC-3)
-    const getARTime = (input = null) => {
-        try {
-            const d = input ? new Date(input) : new Date();
-            if (isNaN(d.getTime())) return new Date().toISOString().slice(0, -1);
-            
-            // Forzamos el formato ISO local de Argentina usando Intl
-            const parts = new Intl.DateTimeFormat('fr-CA', {
-                timeZone: 'America/Argentina/Buenos_Aires',
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                hour12: false
-            }).formatToParts(d);
-            
-            const getPart = (type) => parts.find(p => p.type === type).value;
-            return `${getPart('year')}-${getPart('month')}-${getPart('day')}T${getPart('hour')}:${getPart('minute')}:${getPart('second')}`;
-        } catch (e) {
-            return new Date().toISOString().slice(0, -1);
-        }
+    // REGLA DE ORO: Forzar siempre el desfase de Argentina (UTC-3) para evitar errores de servidor
+    const getARTime = () => {
+        const now = new Date();
+        // Forzamos -3 horas (180 minutos) respecto a UTC
+        const arOffset = 180 * 60000;
+        return new Date(now.getTime() - arOffset).toISOString().slice(0, -1);
     };
 
     if (!val) return getARTime();
     if (typeof val !== 'string') return val;
     
-    const low = val.toLowerCase();
-    // Si tiene 'Z' o 'am/pm', es un formato que requiere conversión forzada a Local
-    if (val.includes('Z') || low.includes('am') || low.includes('pm')) {
-        return getARTime(val);
-    }
+    // Si ya viene con el formato ISO pero tiene la 'Z', se la quitamos para que se guarde como hora local literal
+    let clean = val.replace(/Z$/i, '');
+    const low = clean.toLowerCase();
     
-    // Si ya es un ISO sin Z, lo dejamos pasar como local literal
-    return val;
+    if (low.includes('am') || low.includes('pm') || low.includes('a.m.') || low.includes('p.m.')) {
+        console.warn('⚠️ [SISTEMA] Formato am/pm detectado en backend, forzando hora Argentina:', val);
+        return getARTime();
+    }
+    return clean;
 };
 
 // --- CONFIGURACIÓN DE CORREO ---

@@ -190,7 +190,7 @@ const formatEventTime = (timeStr) => {
   try {
     const d = new Date(timeStr);
     if (!isNaN(d.getTime())) {
-      // REGLA DE ORO: Forzar siempre America/Argentina/Buenos_Aires y formato HH:mm:ss
+      // REGLA DE ORO: Forzar siempre America/Argentina/Buenos_Aires para eliminar el desfase de 3hs
       return new Intl.DateTimeFormat('es-AR', {
         timeZone: 'America/Argentina/Buenos_Aires',
         hour: '2-digit',
@@ -201,13 +201,13 @@ const formatEventTime = (timeStr) => {
     }
   } catch (e) {}
   
-  // Limpieza agresiva de strings ISO si la conversión de fecha falla
+  // Si no es una fecha válida pero tiene el formato ISO, intentar extraer la parte de la hora manualmente
   if (typeof timeStr === 'string' && timeStr.includes('T')) {
     const timePart = timeStr.split('T')[1];
-    if (timePart) return timePart.split('.')[0].split('Z')[0];
+    if (timePart) return timePart.split('.')[0];
   }
 
-  return String(timeStr).substring(0, 8);
+  return timeStr;
 };
 
 
