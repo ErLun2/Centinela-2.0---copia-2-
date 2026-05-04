@@ -34,15 +34,24 @@ const getLocalISO = () => {
 };
 
 const sanitizeTime = (val) => {
-    if (!val) return new Date().toISOString();
-    if (typeof val !== 'string') return val;
-    // REGLA DE ORO: Si el cliente envía un formato localizado (am/pm), lo convertimos a ISO actual para evitar error de PG
-    const low = val.toLowerCase();
-    if (low.includes('am') || low.includes('pm') || low.includes('a.m.') || low.includes('p.m.')) {
-        console.warn('⚠️ [SISTEMA] Formato am/pm detectado, forzando ISO:', val);
-        return new Date().toISOString();
+    if (!val) {
+        // Generar ISO local sin 'Z' como fallback seguro
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        return new Date(now.getTime() - offset).toISOString().slice(0, -1);
     }
-    return val;
+    if (typeof val !== 'string') return val;
+    
+    // REGLA DE ORO: Limpiar am/pm y remover la 'Z' para que PG lo tome como local literal
+    let clean = val.replace(/Z$/i, '');
+    const low = clean.toLowerCase();
+    if (low.includes('am') || low.includes('pm') || low.includes('a.m.') || low.includes('p.m.')) {
+        console.warn('⚠️ [SISTEMA] Formato am/pm detectado en backend, forzando ISO Local:', val);
+        const now = new Date();
+        const offset = now.getTimezoneOffset() * 60000;
+        return new Date(now.getTime() - offset).toISOString().slice(0, -1);
+    }
+    return clean;
 };
 
 // --- CONFIGURACIÓN DE CORREO ---

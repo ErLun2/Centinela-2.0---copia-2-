@@ -183,6 +183,26 @@ const getARDateStr = (dateInput) => {
   }
 };
 
+const formatEventTime = (timeStr) => {
+  if (!timeStr) return '--:--';
+  if (timeStr === 'S/H' || timeStr === 'S/I') return timeStr;
+  
+  try {
+    // Si contiene T o Z, es un ISO string o similar
+    if (timeStr.includes('T') || timeStr.includes('Z')) {
+      const d = new Date(timeStr);
+      if (!isNaN(d.getTime())) {
+        return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+      }
+    }
+    // Intentar tomar los primeros 5 caracteres si parece HH:mm
+    if (/^\d{2}:\d{2}/.test(timeStr)) {
+      return timeStr.substring(0, 5);
+    }
+  } catch (e) {}
+  return timeStr;
+};
+
 
 //// ======== ENTERPRISE CONFIG COMPONENT ========
 const EnterpriseConfigPanel = ({ 
@@ -4110,7 +4130,7 @@ const CompanyDashboard = () => {
                               return `${day}/${m}`;
                             })()}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{event.hora || 'S/H'}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{formatEventTime(event.hora)}</div>
                         </td>
                         <td
                           className="guard-link"
@@ -4472,7 +4492,7 @@ const CompanyDashboard = () => {
                         <div>
                            <h3 style={{ margin: 0, textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--primary)', fontSize: '1rem' }}>Evidencia del Evento</h3>
                            <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-                              {mediaModal.event?.tipo?.toUpperCase() || 'NOTIFICACIÓN'} • {mediaModal.event?.hora || '--:--'} • {(() => {
+                              {mediaModal.event?.tipo?.toUpperCase() || 'NOTIFICACIÓN'} • {formatEventTime(mediaModal.event?.hora)} • {(() => {
                                  const d = mediaModal.event?.fechaRegistro || mediaModal.event?.created_at || mediaModal.event?.fecha;
                                  return getARDateStr(d).split('-').reverse().join('/') || 'Hoy';
                               })()}
@@ -4658,7 +4678,7 @@ const CompanyDashboard = () => {
                               <div style={{ width: '1px', background: 'rgba(255,255,255,0.1)' }} />
                               <div style={{ flex: 1 }}>
                                  <div style={{ fontSize: '0.6rem', color: 'rgba(255,255,255,0.4)', fontWeight: 'bold', textTransform: 'uppercase' }}>Hora Fin</div>
-                                 <div style={{ fontSize: '0.95rem', fontWeight: '900', color: '#00d2ff', marginTop: '2px' }}>{mediaModal.event?.fin || '--:--'}</div>
+                                 <div style={{ fontSize: '0.95rem', fontWeight: '900', color: '#00d2ff', marginTop: '2px' }}>{formatEventTime(mediaModal.event?.fin)}</div>
                               </div>
                            </div>
                         </div>
