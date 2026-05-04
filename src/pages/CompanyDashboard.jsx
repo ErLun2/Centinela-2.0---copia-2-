@@ -190,7 +190,7 @@ const formatEventTime = (timeStr) => {
   try {
     const d = new Date(timeStr);
     if (!isNaN(d.getTime())) {
-      // REGLA DE ORO: Forzar siempre America/Argentina/Buenos_Aires para eliminar el desfase de 3hs
+      // REGLA DE ORO: Forzar siempre America/Argentina/Buenos_Aires y formato HH:mm:ss
       return new Intl.DateTimeFormat('es-AR', {
         timeZone: 'America/Argentina/Buenos_Aires',
         hour: '2-digit',
@@ -201,13 +201,13 @@ const formatEventTime = (timeStr) => {
     }
   } catch (e) {}
   
-  // Si no es una fecha válida pero tiene el formato ISO, intentar extraer la parte de la hora manualmente
+  // Limpieza agresiva de strings ISO si la conversión de fecha falla
   if (typeof timeStr === 'string' && timeStr.includes('T')) {
     const timePart = timeStr.split('T')[1];
-    if (timePart) return timePart.split('.')[0];
+    if (timePart) return timePart.split('.')[0].split('Z')[0];
   }
 
-  return timeStr;
+  return String(timeStr).substring(0, 8);
 };
 
 
@@ -1206,7 +1206,7 @@ const CompanyDashboard = () => {
                 
                 return `
                   <tr>
-                    <td>${new Date(e.fechaRegistro || e.fecha || 0).toLocaleDateString()} ${e.hora || ''}</td>
+                    <td>${new Date(e.fechaRegistro || e.fecha || 0).toLocaleDateString()} ${formatEventTime(e.hora)}</td>
                     <td>${u ? `${u.nombre || u.name} ${u.apellido || u.surname || ''}` : 'S/N'}</td>
                     <td>${e.tipo?.toUpperCase()}</td>
                     <td>${obj?.nombre || 'General'}</td>
@@ -1319,9 +1319,29 @@ const CompanyDashboard = () => {
       const normalizedEvents = allEvents.map(e => {
         const fechaReg = e.fechaRegistro || e.created_at || e.fecha || new Date().toISOString();
         const eventDateStr = getARDateStr(fechaReg);
+        
+        // REGLA DE ORO: Normalizar la hora en el origen de datos para que todo el panel (Historial, Resumen, Modal) se vea perfecto
+        let cleanHora = e.hora || '--:--';
+        try {
+          const rawForTime = e.hora || fechaReg;
+          const d = new Date(rawForTime);
+          if (!isNaN(d.getTime())) {
+            cleanHora = new Intl.DateTimeFormat('es-AR', {
+              timeZone: 'America/Argentina/Buenos_Aires',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false
+            }).format(d);
+          }
+        } catch (err) {
+          console.warn("[TIME-FIX] Error formateando hora:", err);
+        }
+
         return {
           ...e,
           fechaRegistro: fechaReg,
+          hora: cleanHora,
           isToday: eventDateStr === todayStr
         };
       });
@@ -1813,7 +1833,7 @@ const CompanyDashboard = () => {
               <div>
                 <div style={{ fontWeight: '900', fontSize: '0.8rem' }}>RONDA INCUMPLIDA</div>
                 <div style={{ fontSize: '0.85rem', fontWeight: '900' }}>{alert.pointName}</div>
-                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Horario: {alert.hora}</div>
+                <div style={{ fontSize: '0.7rem', opacity: 0.8 }}>Horario: {formatEventTime(alert.hora)}</div>
               </div>
             </div>
             <button 
