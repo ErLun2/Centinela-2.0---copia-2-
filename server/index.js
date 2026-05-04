@@ -20,12 +20,17 @@ app.use(bodyParser.json({ limit: '15mb' }));
 app.use(bodyParser.urlencoded({ limit: '15mb', extended: true }));
 app.use(express.json({ limit: '15mb' }));
 
-// Helper para fechas PostgreSQL (Regla de Oro: Estabilidad de Datos)
 const toPGDate = (val) => {
     if (!val) return null;
     const d = new Date(val);
     if (isNaN(d.getTime())) return null;
     return d.toISOString();
+};
+
+const getLocalISO = () => {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  return new Date(now.getTime() - offset).toISOString().slice(0, -1);
 };
 
 const sanitizeTime = (val) => {
@@ -150,8 +155,8 @@ pool.connect()
                 tipo VARCHAR(50),
                 subtipo VARCHAR(50),
                 descripcion TEXT,
-                fecha TIMESTAMPTZ,
-                hora TIMESTAMPTZ,
+                fecha TIMESTAMP,
+                hora TIMESTAMP,
                 lat FLOAT,
                 lng FLOAT,
                 "companyId" VARCHAR(100),
@@ -198,8 +203,8 @@ pool.connect()
             ['videoUrl', 'TEXT'],
             ['inicio', 'VARCHAR(50)'],
             ['fin', 'VARCHAR(50)'],
-            ['fecha', 'TIMESTAMPTZ'],
-            ['hora', 'TIMESTAMPTZ']
+            ['fecha', 'TIMESTAMP'],
+            ['hora', 'TIMESTAMP']
         ];
         for (const [col, type] of colsEventos) {
             try { await client.query(`ALTER TABLE eventos ADD COLUMN IF NOT EXISTS "${col}" ${type}`); } catch(e){}

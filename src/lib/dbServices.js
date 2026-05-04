@@ -69,7 +69,7 @@ const subscribeToResource = (endpoint, callback, interval = 30000) => {
 const getLocalISO = () => {
   const now = new Date();
   const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - offset).toISOString();
+  return new Date(now.getTime() - offset).toISOString().slice(0, -1);
 };
 
 export const crearEmpresa = async (empresaId, data) => {

@@ -867,7 +867,7 @@ const mediaPanelStyles = {
 const getLocalISO = () => {
   const now = new Date();
   const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - offset).toISOString();
+  return new Date(now.getTime() - offset).toISOString().slice(0, -1);
 };
 
 const StaffApp = () => {
