@@ -375,7 +375,13 @@ pool.connect()
                 timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
-        try { await client.query('ALTER TABLE locations ADD PRIMARY KEY ("usuarioId")'); } catch(e){}
+        try { 
+            // REGLA DE ORO: Limpiar duplicados antes de intentar poner la PK, si no fallará
+            await client.query('DELETE FROM locations a USING locations b WHERE a.timestamp < b.timestamp AND a."usuarioId" = b."usuarioId"');
+            await client.query('ALTER TABLE locations ADD PRIMARY KEY ("usuarioId")'); 
+        } catch(e){
+            console.log("ℹ️ [SISTEMA] No se pudo agregar PK a locations (probablemente ya existe o tabla vacía)");
+        }
         try { await client.query('ALTER TABLE locations ALTER COLUMN timestamp TYPE TIMESTAMPTZ USING timestamp::TIMESTAMPTZ'); } catch(e){}
 
         // 14. Usuario Maestro (REGLA DE ORO)
