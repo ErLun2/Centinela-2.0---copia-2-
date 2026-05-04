@@ -34,46 +34,47 @@ const getLocalISO = () => {
 };
 
 const sanitizeTime = (val) => {
-    // REGLA DE ORO: Limpiar formatos am/pm con puntos (comunes en móviles) antes de procesar
-    const str = String(val || '');
-    const cleanStr = str.toLowerCase()
-        .replace(/a\.m\./g, 'am')
-        .replace(/p\.m\./g, 'pm')
-        .trim();
+    // REGLA DE ORO: No importa qué formato llegue, devolvemos un TIMESTAMP válido para Postgres en UTC-3
+    const str = String(val || '').trim();
     
-    const getARTime = (inputVal) => {
+    // 1. Si ya es un formato ISO correcto (YYYY-MM-DD...), lo dejamos pasar (quitando la Z si existe)
+    if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+        return str.replace('Z', '').replace('z', '');
+    }
+
+    // 2. Si es solo la hora o contiene am/pm (común en errores de móviles)
+    const low = str.toLowerCase();
+    if (low.includes('m.') || low.includes('am') || low.includes('pm') || !str.includes('-')) {
         try {
-            const d = inputVal ? new Date(inputVal) : new Date();
-            // Si el constructor de Date falla con el string am/pm, intentamos una limpieza manual
-            if (isNaN(d.getTime())) {
-                const timeOnly = cleanStr.split(' ')[0]; // Intentar extraer HH:mm:ss
-                if (/^\d{2}:\d{2}/.test(timeOnly)) return timeOnly;
-                return new Date().toISOString().slice(0, -1);
+            const now = new Date();
+            // Extraer números de la hora si existen
+            const timeMatch = str.match(/(\d{1,2}):(\d{2})(:(\d{2}))?/);
+            let hh = now.getHours(), mm = now.getMinutes(), ss = now.getSeconds();
+            
+            if (timeMatch) {
+                hh = parseInt(timeMatch[1]);
+                mm = parseInt(timeMatch[2]);
+                ss = timeMatch[4] ? parseInt(timeMatch[4]) : 0;
+                
+                // Ajuste AM/PM para casos como "12:47:55 p.m."
+                if (low.includes('p.m.') || low.includes('pm')) {
+                    if (hh < 12) hh += 12;
+                } else if (low.includes('a.m.') || low.includes('am')) {
+                    if (hh === 12) hh = 0;
+                }
             }
             
-            const parts = new Intl.DateTimeFormat('en-CA', {
-                timeZone: 'America/Argentina/Buenos_Aires',
-                year: 'numeric', month: '2-digit', day: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit',
-                hour12: false
-            }).formatToParts(d);
-            
-            const p = {};
-            parts.forEach(({type, value}) => p[type] = value);
-            return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
+            // Obtener fecha de hoy en Argentina para completar el TIMESTAMP
+            const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(now);
+            return `${today}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
         } catch (e) {
-            return new Date().toISOString().slice(0, -1);
+            // Fallback total a la hora actual de Argentina
+            const arToday = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
+            return `${arToday}T${new Date().toLocaleTimeString('en-GB')}`;
         }
-    };
-
-    if (!val) return getARTime();
-    
-    // Si viene con am/pm o 'Z' (UTC), forzamos la conversión a AR
-    if (cleanStr.includes('am') || cleanStr.includes('pm') || str.includes('Z')) {
-        return getARTime(cleanStr);
     }
-    
-    return val;
+
+    return str;
 };
 
 // --- CONFIGURACIÓN DE CORREO ---
