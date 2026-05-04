@@ -34,13 +34,23 @@ const getLocalISO = () => {
 };
 
 const sanitizeTime = (val) => {
+    // REGLA DE ORO: Limpiar formatos am/pm con puntos (comunes en móviles) antes de procesar
+    const str = String(val || '');
+    const cleanStr = str.toLowerCase()
+        .replace(/a\.m\./g, 'am')
+        .replace(/p\.m\./g, 'pm')
+        .trim();
+    
     const getARTime = (inputVal) => {
         try {
             const d = inputVal ? new Date(inputVal) : new Date();
-            if (isNaN(d.getTime())) return new Date().toISOString().slice(0, -1);
+            // Si el constructor de Date falla con el string am/pm, intentamos una limpieza manual
+            if (isNaN(d.getTime())) {
+                const timeOnly = cleanStr.split(' ')[0]; // Intentar extraer HH:mm:ss
+                if (/^\d{2}:\d{2}/.test(timeOnly)) return timeOnly;
+                return new Date().toISOString().slice(0, -1);
+            }
             
-            // Usamos Intl para forzar la conversión de UTC a Argentina (UTC-3)
-            // Esto garantiza que si llega "14:00Z", se convierta a "11:00"
             const parts = new Intl.DateTimeFormat('en-CA', {
                 timeZone: 'America/Argentina/Buenos_Aires',
                 year: 'numeric', month: '2-digit', day: '2-digit',
@@ -57,12 +67,10 @@ const sanitizeTime = (val) => {
     };
 
     if (!val) return getARTime();
-    if (typeof val !== 'string') return val;
     
-    const low = val.toLowerCase();
-    // Si viene am/pm o si tiene 'Z' (UTC), forzamos la conversión a AR
-    if (low.includes('am') || low.includes('pm') || val.includes('Z')) {
-        return getARTime(val);
+    // Si viene con am/pm o 'Z' (UTC), forzamos la conversión a AR
+    if (cleanStr.includes('am') || cleanStr.includes('pm') || str.includes('Z')) {
+        return getARTime(cleanStr);
     }
     
     return val;
