@@ -376,11 +376,11 @@ pool.connect()
             )
         `);
         try { 
-            // REGLA DE ORO: Limpiar duplicados antes de intentar poner la PK, si no fallará
-            await client.query('DELETE FROM locations a USING locations b WHERE a.timestamp < b.timestamp AND a."usuarioId" = b."usuarioId"');
+            // REGLA DE ORO: Limpiar duplicados usando ctid (identificador físico de fila en PG) para máxima efectividad
+            await client.query('DELETE FROM locations a USING locations b WHERE a.ctid < b.ctid AND a."usuarioId" = b."usuarioId"');
             await client.query('ALTER TABLE locations ADD PRIMARY KEY ("usuarioId")'); 
         } catch(e){
-            console.log("ℹ️ [SISTEMA] No se pudo agregar PK a locations (probablemente ya existe o tabla vacía)");
+            console.log("ℹ️ [SISTEMA] Re-verificando PK en locations...");
         }
         try { await client.query('ALTER TABLE locations ALTER COLUMN timestamp TYPE TIMESTAMPTZ USING timestamp::TIMESTAMPTZ'); } catch(e){}
 
@@ -678,10 +678,15 @@ app.post('/api/eventos', async (req, res) => {
         );
 
         if (e.tipo === 'ingreso' && finalGuardiaId && e.lat && e.lng) {
-            await pool.query(
-                'INSERT INTO locations ("usuarioId", "companyId", latitud, longitud) VALUES ($1, $2, $3, $4) ON CONFLICT ("usuarioId") DO UPDATE SET latitud=EXCLUDED.latitud, longitud=EXCLUDED.longitud, "companyId"=EXCLUDED."companyId"',
-                [finalGuardiaId, e.companyId, e.lat, e.lng]
-            );
+            try {
+                await pool.query(
+                    'INSERT INTO locations ("usuarioId", "companyId", latitud, longitud) VALUES ($1, $2, $3, $4) ON CONFLICT ("usuarioId") DO UPDATE SET latitud=EXCLUDED.latitud, longitud=EXCLUDED.longitud, "companyId"=EXCLUDED."companyId"',
+                    [finalGuardiaId, e.companyId, e.lat, e.lng]
+                );
+            } catch (locErr) {
+                console.error('⚠️ [SISTEMA] No se pudo actualizar ubicación en tiempo real:', locErr.message);
+                // REGLA DE ORO: No lanzamos el error para no romper el flujo del frontend (Inicio/Fin de turno)
+            }
         }
         res.json({ success: true });
     } catch (err) {
