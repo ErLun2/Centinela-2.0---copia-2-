@@ -34,26 +34,38 @@ const getLocalISO = () => {
 };
 
 const sanitizeTime = (val) => {
-    // REGLA DE ORO: Forzar siempre el desfase de Argentina (UTC-3) para evitar errores de servidor
-    const getARTime = () => {
-        const now = new Date();
-        // Forzamos -3 horas (180 minutos) respecto a UTC
-        const arOffset = 180 * 60000;
-        return new Date(now.getTime() - arOffset).toISOString().slice(0, -1);
+    const getARTime = (inputVal) => {
+        try {
+            const d = inputVal ? new Date(inputVal) : new Date();
+            if (isNaN(d.getTime())) return new Date().toISOString().slice(0, -1);
+            
+            // Usamos Intl para forzar la conversión de UTC a Argentina (UTC-3)
+            // Esto garantiza que si llega "14:00Z", se convierta a "11:00"
+            const parts = new Intl.DateTimeFormat('en-CA', {
+                timeZone: 'America/Argentina/Buenos_Aires',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit',
+                hour12: false
+            }).formatToParts(d);
+            
+            const p = {};
+            parts.forEach(({type, value}) => p[type] = value);
+            return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}:${p.second}`;
+        } catch (e) {
+            return new Date().toISOString().slice(0, -1);
+        }
     };
 
     if (!val) return getARTime();
     if (typeof val !== 'string') return val;
     
-    // Si ya viene con el formato ISO pero tiene la 'Z', se la quitamos para que se guarde como hora local literal
-    let clean = val.replace(/Z$/i, '');
-    const low = clean.toLowerCase();
-    
-    if (low.includes('am') || low.includes('pm') || low.includes('a.m.') || low.includes('p.m.')) {
-        console.warn('⚠️ [SISTEMA] Formato am/pm detectado en backend, forzando hora Argentina:', val);
-        return getARTime();
+    const low = val.toLowerCase();
+    // Si viene am/pm o si tiene 'Z' (UTC), forzamos la conversión a AR
+    if (low.includes('am') || low.includes('pm') || val.includes('Z')) {
+        return getARTime(val);
     }
-    return clean;
+    
+    return val;
 };
 
 // --- CONFIGURACIÓN DE CORREO ---

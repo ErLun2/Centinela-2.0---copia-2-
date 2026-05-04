@@ -1316,14 +1316,11 @@ const CompanyDashboard = () => {
       // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro y marcador de 'Hoy'
       const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
       
-      const normalizedEvents = allEvents.map(e => {
-        const fechaReg = e.fechaRegistro || e.created_at || e.fecha || new Date().toISOString();
-        const eventDateStr = getARDateStr(fechaReg);
-        
         // REGLA DE ORO: Normalizar la hora en el origen de datos para que todo el panel (Historial, Resumen, Modal) se vea perfecto
-        let cleanHora = e.hora || '--:--';
+        // Extraemos solo el horario HH:mm:ss forzado a Argentina
+        let cleanHora = '--:--:--';
         try {
-          const rawForTime = e.hora || fechaReg;
+          const rawForTime = e.hora || e.fechaRegistro || e.created_at || new Date().toISOString();
           const d = new Date(rawForTime);
           if (!isNaN(d.getTime())) {
             cleanHora = new Intl.DateTimeFormat('es-AR', {
@@ -4148,16 +4145,10 @@ const CompanyDashboard = () => {
                         style={{ borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '0.85rem' }}
                       >
                         <td style={{ padding: '20px' }}>
-                          <div style={{ fontWeight: 'bold' }}>
-                            {(() => {
-                              const d = event.fechaRegistro || event.fecha || event.created_at;
-                              const dateStr = getARDateStr(d);
-                              if (!dateStr) return 'Hoy';
-                              const [y, m, day] = dateStr.split('-');
-                              return `${day}/${m}`;
-                            })()}
-                          </div>
-                          <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.4)' }}>{formatEventTime(event.hora)}</div>
+
+
+
+                          <div style={{ fontWeight: '900', fontSize: '1rem', color: 'var(--primary)' }}>{event.hora}</div>
                         </td>
                         <td
                           className="guard-link"
@@ -4518,11 +4509,8 @@ const CompanyDashboard = () => {
                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <div>
                            <h3 style={{ margin: 0, textTransform: 'uppercase', letterSpacing: '2px', color: 'var(--primary)', fontSize: '1rem' }}>Evidencia del Evento</h3>
-                           <div style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
-                              {mediaModal.event?.tipo?.toUpperCase() || 'NOTIFICACIÓN'} • {formatEventTime(mediaModal.event?.hora)} • {(() => {
-                                 const d = mediaModal.event?.fechaRegistro || mediaModal.event?.created_at || mediaModal.event?.fecha;
-                                 return getARDateStr(d).split('-').reverse().join('/') || 'Hoy';
-                              })()}
+                           <div style={{ fontSize: '0.9rem', fontWeight: '900', color: 'white', marginTop: '4px' }}>
+                              {mediaModal.event?.tipo?.toUpperCase() || 'NOTIFICACIÓN'} • {mediaModal.event?.hora || '--:--'}
                            </div>
                         </div>
                      </div>
