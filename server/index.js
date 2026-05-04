@@ -335,6 +335,7 @@ pool.connect()
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        try { await client.query('ALTER TABLE objectives ADD PRIMARY KEY (id)'); } catch(e){}
 
         // 11. QR Points
         await client.query(`
@@ -362,6 +363,7 @@ pool.connect()
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        try { await client.query('ALTER TABLE rondas ADD PRIMARY KEY (id)'); } catch(e){}
 
         // 13. Locations
         await client.query(`
@@ -373,6 +375,7 @@ pool.connect()
                 timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+        try { await client.query('ALTER TABLE locations ADD PRIMARY KEY ("usuarioId")'); } catch(e){}
         try { await client.query('ALTER TABLE locations ALTER COLUMN timestamp TYPE TIMESTAMPTZ USING timestamp::TIMESTAMPTZ'); } catch(e){}
 
         // 14. Usuario Maestro (REGLA DE ORO)
