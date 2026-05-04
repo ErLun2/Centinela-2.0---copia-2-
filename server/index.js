@@ -34,22 +34,24 @@ const getLocalISO = () => {
 };
 
 const sanitizeTime = (val) => {
-    if (!val) {
-        // Generar ISO local sin 'Z' como fallback seguro
+    // REGLA DE ORO: Forzar siempre el desfase de Argentina (UTC-3) para evitar errores de servidor
+    const getARTime = () => {
         const now = new Date();
-        const offset = now.getTimezoneOffset() * 60000;
-        return new Date(now.getTime() - offset).toISOString().slice(0, -1);
-    }
+        // Forzamos -3 horas (180 minutos) respecto a UTC
+        const arOffset = 180 * 60000;
+        return new Date(now.getTime() - arOffset).toISOString().slice(0, -1);
+    };
+
+    if (!val) return getARTime();
     if (typeof val !== 'string') return val;
     
-    // REGLA DE ORO: Limpiar am/pm y remover la 'Z' para que PG lo tome como local literal
+    // Si ya viene con el formato ISO pero tiene la 'Z', se la quitamos para que se guarde como hora local literal
     let clean = val.replace(/Z$/i, '');
     const low = clean.toLowerCase();
+    
     if (low.includes('am') || low.includes('pm') || low.includes('a.m.') || low.includes('p.m.')) {
-        console.warn('⚠️ [SISTEMA] Formato am/pm detectado en backend, forzando ISO Local:', val);
-        const now = new Date();
-        const offset = now.getTimezoneOffset() * 60000;
-        return new Date(now.getTime() - offset).toISOString().slice(0, -1);
+        console.warn('⚠️ [SISTEMA] Formato am/pm detectado en backend, forzando hora Argentina:', val);
+        return getARTime();
     }
     return clean;
 };

@@ -188,18 +188,25 @@ const formatEventTime = (timeStr) => {
   if (timeStr === 'S/H' || timeStr === 'S/I') return timeStr;
   
   try {
-    // Si contiene T o Z, es un ISO string o similar
-    if (timeStr.includes('T') || timeStr.includes('Z')) {
-      const d = new Date(timeStr);
-      if (!isNaN(d.getTime())) {
-        return d.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
-      }
-    }
-    // Intentar tomar los primeros 5 caracteres si parece HH:mm
-    if (/^\d{2}:\d{2}/.test(timeStr)) {
-      return timeStr.substring(0, 5);
+    const d = new Date(timeStr);
+    if (!isNaN(d.getTime())) {
+      // REGLA DE ORO: Forzar siempre America/Argentina/Buenos_Aires para eliminar el desfase de 3hs
+      return new Intl.DateTimeFormat('es-AR', {
+        timeZone: 'America/Argentina/Buenos_Aires',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+      }).format(d);
     }
   } catch (e) {}
+  
+  // Si no es una fecha válida pero tiene el formato ISO, intentar extraer la parte de la hora manualmente
+  if (typeof timeStr === 'string' && timeStr.includes('T')) {
+    const timePart = timeStr.split('T')[1];
+    if (timePart) return timePart.split('.')[0];
+  }
+
   return timeStr;
 };
 
