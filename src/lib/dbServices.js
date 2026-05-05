@@ -224,7 +224,7 @@ export const subscribeToTickets = (cb) => subscribeToResource('/tickets', (data)
         status: t.estado || t.status || 'Nuevo'
     }));
     cb(normalized);
-}, 1500);
+}, 10000);
 
 // ========================
 // FACTURACIÓN

@@ -45,9 +45,7 @@ const SupportDashboard = () => {
   const [selectedRepairCompany, setSelectedRepairCompany] = useState(null);
   const [tempUIConfig, setTempUIConfig] = useState({});
 
-  useEffect(() => {
-    loadData();
-  }, []);
+
 
   const handleRunDiagnostic = async (ticket) => {
     if (!ticket) return;
@@ -206,7 +204,9 @@ const SupportDashboard = () => {
 
   useEffect(() => {
     const unsub = loadData();
-    return () => unsub && unsub();
+    return () => {
+      if (unsub) unsub();
+    };
   }, []);
 
   // REGLA DE ORO: Carga bajo demanda de la dotación de la empresa seleccionada

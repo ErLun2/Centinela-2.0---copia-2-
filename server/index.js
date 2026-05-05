@@ -773,7 +773,16 @@ app.post('/api/eventos/:id/update', async (req, res) => {
 app.get('/api/tickets', async (req, res) => {
     try {
         const { rows } = await pool.query('SELECT * FROM tickets ORDER BY fecha DESC');
-        res.json(rows.map(t => ({...t, respuestas: JSON.parse(t.respuestas || '[]')})));
+        res.json(rows.map(t => {
+            let respuestas = [];
+            try {
+                respuestas = typeof t.respuestas === 'string' ? JSON.parse(t.respuestas || '[]') : (t.respuestas || []);
+            } catch(e) {
+                console.error("Error parsing respuestas for ticket", t.id, e);
+                respuestas = [];
+            }
+            return { ...t, respuestas };
+        }));
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
