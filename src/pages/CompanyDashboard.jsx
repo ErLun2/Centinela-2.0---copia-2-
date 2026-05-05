@@ -2823,10 +2823,13 @@ const CompanyDashboard = () => {
                         <button
                           onClick={async () => {
                             if (confirm(`¿Eliminar definitivamente el punto "${point.name}"? Los guardias no podrán escanearlo.`)) {
-                              const allQrPoints = JSON.parse(localStorage.getItem('centinela_qr_points') || '[]');
-                              const updated = allQrPoints.filter(p => p.id !== point.id);
-                              localStorage.setItem('centinela_qr_points', JSON.stringify(updated));
-                              setQrPoints(qrPoints.filter(p => p.id !== point.id));
+                              try {
+                                await db.eliminarQrPoint(point.id);
+                                setQrPoints(qrPoints.filter(p => p.id !== point.id));
+                                showToast("✅ Punto de control eliminado.");
+                              } catch (e) {
+                                showToast("Error al eliminar el punto.", "error");
+                              }
                             }
                           }}
                           className="noprint"
