@@ -412,6 +412,31 @@ pool.connect()
                 timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // 14. Sesiones de Ronda (ACTIVO)
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS ronda_sessions (
+                id VARCHAR(100) PRIMARY KEY,
+                "guardiaId" VARCHAR(100),
+                "companyId" VARCHAR(100),
+                "gpsInicio" TEXT,
+                "startTime" TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                "endTime" TIMESTAMPTZ,
+                status VARCHAR(50) DEFAULT 'En Curso'
+            )
+        `);
+
+        // 15. Auditoría
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS audit (
+                id SERIAL PRIMARY KEY,
+                tipo VARCHAR(100),
+                descripcion TEXT,
+                "usuarioId" VARCHAR(100),
+                "companyId" VARCHAR(100),
+                timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+            )
+        `);
         try { 
             // REGLA DE ORO: Limpiar duplicados usando ctid (identificador físico de fila en PG) para máxima efectividad
             await client.query('DELETE FROM locations a USING locations b WHERE a.ctid < b.ctid AND a."usuarioId" = b."usuarioId"');
@@ -977,6 +1002,60 @@ app.post('/api/rondas', async (req, res) => {
         );
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// 7. CONTROL DE RONDAS (STAFF APP)
+app.post('/api/rondas/start', async (req, res) => {
+    const { guardiaId, companyId, gpsInicio } = req.body;
+    const id = `session_${Date.now()}`;
+    try {
+        await pool.query(
+            'INSERT INTO ronda_sessions (id, "guardiaId", "companyId", "gpsInicio") VALUES ($1, $2, $3, $4)',
+            [id, guardiaId, companyId, gpsInicio]
+        );
+        res.json(id); // Devolvemos el ID como string plano para compatibilidad con StaffApp
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/rondas/finish/:id', async (req, res) => {
+    try {
+        await pool.query(
+            'UPDATE ronda_sessions SET status = $1, "endTime" = CURRENT_TIMESTAMP WHERE id = $2',
+            ['Completada', req.params.id]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/rondas/point', async (req, res) => {
+    // Registrar el punto escaneado como un mini-evento auditado
+    const { puntoId, usuarioId, companyId } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO audit (tipo, descripcion, "usuarioId", "companyId") VALUES ($1, $2, $3, $4)',
+            ['QR_SCAN', `Punto escaneado: ${puntoId}`, usuarioId, companyId]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/audit', async (req, res) => {
+    const { tipo, descripcion, usuarioId, companyId } = req.body;
+    try {
+        await pool.query(
+            'INSERT INTO audit (tipo, descripcion, "usuarioId", "companyId") VALUES ($1, $2, $3, $4)',
+            [tipo, descripcion, usuarioId, companyId]
+        );
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // SOPORTE DIAGNÓSTICO
