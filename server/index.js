@@ -311,11 +311,13 @@ pool.connect()
                 "nombreEmpresa" VARCHAR(255),
                 "empresaPlan" VARCHAR(100),
                 respuestas TEXT,
+                rating INT,
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
         try { await client.query('ALTER TABLE tickets ALTER COLUMN fecha TYPE TIMESTAMPTZ USING fecha::TIMESTAMPTZ'); } catch(e){}
         try { await client.query('ALTER TABLE tickets ALTER COLUMN created_at TYPE TIMESTAMPTZ USING created_at::TIMESTAMPTZ'); } catch(e){}
+        try { await client.query('ALTER TABLE tickets ADD COLUMN IF NOT EXISTS rating INT'); } catch(e){}
 
         // 7. Sistema Config
         await client.query(`
@@ -814,10 +816,10 @@ app.post('/api/tickets', async (req, res) => {
         
         const respJSON = JSON.stringify(mergedRespuestas);
         await pool.query(
-            `INSERT INTO tickets (id, titulo, descripcion, asunto, tipo, prioridad, estado, fecha, "usuarioId", "usuarioNombre", "usuarioEmail", "empresaId", "nombreEmpresa", "empresaPlan", respuestas) 
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15) 
-             ON CONFLICT (id) DO UPDATE SET estado=EXCLUDED.estado, respuestas=EXCLUDED.respuestas, prioridad=EXCLUDED.prioridad`,
-            [t.id, titulo, t.descripcion, t.asunto || titulo, t.tipo || 'Soporte', t.prioridad || 'Media', estado, t.fecha, t.usuarioId, t.usuarioNombre, t.usuarioEmail, t.empresaId, t.nombreEmpresa, t.empresaPlan, respJSON]
+            `INSERT INTO tickets (id, titulo, descripcion, asunto, tipo, prioridad, estado, fecha, "usuarioId", "usuarioNombre", "usuarioEmail", "empresaId", "nombreEmpresa", "empresaPlan", respuestas, rating) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16) 
+             ON CONFLICT (id) DO UPDATE SET estado=EXCLUDED.estado, respuestas=EXCLUDED.respuestas, prioridad=EXCLUDED.prioridad, rating=EXCLUDED.rating`,
+            [t.id, titulo, t.descripcion, t.asunto || titulo, t.tipo || 'Soporte', t.prioridad || 'Media', estado, t.fecha, t.usuarioId, t.usuarioNombre, t.usuarioEmail, t.empresaId, t.nombreEmpresa, t.empresaPlan, respJSON, t.rating]
         );
         res.json({ success: true, respuestas: mergedRespuestas });
     } catch (err) {
