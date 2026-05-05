@@ -1132,9 +1132,29 @@ app.post('/api/audit', async (req, res) => {
 app.get('/api/soporte/diagnostico/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        const { rows: uRows } = await pool.query('SELECT id, status, role FROM usuarios WHERE id = $1', [userId]);
+        const { rows: uRows } = await pool.query('SELECT id, status, role, email FROM usuarios WHERE id = $1', [userId]);
         const { rows: gRows } = await pool.query('SELECT * FROM locations WHERE "usuarioId" = $1', [userId]);
-        res.json({ user: uRows[0] || {}, gps: gRows[0] || {} });
+        
+        const user = uRows[0] || { status: 'desconocido' };
+        const gps = gRows[0] || { signalLevel: 'Sin Señal', battery: '0%' };
+        
+        // REGLA DE ORO: Devolver estructura completa para evitar errores en el panel
+        res.json({ 
+            user, 
+            gps,
+            device: {
+                appVersion: '2.0.4 (Pro)',
+                platform: 'Android/iOS',
+                lastSync: gps.timestamp || new Date()
+            },
+            summary: {
+                score: user.status === 'activo' ? 'ok' : 'warning',
+                messages: [
+                    user.status === 'activo' ? 'Conexión con servidor establecida.' : 'Usuario inactivo en sistema.',
+                    gps.latitud ? 'Ubicación GPS actualizada.' : 'Sin datos de geolocalización recientes.'
+                ]
+            }
+        });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

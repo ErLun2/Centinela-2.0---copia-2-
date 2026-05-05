@@ -76,8 +76,8 @@ const SupportDashboard = () => {
       });
       setDiagnosticLogs(logs);
       setDiagnosticSummary({
-        score: diag.summary.score,
-        summary: diag.summary.messages
+        score: diag?.summary?.score || 'warning',
+        summary: diag?.summary?.messages || ['Esperando datos...']
       });
       
       // FETCH INTELLIGENT SUGGESTIONS
@@ -420,10 +420,10 @@ const SupportDashboard = () => {
                             
                             {diagnosticData && (
                               <div style={{ marginTop: '20px', display: 'grid', gap: '10px' }}>
-                                 <DiagnosticItem label="Usuario" value={diagnosticData.user.status} color="#10b981" />
-                                 <DiagnosticItem label="App" value={diagnosticData.device.appVersion} />
-                                 <DiagnosticItem label="Señal GPS" value={diagnosticData.gps.signalLevel} />
-                                 <DiagnosticItem label="Batería" value={diagnosticData.gps.battery} />
+                                 <DiagnosticItem label="Usuario" value={diagnosticData?.user?.status || '---'} color="#10b981" />
+                                 <DiagnosticItem label="App" value={diagnosticData?.device?.appVersion || 'Desconocida'} />
+                                 <DiagnosticItem label="Señal GPS" value={diagnosticData?.gps?.signalLevel || 'N/A'} />
+                                 <DiagnosticItem label="Batería" value={diagnosticData?.gps?.battery || '---'} />
                               </div>
                             )}
                           </div>
