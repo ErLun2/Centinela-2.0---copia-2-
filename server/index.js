@@ -932,6 +932,39 @@ app.post('/api/payments/:id', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+app.get('/api/payments/history', async (req, res) => {
+    const { companyId } = req.query;
+    try {
+        let sql = 'SELECT * FROM payments';
+        let params = [];
+        if (companyId) {
+            sql += ' WHERE "companyId" = $1';
+            params.push(companyId);
+        }
+        sql += ' ORDER BY created_at DESC';
+        const { rows } = await pool.query(sql, params);
+        res.json(rows);
+    } catch (err) { res.json([]); }
+});
+
+app.post('/api/payments/webhook', async (req, res) => {
+    // Registro manual de pago desde el panel
+    const data = req.body;
+    const id = `PAY-${Date.now()}`;
+    try {
+        await pool.query(
+            'INSERT INTO payments (id, "companyId", monto, status, plan, "metodoPago") VALUES ($1, $2, $3, $4, $5, $6)',
+            [id, data.companyId, data.monto, 'approved', data.plan, 'Manual/Transferencia']
+        );
+        res.json({ success: true, id });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/payments/create-preference', async (req, res) => {
+    // Stub para Mercado Pago
+    res.json({ id: 'pref_' + Date.now(), init_point: '#' });
+});
+
 app.get('/api/pagos/config', async (req, res) => {
     try {
         const { rows } = await pool.query('SELECT value FROM sistema_config WHERE key = \'mp_config\'');
@@ -1100,8 +1133,25 @@ app.post('/api/soporte/ejecutar', async (req, res) => {
     const { actionId, userId, ticketId } = req.body;
     try {
         if (actionId === 'reset_password') await pool.query('UPDATE usuarios SET password = $1, password_changed = false WHERE id = $2', ['soporte123', userId]);
+        if (actionId === 'activate_user') await pool.query('UPDATE usuarios SET status = \'activo\' WHERE id = $1', [userId]);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.post('/api/send-proposal', async (req, res) => {
+    // Registro de auditoría de envío de propuesta
+    const { email, planId } = req.body;
+    try {
+        await pool.query('INSERT INTO audit (tipo, descripcion) VALUES ($1, $2)', ['PROPOSAL_SENT', `Propuesta enviada a ${email} para el plan ${planId}`]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.get('/api/suscripciones', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM suscripciones');
+        res.json(rows);
+    } catch (err) { res.json([]); }
 });
 
 const PORT = process.env.PORT || 3001;
