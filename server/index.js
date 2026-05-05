@@ -1031,6 +1031,34 @@ app.post('/api/rondas/finish/:id', async (req, res) => {
     }
 });
 
+// 8. PUNTOS QR
+app.get('/api/qr_points', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM qr_points');
+        res.json(rows.map(p => ({ ...p, companyId: p.companyId })));
+    } catch (err) { res.json([]); }
+});
+
+app.post('/api/qr_points', async (req, res) => {
+    const p = req.body;
+    try {
+        await pool.query(
+            `INSERT INTO qr_points (id, name, "objectiveId", code, "companyId") 
+             VALUES ($1, $2, $3, $4, $5) 
+             ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, "objectiveId"=EXCLUDED."objectiveId", code=EXCLUDED.code, "companyId"=EXCLUDED."companyId"`,
+            [p.id, p.name, p.objectiveId, p.code, p.companyId]
+        );
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+app.delete('/api/qr_points/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM qr_points WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
 app.post('/api/rondas/point', async (req, res) => {
     // Registrar el punto escaneado como un mini-evento auditado
     const { puntoId, usuarioId, companyId } = req.body;
