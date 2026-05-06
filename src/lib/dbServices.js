@@ -168,9 +168,18 @@ export const crearEvento = async (empresaId, dataEvento) => {
   };
 
   // REGLA DE ORO: Si hay multimedia en Base64, subirla a IlimitadoHost
-  if (newEvent.fotoUrl && newEvent.fotoUrl.startsWith('data:')) newEvent.fotoUrl = await subirArchivoAStorage(newEvent.fotoUrl);
-  if (newEvent.videoUrl && newEvent.videoUrl.startsWith('data:')) newEvent.videoUrl = await subirArchivoAStorage(newEvent.videoUrl);
-  if (newEvent.audioUrl && newEvent.audioUrl.startsWith('data:')) newEvent.audioUrl = await subirArchivoAStorage(newEvent.audioUrl);
+  const processMedia = async (url) => (url && typeof url === 'string' && url.startsWith('data:')) ? await subirArchivoAStorage(url) : url;
+
+  newEvent.fotoUrl = await processMedia(newEvent.fotoUrl);
+  newEvent.videoUrl = await processMedia(newEvent.videoUrl);
+  newEvent.audioUrl = await processMedia(newEvent.audioUrl);
+
+  // También revisar si vienen dentro de un objeto de adjuntos (común en StaffApp)
+  if (newEvent.adjuntos) {
+    if (newEvent.adjuntos.foto) newEvent.adjuntos.foto = await processMedia(newEvent.adjuntos.foto);
+    if (newEvent.adjuntos.video) newEvent.adjuntos.video = await processMedia(newEvent.adjuntos.video);
+    if (newEvent.adjuntos.audio) newEvent.adjuntos.audio = await processMedia(newEvent.adjuntos.audio);
+  }
 
   await apiRequest('/eventos', 'POST', newEvent);
   return newEvent.id;
