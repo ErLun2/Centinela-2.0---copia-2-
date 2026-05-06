@@ -39,10 +39,16 @@ export const subirArchivoAStorage = async (base64OrFile) => {
         }
 
         const res = await fetch(STORAGE_URL, { method: 'POST', body: formData });
+        if (!res.ok) throw new Error(`Servidor respondió con status: ${res.status}`);
+        
         const data = await res.json();
-        return data.success ? data.url : base64OrFile;
+        if (!data.success) throw new Error(data.message || "Error desconocido en servidor");
+        
+        return data.url;
     } catch (error) {
-        console.error("Error subiendo a IlimitadoHost:", error);
+        // REGLA DE ORO: Solo para diagnóstico temporal
+        console.error("Error diagnóstico subida:", error);
+        window.alert("AVISO TÉCNICO: La subida a IlimitadoHost falló. Motivo: " + error.message + ". La imagen se guardará en Render como respaldo.");
         return base64OrFile;
     }
 };
