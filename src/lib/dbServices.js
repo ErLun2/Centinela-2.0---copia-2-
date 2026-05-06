@@ -168,7 +168,13 @@ export const crearEvento = async (empresaId, dataEvento) => {
   };
 
   // REGLA DE ORO: Si hay multimedia en Base64, subirla a IlimitadoHost
-  const processMedia = async (url) => (url && typeof url === 'string' && url.startsWith('data:')) ? await subirArchivoAStorage(url) : url;
+  const processMedia = async (url) => {
+    if (url && typeof url === 'string' && url.includes('data:')) {
+        window.alert("SISTEMA: Detectado multimedia pesado. Iniciando subida a IlimitadoHost...");
+        return await subirArchivoAStorage(url);
+    }
+    return url;
+  };
 
   newEvent.fotoUrl = await processMedia(newEvent.fotoUrl);
   newEvent.videoUrl = await processMedia(newEvent.videoUrl);
