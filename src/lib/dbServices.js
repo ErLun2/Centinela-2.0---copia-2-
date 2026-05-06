@@ -12,7 +12,7 @@ const getApiUrl = () => {
 };
 
 export const API_URL = getApiUrl();
-const STORAGE_URL = 'https://centinela-security.com/public_html/uploads/upload.php'; // URL de tu servidor IlimitadoHost
+const STORAGE_URL = 'https://centinela-security.com/upload.php'; // URL estándar en tu raíz de IlimitadoHost
 
 // Función centralizada para subir archivos a IlimitadoHost
 export const subirArchivoAStorage = async (base64OrFile) => {
