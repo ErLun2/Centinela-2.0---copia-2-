@@ -21,28 +21,29 @@ export const subirArchivoAStorage = async (base64OrFile) => {
         let formData = new FormData();
         
         if (typeof base64OrFile === 'string' && base64OrFile.startsWith('data:')) {
-            // Convertir Base64 a Blob para el envío
-            const response = await fetch(base64OrFile);
-            const blob = await response.blob();
-            // Determinar extensión basándose en el mime-type
-            const mimeType = base64OrFile.split(';')[0].split(':')[1];
-            const ext = mimeType.split('/')[1] || 'png';
+            // Método robusto: Convertir Base64 a Blob manualmente
+            const parts = base64OrFile.split(';base64,');
+            const contentType = parts[0].split(':')[1];
+            const raw = window.atob(parts[1]);
+            const rawLength = raw.length;
+            const uInt8Array = new Uint8Array(rawLength);
+            for (let i = 0; i < rawLength; ++i) uInt8Array[i] = raw.charCodeAt(i);
+            const blob = new Blob([uInt8Array], { type: contentType });
+            
+            const ext = contentType.split('/')[1] || 'png';
             formData.append('file', blob, `media_${Date.now()}.${ext}`);
         } else if (base64OrFile instanceof File || base64OrFile instanceof Blob) {
             formData.append('file', base64OrFile);
         } else {
-            return base64OrFile; // Si ya es una URL, la devolvemos
+            return base64OrFile;
         }
 
-        const res = await fetch(STORAGE_URL, {
-            method: 'POST',
-            body: formData
-        });
+        const res = await fetch(STORAGE_URL, { method: 'POST', body: formData });
         const data = await res.json();
         return data.success ? data.url : base64OrFile;
     } catch (error) {
         console.error("Error subiendo a IlimitadoHost:", error);
-        return base64OrFile; // Fallback al original si falla el upload
+        return base64OrFile;
     }
 };
 
