@@ -12,6 +12,39 @@ const getApiUrl = () => {
 };
 
 export const API_URL = getApiUrl();
+const STORAGE_URL = 'https://centinela-security.com/public_html/uploads/upload.php'; // URL de tu servidor IlimitadoHost
+
+// Función centralizada para subir archivos a IlimitadoHost
+export const subirArchivoAStorage = async (base64OrFile) => {
+    if (!base64OrFile) return null;
+    try {
+        let formData = new FormData();
+        
+        if (typeof base64OrFile === 'string' && base64OrFile.startsWith('data:')) {
+            // Convertir Base64 a Blob para el envío
+            const response = await fetch(base64OrFile);
+            const blob = await response.blob();
+            // Determinar extensión basándose en el mime-type
+            const mimeType = base64OrFile.split(';')[0].split(':')[1];
+            const ext = mimeType.split('/')[1] || 'png';
+            formData.append('file', blob, `media_${Date.now()}.${ext}`);
+        } else if (base64OrFile instanceof File || base64OrFile instanceof Blob) {
+            formData.append('file', base64OrFile);
+        } else {
+            return base64OrFile; // Si ya es una URL, la devolvemos
+        }
+
+        const res = await fetch(STORAGE_URL, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        return data.success ? data.url : base64OrFile;
+    } catch (error) {
+        console.error("Error subiendo a IlimitadoHost:", error);
+        return base64OrFile; // Fallback al original si falla el upload
+    }
+};
 
 export const apiRequest = async (endpoint, method = 'GET', body = null) => {
     try {
@@ -126,6 +159,12 @@ export const crearEvento = async (empresaId, dataEvento) => {
       fechaRegistro: dataEvento.fechaRegistro || nowISO,
       hora: dataEvento.hora || nowISO
   };
+
+  // REGLA DE ORO: Si hay multimedia en Base64, subirla a IlimitadoHost
+  if (newEvent.fotoUrl && newEvent.fotoUrl.startsWith('data:')) newEvent.fotoUrl = await subirArchivoAStorage(newEvent.fotoUrl);
+  if (newEvent.videoUrl && newEvent.videoUrl.startsWith('data:')) newEvent.videoUrl = await subirArchivoAStorage(newEvent.videoUrl);
+  if (newEvent.audioUrl && newEvent.audioUrl.startsWith('data:')) newEvent.audioUrl = await subirArchivoAStorage(newEvent.audioUrl);
+
   await apiRequest('/eventos', 'POST', newEvent);
   return newEvent.id;
 };
@@ -204,7 +243,21 @@ export const actualizarEmpresa = async (idOrData, data) => {
 // ========================
 export const registrarNuevoTicket = async (ticketData) => {
     const id = ticketData.id || "TK-" + Math.random().toString(36).substr(2, 9).toUpperCase();
-    const newTicket = { ...ticketData, id, fecha: ticketData.fecha || new Date().toISOString() };
+    let newTicket = { ...ticketData, id, fecha: ticketData.fecha || new Date().toISOString() };
+    
+    // REGLA DE ORO: Subir adjuntos base64 a IlimitadoHost para ahorrar espacio en DB
+    if (newTicket.adjunto && newTicket.adjunto.startsWith('data:')) {
+        newTicket.adjunto = await subirArchivoAStorage(newTicket.adjunto);
+    }
+
+    if (newTicket.respuestas && Array.isArray(newTicket.respuestas)) {
+        for (let i = 0; i < newTicket.respuestas.length; i++) {
+            if (newTicket.respuestas[i].adjunto && newTicket.respuestas[i].adjunto.startsWith('data:')) {
+                newTicket.respuestas[i].adjunto = await subirArchivoAStorage(newTicket.respuestas[i].adjunto);
+            }
+        }
+    }
+
     const result = await apiRequest('/tickets', 'POST', newTicket);
     // Retornamos el ticket actualizado con las respuestas que el servidor fusionó
     return result.respuestas ? { ...newTicket, respuestas: result.respuestas } : newTicket;
