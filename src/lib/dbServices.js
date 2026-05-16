@@ -269,6 +269,7 @@ export const registrarNuevoTicket = async (ticketData) => {
     
     // REGLA DE ORO: Subir adjuntos base64 a IlimitadoHost para ahorrar espacio en DB
     if (newTicket.adjunto && newTicket.adjunto.startsWith('data:')) {
+        window.alert("SISTEMA: Detectado adjunto en Ticket. Subiendo a IlimitadoHost...");
         newTicket.adjunto = await subirArchivoAStorage(newTicket.adjunto);
     }
 
