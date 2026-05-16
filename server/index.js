@@ -918,6 +918,10 @@ app.post('/api/send-proposal', async (req, res) => {
             html: `<h1>Plan ${plan.nombre}</h1><p>Precio: $${plan.precio}</p>`
         };
         await transporter.sendMail(mailOptions);
+        
+        // Registro de auditoría de envío de propuesta (unificado para mantener la Regla de Oro)
+        await pool.query('INSERT INTO audit (tipo, descripcion) VALUES ($1, $2)', ['PROPOSAL_SENT', `Propuesta enviada a ${email} para el plan ${planId}`]);
+        
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -1169,14 +1173,7 @@ app.post('/api/soporte/ejecutar', async (req, res) => {
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-app.post('/api/send-proposal', async (req, res) => {
-    // Registro de auditoría de envío de propuesta
-    const { email, planId } = req.body;
-    try {
-        await pool.query('INSERT INTO audit (tipo, descripcion) VALUES ($1, $2)', ['PROPOSAL_SENT', `Propuesta enviada a ${email} para el plan ${planId}`]);
-        res.json({ success: true });
-    } catch (err) { res.status(500).json({ error: err.message }); }
-});
+// Nota: La ruta duplicada /api/send-proposal que estaba aquí fue unificada arriba con la principal para evitar que sobrescriba el envío real de correos.
 
 app.get('/api/suscripciones', async (req, res) => {
     try {
