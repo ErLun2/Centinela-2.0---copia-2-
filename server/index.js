@@ -91,6 +91,14 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Verificar variables de entorno de correo al arrancar (Regla de Oro: Informativo y seguro)
+if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("⚠️ [SMTP-AVISO] SMTP_USER o SMTP_PASS no están configurados en las variables de entorno. Los correos electrónicos de propuestas y formularios no se enviarán.");
+} else {
+    console.log(`📧 [SMTP-INFO] Servidor de correo configurado. Host: ${process.env.SMTP_HOST || 'smtp.gmail.com (predeterminado)'}, Puerto: ${process.env.SMTP_PORT || '587 (predeterminado)'}, Usuario: ${process.env.SMTP_USER}`);
+}
+
+
 // Probar conexión e Inicializar Tablas automáticamente
 pool.connect()
   .then(async client => {
@@ -897,11 +905,58 @@ app.post('/api/demo-requests', async (req, res) => {
                 subject: `Lead: ${empresa}`,
                 html: `<p>Nombre: ${nombre}</p><p>Empresa: ${empresa}</p>`
             };
-            transporter.sendMail(mailOptions).catch(e => console.error(e));
+            transporter.sendMail(mailOptions).catch(e => {
+                console.error("❌ [SMTP-ERROR] Error al enviar correo de demo:", e.message);
+            });
+        } else {
+            console.warn("⚠️ [SMTP-AVISO] Omitiendo envío de correo de demo: SMTP_USER o SMTP_PASS no están configurados.");
         }
         res.json({ success: true });
     } catch (err) {
+        console.error("❌ [DEMO-ERROR] Error al registrar solicitud de demo en DB:", err.message);
         res.status(200).json({ success: true });
+    }
+});
+
+// Endpoint de diagnóstico para probar SMTP (Regla de Oro: Seguro y aislado)
+app.get('/api/test-email', async (req, res) => {
+    const diagnostics = {
+        has_smtp_user: !!process.env.SMTP_USER,
+        smtp_user: process.env.SMTP_USER ? `${process.env.SMTP_USER.slice(0, 3)}...` : 'not_configured',
+        has_smtp_pass: !!process.env.SMTP_PASS,
+        smtp_host: process.env.SMTP_HOST || 'smtp.gmail.com (default)',
+        smtp_port: process.env.SMTP_PORT || '587 (default)',
+    };
+    
+    if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+        return res.status(400).json({
+            success: false,
+            message: "Falta configurar SMTP_USER o SMTP_PASS en el servidor de Render (Environment Variables).",
+            diagnostics
+        });
+    }
+    
+    try {
+        const mailOptions = {
+            from: `"Centinela Test" <${process.env.SMTP_USER}>`,
+            to: 'ventas@centinela-security.com',
+            subject: 'Prueba de Conexión SMTP',
+            text: 'Si recibes este mensaje, la configuración SMTP en Render está funcionando perfectamente.'
+        };
+        await transporter.sendMail(mailOptions);
+        res.json({
+            success: true,
+            message: "¡Correo de prueba enviado con éxito a ventas@centinela-security.com!",
+            diagnostics
+        });
+    } catch (err) {
+        res.status(500).json({
+            success: false,
+            message: "Error al enviar el correo de prueba.",
+            error: err.message,
+            stack: err.stack,
+            diagnostics
+        });
     }
 });
 
@@ -912,7 +967,7 @@ app.post('/api/send-proposal', async (req, res) => {
         const { rows } = await pool.query('SELECT * FROM planes WHERE id = $1', [planId]);
         const plan = rows[0] || { nombre: planId, precio: 'Consultar' };
         const mailOptions = {
-            from: `"Centinela" <cristianangel_vidal@centinela-security.com>`,
+            from: `"Centinela" <${process.env.SMTP_USER}>`,
             to: email,
             subject: `Propuesta Centinela - ${companyName}`,
             html: `<h1>Plan ${plan.nombre}</h1><p>Precio: $${plan.precio}</p>`
