@@ -117,6 +117,7 @@ const sendMail = async (mailOptions) => {
             body: JSON.stringify({
                 from: fromHeader,
                 to: toField,
+                reply_to: mailOptions.replyTo || mailOptions.reply_to,
                 subject: mailOptions.subject,
                 html: mailOptions.html || mailOptions.text,
                 text: mailOptions.text
@@ -952,8 +953,9 @@ app.post('/api/demo-requests', async (req, res) => {
             const mailOptions = {
                 from: `"Centinela Lead" <${process.env.SMTP_USER}>`,
                 to: 'ventas@centinela-security.com',
+                replyTo: email,
                 subject: `Lead: ${empresa}`,
-                html: `<p>Nombre: ${nombre}</p><p>Empresa: ${empresa}</p>`
+                html: `<p>Nombre: ${nombre}</p><p>Empresa: ${empresa}</p><p>Email: ${email}</p><p>Teléfono: ${telefono}</p><p>Mensaje: ${mensaje}</p>`
             };
             sendMail(mailOptions).catch(e => {
                 console.error("❌ [SMTP-ERROR] Error al enviar correo de demo:", e.message);
