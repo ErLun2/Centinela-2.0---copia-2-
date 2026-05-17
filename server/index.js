@@ -91,6 +91,49 @@ const transporter = nodemailer.createTransport({
     }
 });
 
+// Función unificada para enviar correos (Soporta SMTP tradicional y HTTP API de Resend para esquivar bloqueos de puerto en Render)
+const sendMail = async (mailOptions) => {
+    // Si el host es Resend o la clave empieza con re_, usamos la API HTTP REST para saltar los bloqueos de puerto (puerto 465/587) en Render Free Tier
+    if (process.env.SMTP_HOST === 'smtp.resend.com' || (process.env.SMTP_PASS && process.env.SMTP_PASS.startsWith('re_'))) {
+        console.log(`📧 [EMAIL-HTTP] Enviando vía API REST de Resend a: ${mailOptions.to}`);
+        
+        const fromEmail = process.env.SMTP_USER || 'admin@centinela-security.com';
+        const fromHeader = mailOptions.from ? mailOptions.from : `"Centinela" <${fromEmail}>`;
+        const toField = Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to];
+
+        const response = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${process.env.SMTP_PASS}`
+            },
+            body: JSON.stringify({
+                from: fromHeader,
+                to: toField,
+                subject: mailOptions.subject,
+                html: mailOptions.html || mailOptions.text,
+                text: mailOptions.text
+            })
+        });
+
+        const resData = await response.json();
+        if (!response.ok) {
+            throw new Error(`Resend REST API Error: ${resData.message || response.statusText}`);
+        }
+        console.log(`✅ [EMAIL-HTTP] Enviado con éxito vía Resend API. ID: ${resData.id}`);
+        return resData;
+    } else {
+        // SMTP Tradicional
+        console.log(`📧 [EMAIL-SMTP] Enviando vía SMTP tradicional a: ${mailOptions.to}`);
+        return new Promise((resolve, reject) => {
+            transporter.sendMail(mailOptions, (err, info) => {
+                if (err) return reject(err);
+                resolve(info);
+            });
+        });
+    }
+};
+
 // Verificar variables de entorno de correo al arrancar (Regla de Oro: Informativo y seguro)
 if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
     console.warn("⚠️ [SMTP-AVISO] SMTP_USER o SMTP_PASS no están configurados en las variables de entorno. Los correos electrónicos de propuestas y formularios no se enviarán.");
@@ -905,7 +948,7 @@ app.post('/api/demo-requests', async (req, res) => {
                 subject: `Lead: ${empresa}`,
                 html: `<p>Nombre: ${nombre}</p><p>Empresa: ${empresa}</p>`
             };
-            transporter.sendMail(mailOptions).catch(e => {
+            sendMail(mailOptions).catch(e => {
                 console.error("❌ [SMTP-ERROR] Error al enviar correo de demo:", e.message);
             });
         } else {
@@ -943,7 +986,7 @@ app.get('/api/test-email', async (req, res) => {
             subject: 'Prueba de Conexión SMTP',
             text: 'Si recibes este mensaje, la configuración SMTP en Render está funcionando perfectamente.'
         };
-        await transporter.sendMail(mailOptions);
+        await sendMail(mailOptions);
         res.json({
             success: true,
             message: "¡Correo de prueba enviado con éxito a ventas@centinela-security.com!",
@@ -972,7 +1015,7 @@ app.post('/api/send-proposal', async (req, res) => {
             subject: `Propuesta Centinela - ${companyName}`,
             html: `<h1>Plan ${plan.nombre}</h1><p>Precio: $${plan.precio}</p>`
         };
-        await transporter.sendMail(mailOptions);
+        await sendMail(mailOptions);
         
         // Registro de auditoría de envío de propuesta (unificado para mantener la Regla de Oro)
         await pool.query('INSERT INTO audit (tipo, descripcion) VALUES ($1, $2)', ['PROPOSAL_SENT', `Propuesta enviada a ${email} para el plan ${planId}`]);
