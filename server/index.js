@@ -97,8 +97,15 @@ const sendMail = async (mailOptions) => {
     if (process.env.SMTP_HOST === 'smtp.resend.com' || (process.env.SMTP_PASS && process.env.SMTP_PASS.startsWith('re_'))) {
         console.log(`📧 [EMAIL-HTTP] Enviando vía API REST de Resend a: ${mailOptions.to}`);
         
-        const fromEmail = process.env.SMTP_USER || 'admin@centinela-security.com';
-        const fromHeader = mailOptions.from ? mailOptions.from : `"Centinela" <${fromEmail}>`;
+        let fromHeader = mailOptions.from ? mailOptions.from : `"Centinela" <admin@centinela-security.com>`;
+        // Si el remitente contiene '<resend>' (debido al SMTP_USER), lo cambiamos al correo oficial verificado
+        if (fromHeader.includes('<resend>') || fromHeader.includes('<resend.com>')) {
+            fromHeader = fromHeader.replace(/<resend>/g, '<admin@centinela-security.com>').replace(/<resend\.com>/g, '<admin@centinela-security.com>');
+        }
+        // Si no tiene arroba por alguna razón, forzamos el remitente válido
+        if (!fromHeader.includes('@')) {
+            fromHeader = `"Centinela" <admin@centinela-security.com>`;
+        }
         const toField = Array.isArray(mailOptions.to) ? mailOptions.to : [mailOptions.to];
 
         const response = await fetch('https://api.resend.com/emails', {
