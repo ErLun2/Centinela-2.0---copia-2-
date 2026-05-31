@@ -507,8 +507,8 @@ pool.connect()
                 contacto VARCHAR(255),
                 email VARCHAR(255),
                 plan_id VARCHAR(100),
-                guardias INTEGER DEFAULT 0,
-                panic_users INTEGER DEFAULT 0,
+                guardias BIGINT DEFAULT 0,
+                panic_users BIGINT DEFAULT 0,
                 mensaje TEXT,
                 enlace TEXT,
                 imagen_url TEXT,
@@ -517,6 +517,10 @@ pool.connect()
                 sent_at TIMESTAMPTZ
             )
         `);
+        try {
+            await client.query('ALTER TABLE propuestas ALTER COLUMN guardias TYPE BIGINT');
+            await client.query('ALTER TABLE propuestas ALTER COLUMN panic_users TYPE BIGINT');
+        } catch(e){}
         try { 
             // REGLA DE ORO: Limpiar duplicados usando ctid (identificador físico de fila en PG) para máxima efectividad
             await client.query('DELETE FROM locations a USING locations b WHERE a.ctid < b.ctid AND a."usuarioId" = b."usuarioId"');
