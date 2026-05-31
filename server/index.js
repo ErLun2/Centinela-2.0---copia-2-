@@ -6,6 +6,42 @@ import dotenv from 'dotenv';
 dotenv.config();
 import pool from './db.js';
 import nodemailer from 'nodemailer';
+
+// CONFIG COMPATIBILITY UTILITIES (REGLA DE ORO)
+async function getSysConfigValue(key, defaultValue = null) {
+    try {
+        const { rows } = await pool.query('SELECT valor FROM sistema_config WHERE clave = $1', [key]);
+        if (rows.length > 0 && rows[0].valor) return JSON.parse(rows[0].valor);
+    } catch (e) {
+        try {
+            const { rows } = await pool.query('SELECT value FROM sistema_config WHERE key = $1', [key]);
+            if (rows.length > 0 && rows[0].value) return JSON.parse(rows[0].value);
+        } catch (innerErr) {
+            console.error(`Error querying config key ${key}:`, innerErr.message);
+        }
+    }
+    return defaultValue;
+}
+
+async function setSysConfigValue(key, value) {
+    const stringVal = JSON.stringify(value);
+    try {
+        const updateRes = await pool.query('UPDATE sistema_config SET valor = $1 WHERE clave = $2', [stringVal, key]);
+        if (updateRes.rowCount > 0) return true;
+        await pool.query('INSERT INTO sistema_config (clave, valor) VALUES ($1, $2)', [key, stringVal]);
+        return true;
+    } catch (e) {
+        try {
+            const updateRes = await pool.query('UPDATE sistema_config SET value = $1 WHERE key = $2', [stringVal, key]);
+            if (updateRes.rowCount > 0) return true;
+            await pool.query('INSERT INTO sistema_config (key, value) VALUES ($1, $2)', [key, stringVal]);
+            return true;
+        } catch (innerErr) {
+            console.error(`Error setting config key ${key}:`, innerErr.message);
+            throw innerErr;
+        }
+    }
+}
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
 import compression from 'compression';
@@ -937,8 +973,8 @@ app.post('/api/tickets', async (req, res) => {
 // 6. CONFIGURACIÓN
 app.get('/api/config/:key', async (req, res) => {
     try {
-        const { rows } = await pool.query('SELECT value FROM sistema_config WHERE key = $1', [req.params.key]);
-        if (rows.length > 0) res.json(JSON.parse(rows[0].value));
+        const val = await getSysConfigValue(req.params.key);
+        if (val !== null) res.json(val);
         else res.status(404).json({ error: "Config not found" });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -947,11 +983,7 @@ app.get('/api/config/:key', async (req, res) => {
 
 app.post('/api/config/:key', async (req, res) => {
     try {
-        const value = JSON.stringify(req.body);
-        await pool.query(
-            'INSERT INTO sistema_config (key, value) VALUES ($1, $2) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-            [req.params.key, value]
-        );
+        await setSysConfigValue(req.params.key, req.body);
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
@@ -975,15 +1007,11 @@ app.get('/api/debug-db-config', async (req, res) => {
 app.post('/api/auth/admin-password', async (req, res) => {
     const { currentPassword, newPassword } = req.body;
     try {
-        const { rows } = await pool.query('SELECT value FROM sistema_config WHERE key = \'admin_pass\'');
-        let savedPass = rows.length > 0 ? JSON.parse(rows[0].value) : '123456';
+        let savedPass = await getSysConfigValue('admin_pass', '123456');
         if (currentPassword !== savedPass && currentPassword !== '123456' && currentPassword !== 'admin') {
             return res.status(401).json({ error: 'La contraseña actual es incorrecta' });
         }
-        await pool.query(
-            'INSERT INTO sistema_config (key, value) VALUES (\'admin_pass\', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value',
-            [JSON.stringify(newPassword)]
-        );
+        await setSysConfigValue('admin_pass', newPassword);
         res.json({ success: true, message: 'Contraseña actualizada correctamente' });
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -993,8 +1021,7 @@ app.post('/api/auth/admin-password', async (req, res) => {
 app.post('/api/auth/verify-admin', async (req, res) => {
     const { password } = req.body;
     try {
-        const { rows } = await pool.query('SELECT value FROM sistema_config WHERE key = \'admin_pass\'');
-        let savedPass = rows.length > 0 ? JSON.parse(rows[0].value) : '123456';
+        let savedPass = await getSysConfigValue('admin_pass', '123456');
         if (password === savedPass || password === 'admin' || password === '123456') res.json({ success: true });
         else res.status(401).json({ success: false, error: 'Credenciales inválidas' });
     } catch (err) {
@@ -1399,14 +1426,14 @@ app.post('/api/payments/create-preference', async (req, res) => {
 
 app.get('/api/pagos/config', async (req, res) => {
     try {
-        const { rows } = await pool.query('SELECT value FROM sistema_config WHERE key = \'mp_config\'');
-        res.json(rows.length > 0 ? JSON.parse(rows[0].value) : {});
+        const val = await getSysConfigValue('mp_config');
+        res.json(val || {});
     } catch (err) { res.json({}); }
 });
 
 app.post('/api/pagos/config', async (req, res) => {
     try {
-        await pool.query('INSERT INTO sistema_config (key, value) VALUES (\'mp_config\', $1) ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value', [JSON.stringify(req.body)]);
+        await setSysConfigValue('mp_config', req.body);
         res.json({ success: true });
     } catch (err) { res.status(500).json({ error: err.message }); }
 });
