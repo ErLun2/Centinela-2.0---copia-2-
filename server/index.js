@@ -498,6 +498,25 @@ pool.connect()
                 timestamp TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
             )
         `);
+
+        // 16. Propuestas CRM
+        await client.query(`
+            CREATE TABLE IF NOT EXISTS propuestas (
+                id VARCHAR(100) PRIMARY KEY,
+                empresa VARCHAR(255),
+                contacto VARCHAR(255),
+                email VARCHAR(255),
+                plan_id VARCHAR(100),
+                guardias INTEGER DEFAULT 0,
+                panic_users INTEGER DEFAULT 0,
+                mensaje TEXT,
+                enlace TEXT,
+                imagen_url TEXT,
+                estado VARCHAR(50) DEFAULT 'Borrador',
+                created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+                sent_at TIMESTAMPTZ
+            )
+        `);
         try { 
             // REGLA DE ORO: Limpiar duplicados usando ctid (identificador físico de fila en PG) para máxima efectividad
             await client.query('DELETE FROM locations a USING locations b WHERE a.ctid < b.ctid AND a."usuarioId" = b."usuarioId"');
@@ -1031,6 +1050,254 @@ app.post('/api/send-proposal', async (req, res) => {
         
         res.json({ success: true });
     } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// NUEVOS ENDPOINTS PARA CRM DE PROPUESTAS
+app.get('/api/propuestas', async (req, res) => {
+    try {
+        const { rows } = await pool.query('SELECT * FROM propuestas ORDER BY created_at DESC');
+        res.json(rows);
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/propuestas', async (req, res) => {
+    const p = req.body;
+    try {
+        const id = p.id || `prop_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        await pool.query(
+            `INSERT INTO propuestas (id, empresa, contacto, email, plan_id, guardias, panic_users, mensaje, enlace, imagen_url, estado, sent_at)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             ON CONFLICT (id) DO UPDATE SET empresa=EXCLUDED.empresa, contacto=EXCLUDED.contacto, email=EXCLUDED.email, plan_id=EXCLUDED.plan_id, guardias=EXCLUDED.guardias, panic_users=EXCLUDED.panic_users, mensaje=EXCLUDED.mensaje, enlace=EXCLUDED.enlace, imagen_url=EXCLUDED.imagen_url, estado=EXCLUDED.estado, sent_at=EXCLUDED.sent_at`,
+            [
+                id,
+                p.empresa || null,
+                p.contacto || null,
+                p.email || null,
+                p.plan_id || 'profesional',
+                p.guardias || 0,
+                p.panic_users || 0,
+                p.mensaje || null,
+                p.enlace || null,
+                p.imagen_url || null,
+                p.estado || 'Borrador',
+                p.sent_at || null
+            ]
+        );
+        res.json({ success: true, id });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.delete('/api/propuestas/:id', async (req, res) => {
+    try {
+        await pool.query('DELETE FROM propuestas WHERE id = $1', [req.params.id]);
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.post('/api/send-proposal-crm', async (req, res) => {
+    const { id, empresa, contacto, email, plan_id, guardias, panic_users, mensaje, enlace, imagen_url, subject } = req.body;
+    try {
+        const { rows } = await pool.query('SELECT * FROM planes WHERE id = $1', [plan_id]);
+        const plan = rows[0] || { nombre: plan_id.toUpperCase(), precio: 'A convenir', color: '#38bdf8' };
+        
+        const headerImage = imagen_url || 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=800&auto=format&fit=crop&q=60';
+        const actionLink = enlace || 'https://centinela-security.com';
+
+        const emailHtml = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <style>
+                body {
+                    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+                    background-color: #070c1a;
+                    color: #ffffff;
+                    margin: 0;
+                    padding: 0;
+                }
+                .container {
+                    max-width: 600px;
+                    margin: 20px auto;
+                    background: #0f172a;
+                    border-radius: 24px;
+                    overflow: hidden;
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                }
+                .header {
+                    padding: 40px 30px;
+                    text-align: center;
+                    background: #070c1a;
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                }
+                .logo {
+                    width: 60px;
+                    margin-bottom: 15px;
+                }
+                .title {
+                    font-size: 24px;
+                    font-weight: 900;
+                    letter-spacing: 2px;
+                    color: #00d2ff;
+                    margin: 0;
+                }
+                .banner {
+                    width: 100%;
+                    height: 200px;
+                    object-fit: cover;
+                }
+                .content {
+                    padding: 40px 35px;
+                }
+                .greeting {
+                    font-size: 20px;
+                    font-weight: 700;
+                    margin-bottom: 20px;
+                    color: #00d2ff;
+                }
+                .message {
+                    font-size: 15px;
+                    line-height: 1.6;
+                    color: #cbd5e1;
+                    margin-bottom: 30px;
+                }
+                .plan-card {
+                    background: rgba(255, 255, 255, 0.02);
+                    border: 1px solid rgba(255, 255, 255, 0.05);
+                    border-radius: 20px;
+                    padding: 30px;
+                    margin-bottom: 30px;
+                }
+                .plan-header {
+                    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                    padding-bottom: 15px;
+                    margin-bottom: 20px;
+                }
+                .plan-name {
+                    font-size: 18px;
+                    font-weight: 800;
+                    color: #ffffff;
+                    text-transform: uppercase;
+                }
+                .plan-price {
+                    font-size: 22px;
+                    font-weight: 900;
+                    color: ${plan.color || '#38bdf8'};
+                    float: right;
+                }
+                .features-list {
+                    margin: 0;
+                    padding: 0;
+                    list-style: none;
+                }
+                .feature-item {
+                    font-size: 14px;
+                    color: #94a3b8;
+                    margin-bottom: 12px;
+                }
+                .bullet {
+                    color: ${plan.color || '#38bdf8'};
+                    margin-right: 10px;
+                    font-weight: bold;
+                }
+                .btn-container {
+                    text-align: center;
+                    margin: 40px 0 20px 0;
+                }
+                .btn {
+                    display: inline-block;
+                    padding: 15px 35px;
+                    background: #00d2ff;
+                    color: #070c1a !important;
+                    text-decoration: none;
+                    font-weight: 800;
+                    border-radius: 12px;
+                    letter-spacing: 1px;
+                    text-transform: uppercase;
+                    font-size: 13px;
+                }
+                .footer {
+                    padding: 30px;
+                    text-align: center;
+                    font-size: 12px;
+                    color: #64748b;
+                    background: #070c1a;
+                    border-top: 1px solid rgba(255, 255, 255, 0.05);
+                }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <img class="logo" src="https://centinela-security.com/logo-centinela.png" alt="Centinela Logo">
+                    <h1 class="title">CENTINELA</h1>
+                    <div style="font-size: 10px; color: #94a3b8; letter-spacing: 1px; margin-top: 5px;">CONTROL CENTER</div>
+                </div>
+                <img class="banner" src="${headerImage}" alt="Cover Image">
+                <div class="content">
+                    <div class="greeting">Propuesta Comercial para ${empresa}</div>
+                    <div class="message">
+                        Hola ${contacto || 'Equipo'},<br><br>
+                        ${mensaje ? mensaje.replace(/\n/g, '<br>') : 'Es un placer presentarte nuestra propuesta comercial para la gestión integral de tu operación de seguridad física. Adjunto encontrarás los detalles del plan recomendado.'}
+                    </div>
+                    
+                    <div class="plan-card">
+                        <div class="plan-header">
+                            <span class="plan-price">$${plan.precio} <span style="font-size: 12px; color: #94a3b8; font-weight: normal;">/mes</span></span>
+                            <span class="plan-name">PLAN ${plan.nombre}</span>
+                            <div style="clear: both;"></div>
+                        </div>
+                        <ul class="features-list">
+                            <li class="feature-item"><span class="bullet">✓</span> Guardias: ${guardias || plan.limite_guardias || 50}</li>
+                            <li class="feature-item"><span class="bullet">✓</span> Botones de Pánico: ${panic_users || plan.botones_panico || 20}</li>
+                            <li class="feature-item"><span class="bullet">✓</span> GPS y Rondas: Activo</li>
+                            <li class="feature-item"><span class="bullet">✓</span> Monitoreo: Ilimitado</li>
+                        </ul>
+                    </div>
+
+                    <div class="btn-container">
+                        <a class="btn" href="${actionLink}" target="_blank">Ver y Aceptar Propuesta</a>
+                    </div>
+                </div>
+                <div class="footer">
+                    Este es un correo automático enviado por Centinela Security.<br>
+                    © 2026 Centinela Security. Todos los derechos reservados.<br>
+                    <a href="https://centinela-security.com" style="color: #00d2ff; text-decoration: none;">Visitar Sitio Web</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+
+        const mailOptions = {
+            from: `"Centinela Security" <${process.env.SMTP_USER}>`,
+            to: email,
+            subject: subject || `Propuesta Comercial Centinela - ${empresa}`,
+            html: emailHtml
+        };
+        
+        await sendMail(mailOptions);
+
+        if (id) {
+            await pool.query(
+                `UPDATE propuestas SET estado = 'Enviado', sent_at = CURRENT_TIMESTAMP WHERE id = $1`,
+                [id]
+            );
+        }
+
+        await pool.query('INSERT INTO audit (tipo, descripcion) VALUES ($1, $2)', ['PROPOSAL_SENT', `Propuesta CRM enviada a ${email} para la empresa ${empresa}`]);
+
+        res.json({ success: true });
+    } catch (err) {
+        console.error("Error en send-proposal-crm:", err);
         res.status(500).json({ error: err.message });
     }
 });

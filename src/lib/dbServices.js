@@ -7,6 +7,10 @@ import { getAuth, createUserWithEmailAndPassword, signOut as signOutAuth } from 
 // CONFIGURACIÓN API (RENDER / PRODUCCIÓN)
 // ========================
 const getApiUrl = () => {
+    // Si estamos probando en localhost, apuntamos automáticamente al servidor de API local
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3001/api';
+    }
     // REGLA DE ORO: Priorizamos la variable de entorno de Vite, con fallback al servidor real de Render
     return import.meta.env.VITE_API_URL || 'https://centinela-backend.onrender.com/api';
 };
@@ -403,3 +407,9 @@ export const loginRemoto = async (email, password) => {
 };
 
 export const cambiarAdminPassword = async (currentPassword, newPassword) => await apiRequest('/auth/admin-password', 'POST', { currentPassword, newPassword });
+
+// CRM PROPUESTAS
+export const obtenerPropuestas = async () => await apiRequest('/propuestas');
+export const guardarPropuesta = async (data) => await apiRequest('/propuestas', 'POST', data);
+export const eliminarPropuesta = async (id) => await apiRequest(`/propuestas/${id}`, 'DELETE');
+export const enviarPropuestaCRM = async (data) => await apiRequest('/send-proposal-crm', 'POST', data);

@@ -93,6 +93,24 @@ const MasterDashboard = () => {
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
+  // ESTADOS PARA CRM DE PROPUESTAS
+  const [licenciasSubTab, setLicenciasSubTab] = useState('planes');
+  const [propuestas, setPropuestas] = useState([]);
+  const [loadingPropuestas, setLoadingPropuestas] = useState(false);
+  const [globalEmailSubject, setGlobalEmailSubject] = useState('Propuesta Comercial - {empresa}');
+  const [globalEmailMessage, setGlobalEmailMessage] = useState('Hola {contacto},\n\nEs un placer presentarte nuestra propuesta comercial para la gestión integral de tu operación de seguridad física. Adjunto encontrarás los detalles del plan recomendado.\n\nQuedamos a tu entera disposición para resolver cualquier duda.');
+  const [globalEmailImage, setGlobalEmailImage] = useState('https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=800&auto=format&fit=crop&q=60');
+  const [searchCrmQuery, setSearchCrmQuery] = useState('');
+  const [filterCrmStatus, setFilterCrmStatus] = useState('all');
+  const [selectedCrmIds, setSelectedCrmIds] = useState([]);
+  const [showProposalCrmModal, setShowProposalCrmModal] = useState(false);
+  const [editingPropuesta, setEditingPropuesta] = useState(null);
+  const [proposalCrmData, setProposalCrmData] = useState({
+    empresa: '', contacto: '', email: '', plan_id: 'profesional', guardias: 10, panic_users: 10, mensaje: '', enlace: '', imagen_url: ''
+  });
+  const [showCsvModal, setShowCsvModal] = useState(false);
+  const [csvPreviewData, setCsvPreviewData] = useState([]);
+
   const { logout, user } = useAuth();
 
   const loadData = () => {
@@ -190,7 +208,11 @@ const MasterDashboard = () => {
     return () => unsub && unsub();
   }, []);
 
-
+  useEffect(() => {
+    if (activeTab === 'Licencias') {
+      loadPropuestas();
+    }
+  }, [activeTab]);
 
     // REAL-TIME SUBSCRIPTIONS (Blindadas)
 
@@ -787,6 +809,706 @@ const MasterDashboard = () => {
     return map[s] || { bg: 'rgba(156,163,175,0.1)', text: '#9ca3af' };
   };
 
+  const loadPropuestas = async () => {
+    setLoadingPropuestas(true);
+    try {
+      const data = await db.obtenerPropuestas();
+      setPropuestas(data || []);
+    } catch (err) {
+      console.error("Error cargando propuestas:", err);
+    } finally {
+      setLoadingPropuestas(false);
+    }
+  };
+
+  const handleCreateOrUpdatePropuesta = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
+    try {
+      const payload = {
+        ...proposalCrmData,
+        id: editingPropuesta?.id || null,
+        estado: editingPropuesta?.estado || 'Borrador'
+      };
+      const res = await db.guardarPropuesta(payload);
+      if (res && res.success) {
+        await loadPropuestas();
+        setShowProposalCrmModal(false);
+        setEditingPropuesta(null);
+      } else {
+        alert("Error al guardar la propuesta");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al guardar la propuesta: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeletePropuesta = async (id) => {
+    if (!window.confirm("¿Estás seguro de que deseas eliminar esta propuesta?")) return;
+    try {
+      const res = await db.eliminarPropuesta(id);
+      if (res && res.success) {
+        setPropuestas(prev => prev.filter(p => p.id !== id));
+        setSelectedCrmIds(prev => prev.filter(selectedId => selectedId !== id));
+      } else {
+        alert("Error al eliminar la propuesta");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al eliminar: " + err.message);
+    }
+  };
+
+  const handleSendPropuestaCRM = async (prop) => {
+    try {
+      const confirmSend = window.confirm(`¿Enviar propuesta por email a ${prop.contacto || prop.empresa} (${prop.email})?`);
+      if (!confirmSend) return;
+      
+      let subject = globalEmailSubject
+        .replace(/{empresa}/g, prop.empresa)
+        .replace(/{contacto}/g, prop.contacto || 'Equipo');
+
+      let customMsg = prop.mensaje || globalEmailMessage;
+      customMsg = customMsg
+        .replace(/{empresa}/g, prop.empresa)
+        .replace(/{contacto}/g, prop.contacto || 'Equipo');
+
+      const payload = {
+        id: prop.id,
+        empresa: prop.empresa,
+        contacto: prop.contacto,
+        email: prop.email,
+        plan_id: prop.plan_id,
+        guardias: prop.guardias,
+        panic_users: prop.panic_users,
+        mensaje: customMsg,
+        enlace: prop.enlace || '',
+        imagen_url: prop.imagen_url || globalEmailImage,
+        subject: subject
+      };
+
+      const res = await db.enviarPropuestaCRM(payload);
+      if (res && res.success) {
+        alert("Propuesta enviada exitosamente.");
+        await loadPropuestas();
+      } else {
+        alert("Error al enviar propuesta.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al enviar propuesta: " + err.message);
+    }
+  };
+
+  const handleBulkSendPropuestas = async () => {
+    if (selectedCrmIds.length === 0) return;
+    const confirmBulk = window.confirm(`¿Estás seguro de que deseas enviar las propuestas a los ${selectedCrmIds.length} destinatarios seleccionados?`);
+    if (!confirmBulk) return;
+
+    setIsProcessing(true);
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const id of selectedCrmIds) {
+      const prop = propuestas.find(p => p.id === id);
+      if (!prop) continue;
+
+      try {
+        let subject = globalEmailSubject
+          .replace(/{empresa}/g, prop.empresa)
+          .replace(/{contacto}/g, prop.contacto || 'Equipo');
+
+        let customMsg = prop.mensaje || globalEmailMessage;
+        customMsg = customMsg
+          .replace(/{empresa}/g, prop.empresa)
+          .replace(/{contacto}/g, prop.contacto || 'Equipo');
+
+        const payload = {
+          id: prop.id,
+          empresa: prop.empresa,
+          contacto: prop.contacto,
+          email: prop.email,
+          plan_id: prop.plan_id,
+          guardias: prop.guardias,
+          panic_users: prop.panic_users,
+          mensaje: customMsg,
+          enlace: prop.enlace || '',
+          imagen_url: prop.imagen_url || globalEmailImage,
+          subject: subject
+        };
+
+        const res = await db.enviarPropuestaCRM(payload);
+        if (res && res.success) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      } catch (err) {
+        console.error(`Error enviando a ${prop.email}:`, err);
+        failCount++;
+      }
+    }
+
+    alert(`Proceso de envío finalizado.\nEnviados con éxito: ${successCount}\nFallidos: ${failCount}`);
+    setSelectedCrmIds([]);
+    await loadPropuestas();
+    setIsProcessing(false);
+  };
+
+  const parseCSVText = (text) => {
+    const lines = text.split('\n');
+    const result = [];
+    if (lines.length < 2) return result;
+    
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      const values = [];
+      let currentVal = '';
+      let insideQuote = false;
+      for (let charIdx = 0; charIdx < line.length; charIdx++) {
+        const char = line[charIdx];
+        if (char === '"') {
+          insideQuote = !insideQuote;
+        } else if (char === ',' && !insideQuote) {
+          values.push(currentVal.trim());
+          currentVal = '';
+        } else {
+          currentVal += char;
+        }
+      }
+      values.push(currentVal.trim());
+      
+      const row = {};
+      headers.forEach((header, idx) => {
+        let val = values[idx] || '';
+        if (val.startsWith('"') && val.endsWith('"')) {
+          val = val.substring(1, val.length - 1);
+        }
+        row[header] = val;
+      });
+
+      const empresa = row.empresa || values[0] || '';
+      const contacto = row.contacto || values[1] || '';
+      const email = row.email || values[2] || '';
+      const plan_id = (row.plan_id || values[3] || 'profesional').toLowerCase().trim();
+      const guardias = parseInt(row.guardias || values[4] || '10') || 10;
+      const panic_users = parseInt(row.panic_users || values[5] || '10') || 10;
+      const mensaje = row.mensaje || values[6] || '';
+      const enlace = row.enlace || values[7] || '';
+      const imagen_url = row.imagen_url || values[8] || '';
+
+      if (empresa && email) {
+        result.push({
+          empresa,
+          contacto,
+          email,
+          plan_id: ['basico', 'profesional', 'enterprise', 'demo'].includes(plan_id) ? plan_id : 'profesional',
+          guardias,
+          panic_users,
+          mensaje,
+          enlace,
+          imagen_url,
+          estado: 'Borrador'
+        });
+      }
+    }
+    return result;
+  };
+
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const text = evt.target.result;
+        const parsed = parseCSVText(text);
+        if (parsed.length === 0) {
+          alert("No se encontraron leads válidos en el archivo CSV. Asegúrate de incluir cabeceras: empresa, contacto, email, etc.");
+          return;
+        }
+        setCsvPreviewData(parsed);
+        setShowCsvModal(true);
+      } catch (err) {
+        console.error(err);
+        alert("Error al procesar el archivo CSV: " + err.message);
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
+
+  const handleConfirmImportCSV = async () => {
+    setIsSaving(true);
+    try {
+      let successCount = 0;
+      for (const lead of csvPreviewData) {
+        const res = await db.guardarPropuesta(lead);
+        if (res && res.success) {
+          successCount++;
+        }
+      }
+      alert(`Importación finalizada. Se importaron ${successCount} propuestas exitosamente.`);
+      setShowCsvModal(false);
+      setCsvPreviewData([]);
+      await loadPropuestas();
+    } catch (err) {
+      console.error(err);
+      alert("Error al guardar propuestas importadas: " + err.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const renderCrmContent = () => {
+    return (
+      <div className="fade-in">
+        {/* METRICS ROW */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '25px' }}>
+          <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
+              <span>TOTAL LEADS</span>
+              <Users size={18} color="#00d2ff" />
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>{propuestas.length}</div>
+          </div>
+          <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
+              <span>PROPUESTAS ENVIADAS</span>
+              <Bell size={18} color="#f59e0b" />
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>{propuestas.filter(p => p.estado === 'Enviado').length}</div>
+          </div>
+          <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
+              <span>ACEPTADAS</span>
+              <CheckCircle2 size={18} color="#10b981" />
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>{propuestas.filter(p => p.estado === 'Aceptado').length}</div>
+          </div>
+          <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
+              <span>TASA DE CONVERSIÓN</span>
+              <TrendingUp size={18} color="#38bdf8" />
+            </div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>
+              {propuestas.length > 0 
+                ? `${Math.round((propuestas.filter(p => p.estado === 'Aceptado').length / propuestas.length) * 100)}%` 
+                : '0%'}
+            </div>
+          </div>
+        </div>
+
+        {/* TEMPLATE SETTINGS AND PREVIEW */}
+        <div className="glass" style={{ padding: '25px', borderRadius: '24px', marginBottom: '25px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          <h3 style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px', color: '#00d2ff' }}>
+            <Settings2 size={18} /> Configuración Global de la Plantilla de Propuestas
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '25px' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>Asunto Estándar</label>
+                <input 
+                  className="input-full" 
+                  style={{ marginTop: 0 }} 
+                  value={globalEmailSubject} 
+                  onChange={e => setGlobalEmailSubject(e.target.value)} 
+                  placeholder="Ej: Propuesta Comercial - {empresa}"
+                />
+                <span style={{ fontSize: '0.6rem', color: '#94a3b8' }}>Usa <code>{`{empresa}`}</code> y <code>{`{contacto}`}</code> para reemplazos.</span>
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>Mensaje Estándar</label>
+                <textarea 
+                  className="input-full" 
+                  style={{ marginTop: 0, minHeight: '80px', fontSize: '0.8rem' }} 
+                  value={globalEmailMessage} 
+                  onChange={e => setGlobalEmailMessage(e.target.value)}
+                  placeholder="Escribe el mensaje introductorio..."
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>URL Imagen de Portada Estándar</label>
+                <input 
+                  className="input-full" 
+                  style={{ marginTop: 0 }} 
+                  value={globalEmailImage} 
+                  onChange={e => setGlobalEmailImage(e.target.value)} 
+                  placeholder="URL de imagen..."
+                />
+              </div>
+            </div>
+
+            <div style={{ background: '#070c1a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', maxHeight: '330px', overflowY: 'auto' }} className="custom-scrollbar">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px', marginBottom: '15px' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} />
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                <div style={{ fontSize: '0.7rem', color: '#94a3b8', marginLeft: '10px' }}>Previsualización de Email HTML</div>
+              </div>
+              <div style={{ background: '#0f172a', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)', paddingBottom: '20px' }}>
+                <div style={{ padding: '15px', textAlign: 'center', background: '#070c1a', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  <div style={{ fontWeight: '950', fontSize: '0.9rem', letterSpacing: '2px', background: 'linear-gradient(to right, #00d2ff, #3b82f6)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>CENTINELA</div>
+                </div>
+                <img src={globalEmailImage} alt="Preview banner" style={{ width: '100%', height: '80px', objectFit: 'cover' }} />
+                <div style={{ padding: '15px' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 'bold', color: '#00d2ff', marginBottom: '8px' }}>Propuesta Comercial para [Empresa]</div>
+                  <div style={{ fontSize: '0.7rem', color: '#cbd5e1', lineHeight: '1.4', whiteSpace: 'pre-wrap', marginBottom: '15px' }}>
+                    Hola [Contacto],{"\n\n"}{globalEmailMessage}
+                  </div>
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px' }}>
+                    <span style={{ float: 'right', fontSize: '0.8rem', fontWeight: 'bold', color: '#38bdf8' }}>$[Precio]</span>
+                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>PLAN RECOMENDADO</div>
+                  </div>
+                  <div style={{ textAlign: 'center', marginTop: '15px' }}>
+                    <div style={{ display: 'inline-block', padding: '6px 15px', background: '#00d2ff', color: '#070c1a', fontWeight: 'bold', borderRadius: '6px', fontSize: '0.65rem' }}>Ver y Aceptar Propuesta</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* CONTROLS ROW */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '15px' }}>
+          <div style={{ display: 'flex', gap: '15px', flex: 1 }}>
+            <div style={{ position: 'relative', width: '300px' }}>
+              <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+              <input
+                type="text"
+                placeholder="Buscar empresa o email..."
+                value={searchCrmQuery}
+                onChange={e => setSearchCrmQuery(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 12px 10px 38px', background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.05)', borderRadius: '10px', color: 'white', fontSize: '0.8rem'
+                }}
+              />
+            </div>
+            <select
+              value={filterCrmStatus}
+              onChange={e => setFilterCrmStatus(e.target.value)}
+              style={{ padding: '8px 15px', borderRadius: '10px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)', color: 'white', fontSize: '0.8rem', outline: 'none' }}
+            >
+              <option value="all">Todos los Estados</option>
+              <option value="Borrador">Borrador</option>
+              <option value="Enviado">Enviado</option>
+              <option value="Aceptado">Aceptado</option>
+              <option value="Rechazado">Rechazado</option>
+            </select>
+
+            {selectedCrmIds.length > 0 && (
+              <button
+                onClick={handleBulkSendPropuestas}
+                className="primary"
+                disabled={isProcessing}
+                style={{ padding: '8px 18px', fontSize: '0.8rem', background: 'linear-gradient(to right, #f59e0b, #ef4444)', border: 'none', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                {isProcessing ? <Loader2 size={14} className="animate-spin" /> : <Bell size={14} />}
+                Enviar Masivo ({selectedCrmIds.length})
+              </button>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', gap: '15px' }}>
+            <label 
+              className="secondary" 
+              style={{ padding: '10px 18px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.02)' }}
+            >
+              <Download size={14} /> Importar Leads CSV
+              <input 
+                type="file" 
+                accept=".csv" 
+                onChange={handleImportCSV} 
+                style={{ display: 'none' }}
+              />
+            </label>
+
+            <button
+              onClick={() => {
+                setEditingPropuesta(null);
+                setProposalCrmData({
+                  empresa: '', contacto: '', email: '', plan_id: 'profesional', guardias: 10, panic_users: 10, mensaje: '', enlace: '', imagen_url: ''
+                });
+                setShowProposalCrmModal(true);
+              }}
+              className="primary"
+              style={{ padding: '10px 18px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <Plus size={14} /> Nueva Propuesta
+            </button>
+          </div>
+        </div>
+
+        {/* PROPOSALS TABLE */}
+        <div className="glass" style={{ borderRadius: '20px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.05)' }}>
+          {loadingPropuestas ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+              <Loader2 className="animate-spin" size={24} style={{ margin: '0 auto 10px auto' }} />
+              Cargando propuestas del CRM...
+            </div>
+          ) : propuestas.length === 0 ? (
+            <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>
+              No hay propuestas registradas. Importa un CSV o crea una nueva propuesta para comenzar.
+            </div>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+              <thead>
+                <tr style={{ color: '#94a3b8', borderBottom: '1px solid rgba(255,255,255,0.05)', background: 'rgba(255,255,255,0.01)', textAlign: 'left' }}>
+                  <th style={{ padding: '15px' }}>
+                    <input 
+                      type="checkbox"
+                      checked={selectedCrmIds.length === propuestas.length && propuestas.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedCrmIds(propuestas.map(p => p.id));
+                        else setSelectedCrmIds([]);
+                      }}
+                    />
+                  </th>
+                  <th style={{ padding: '15px' }}>EMPRESA</th>
+                  <th style={{ padding: '15px' }}>CONTACTO / EMAIL</th>
+                  <th style={{ padding: '15px' }}>PLAN PROPUESTO</th>
+                  <th style={{ padding: '15px' }}>GUARDIAS / PÁNICO</th>
+                  <th style={{ padding: '15px' }}>ESTADO</th>
+                  <th style={{ padding: '15px' }}>ÚLTIMO ENVÍO</th>
+                  <th style={{ padding: '15px', textAlign: 'right' }}>ACCIONES</th>
+                </tr>
+              </thead>
+              <tbody>
+                {propuestas
+                  .filter(p => {
+                    const matchesSearch = p.empresa.toLowerCase().includes(searchCrmQuery.toLowerCase()) || 
+                                          p.email.toLowerCase().includes(searchCrmQuery.toLowerCase());
+                    const matchesStatus = filterCrmStatus === 'all' || p.estado === filterCrmStatus;
+                    return matchesSearch && matchesStatus;
+                  })
+                  .map(prop => {
+                    const planKey = (prop.plan_id || 'basico').toUpperCase();
+                    const planInfo = PLANES[planKey] || PLANES.BASICO;
+                    const isChecked = selectedCrmIds.includes(prop.id);
+                    
+                    return (
+                      <tr key={prop.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        <td style={{ padding: '15px' }}>
+                          <input 
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => {
+                              if (isChecked) setSelectedCrmIds(selectedCrmIds.filter(id => id !== prop.id));
+                              else setSelectedCrmIds([...selectedCrmIds, prop.id]);
+                            }}
+                          />
+                        </td>
+                        <td style={{ padding: '15px' }}>
+                          <div style={{ fontWeight: 'bold', color: 'white' }}>{prop.empresa}</div>
+                        </td>
+                        <td style={{ padding: '15px' }}>
+                          <div>{prop.contacto || 'S/D'}</div>
+                          <div style={{ fontSize: '0.75rem', color: '#94a3b8' }}>{prop.email}</div>
+                        </td>
+                        <td style={{ padding: '15px' }}>
+                          <span style={{ color: planInfo.color, fontWeight: 'bold' }}>{planInfo.nombre}</span>
+                          <span style={{ fontSize: '0.75rem', color: '#cbd5e1', marginLeft: '5px' }}>(${planInfo.precio})</span>
+                        </td>
+                        <td style={{ padding: '15px' }}>
+                          <div>G: <b>{prop.guardias}</b></div>
+                          <div style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>P: <b>{prop.panic_users}</b></div>
+                        </td>
+                        <td style={{ padding: '15px' }}>
+                          <span style={{
+                            padding: '4px 10px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold',
+                            backgroundColor: prop.estado === 'Enviado' ? 'rgba(245,158,11,0.1)' : 
+                                           prop.estado === 'Aceptado' ? 'rgba(16,185,129,0.1)' : 
+                                           prop.estado === 'Rechazado' ? 'rgba(239,68,68,0.1)' : 'rgba(156,163,175,0.1)',
+                            color: prop.estado === 'Enviado' ? '#f59e0b' : 
+                                   prop.estado === 'Aceptado' ? '#10b981' : 
+                                   prop.estado === 'Rechazado' ? '#ef4444' : '#9ca3af'
+                          }}>
+                            {prop.estado}
+                          </span>
+                        </td>
+                        <td style={{ padding: '15px', color: '#94a3b8', fontSize: '0.75rem' }}>
+                          {prop.sent_at ? new Date(prop.sent_at).toLocaleDateString() + ' ' + new Date(prop.sent_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Nunca'}
+                        </td>
+                        <td style={{ padding: '15px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                            <button 
+                              onClick={() => handleSendPropuestaCRM(prop)}
+                              className="primary" 
+                              style={{ padding: '6px 12px', fontSize: '0.7rem', background: 'linear-gradient(to right, #00d2ff, #3b82f6)', border: 'none', display: 'flex', alignItems: 'center', gap: '4px' }}
+                              title="Enviar por Email"
+                            >
+                              <Bell size={12} /> Enviar
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setEditingPropuesta(prop);
+                                setProposalCrmData({ ...prop });
+                                setShowProposalCrmModal(true);
+                              }}
+                              className="secondary" 
+                              style={{ padding: '6px 10px', fontSize: '0.7rem' }}
+                            >
+                              Editar
+                            </button>
+                            <button 
+                              onClick={() => handleDeletePropuesta(prop.id)}
+                              style={{ padding: '6px 8px', background: 'rgba(239,68,68,0.1)', color: '#ef4444', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
+                              title="Eliminar"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* MODAL PROPUESTA CRM INDIVIDUAL */}
+        {showProposalCrmModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 6000, backdropFilter: 'blur(15px)' }}>
+            <div className="glass fade-in" style={{ width: '500px', padding: '40px', border: '1px solid rgba(255,255,255,0.1)' }}>
+              <h2 style={{ marginBottom: '25px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Building2 size={24} color="#00d2ff" />
+                {editingPropuesta ? 'Editar Propuesta CRM' : 'Crear Nueva Propuesta CRM'}
+              </h2>
+              <form onSubmit={handleCreateOrUpdatePropuesta}>
+                <div style={{ marginBottom: '15px' }}>
+                  <label>Empresa Destino</label>
+                  <input required className="input-full" value={proposalCrmData.empresa} onChange={e => setProposalCrmData({ ...proposalCrmData, empresa: e.target.value })} placeholder="Nombre de la empresa" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                  <div>
+                    <label>Contacto (Nombre)</label>
+                    <input className="input-full" value={proposalCrmData.contacto} onChange={e => setProposalCrmData({ ...proposalCrmData, contacto: e.target.value })} placeholder="Ej: Juan Pérez" />
+                  </div>
+                  <div>
+                    <label>Email de Contacto</label>
+                    <input required type="email" className="input-full" value={proposalCrmData.email} onChange={e => setProposalCrmData({ ...proposalCrmData, email: e.target.value })} placeholder="ejemplo@empresa.com" />
+                  </div>
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <label>Plan Sugerido</label>
+                  <select className="input-full" value={proposalCrmData.plan_id} onChange={e => setProposalCrmData({ ...proposalCrmData, plan_id: e.target.value })} style={{ background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px' }}>
+                    {Object.values(localPlanes).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                  <div>
+                    <label>Cant. Guardias</label>
+                    <input className="input-full" type="number" value={proposalCrmData.guardias} onChange={e => setProposalCrmData({ ...proposalCrmData, guardias: Number(e.target.value) })} />
+                  </div>
+                  <div>
+                    <label>Usuarios Pánico</label>
+                    <input className="input-full" type="number" value={proposalCrmData.panic_users} onChange={e => setProposalCrmData({ ...proposalCrmData, panic_users: Number(e.target.value) })} />
+                  </div>
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <label>Enlace de Acción Personalizado (CTA)</label>
+                  <input className="input-full" value={proposalCrmData.enlace} onChange={e => setProposalCrmData({ ...proposalCrmData, enlace: e.target.value })} placeholder="Ej: https://centinela-security.com/oferta/empresa" />
+                </div>
+                <div style={{ marginBottom: '15px' }}>
+                  <label>Imagen de Portada Personalizada (URL)</label>
+                  <input className="input-full" value={proposalCrmData.imagen_url} onChange={e => setProposalCrmData({ ...proposalCrmData, imagen_url: e.target.value })} placeholder="En blanco para usar la estándar" />
+                </div>
+                <div style={{ marginBottom: '20px' }}>
+                  <label>Mensaje Personalizado (Cuerpo Email)</label>
+                  <textarea className="input-full" value={proposalCrmData.mensaje} onChange={e => setProposalCrmData({ ...proposalCrmData, mensaje: e.target.value })} style={{ minHeight: '80px' }} placeholder="En blanco para usar el mensaje estándar" />
+                </div>
+                
+                <div style={{ display: 'flex', gap: '15px' }}>
+                  <button type="submit" className="primary" style={{ flex: 1 }}>
+                    {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+                    {editingPropuesta ? 'Guardar Cambios' : 'Crear Propuesta'}
+                  </button>
+                  <button type="button" className="secondary" style={{ flex: 1 }} onClick={() => { setShowProposalCrmModal(false); setEditingPropuesta(null); }}>Cancelar</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL PREVISUALIZACION E IMPORTACION CSV */}
+        {showCsvModal && (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.9)', display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 6000, backdropFilter: 'blur(15px)' }}>
+            <div className="glass fade-in" style={{ width: '800px', padding: '40px', border: '1px solid rgba(255,255,255,0.1)', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: 'column' }}>
+              <h2 style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <Download size={24} color="#00d2ff" />
+                Confirmar Importación de Leads desde CSV
+              </h2>
+              <p style={{ color: '#94a3b8', fontSize: '0.85rem', marginBottom: '20px' }}>
+                Hemos detectado <b>{csvPreviewData.length}</b> leads válidos en tu archivo CSV. Por favor revisa la lista antes de proceder a guardarlos en la base de datos.
+              </p>
+
+              <div style={{ border: '1px solid rgba(255,255,255,0.05)', borderRadius: '12px', overflow: 'hidden', marginBottom: '25px', overflowY: 'auto', flex: 1 }} className="custom-scrollbar">
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ background: 'rgba(255,255,255,0.02)', borderBottom: '1px solid rgba(255,255,255,0.05)', color: '#94a3b8' }}>
+                      <th style={{ padding: '10px' }}>EMPRESA</th>
+                      <th style={{ padding: '10px' }}>CONTACTO</th>
+                      <th style={{ padding: '10px' }}>EMAIL</th>
+                      <th style={{ padding: '10px' }}>PLAN SUGERIDO</th>
+                      <th style={{ padding: '10px' }}>GUARDIAS</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {csvPreviewData.slice(0, 10).map((row, idx) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid rgba(255,255,255,0.02)' }}>
+                        <td style={{ padding: '10px', fontWeight: 'bold' }}>{row.empresa}</td>
+                        <td style={{ padding: '10px' }}>{row.contacto || '-'}</td>
+                        <td style={{ padding: '10px' }}>{row.email}</td>
+                        <td style={{ padding: '10px' }}>{row.plan_id.toUpperCase()}</td>
+                        <td style={{ padding: '10px' }}>{row.guardias}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {csvPreviewData.length > 10 && (
+                  <div style={{ padding: '10px', textAlign: 'center', background: 'rgba(255,255,255,0.01)', fontSize: '0.75rem', color: '#94a3b8', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                    ... y otros {csvPreviewData.length - 10} leads más.
+                  </div>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', gap: '15px' }}>
+                <button 
+                  onClick={handleConfirmImportCSV} 
+                  className="primary" 
+                  style={{ flex: 1, padding: '12px' }}
+                  disabled={isSaving}
+                >
+                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : null}
+                  Confirmar e Importar todo
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowCsvModal(false);
+                    setCsvPreviewData([]);
+                  }} 
+                  className="secondary" 
+                  style={{ flex: 1 }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (activeTab) {
       case 'Estadísticas':
@@ -933,6 +1655,32 @@ const MasterDashboard = () => {
                 ))}
               </div>
             </div>
+
+            {/* SUB-TABS NAVIGATION BAR */}
+            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.03)', padding: '5px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', width: 'fit-content', marginBottom: '25px' }}>
+              {['planes', 'crm'].map(st => (
+                <button
+                  key={st}
+                  onClick={() => setLicenciasSubTab(st)}
+                  style={{
+                    padding: '8px 15px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: licenciasSubTab === st ? 'rgba(0,210,255,0.1)' : 'transparent',
+                    color: licenciasSubTab === st ? '#00d2ff' : '#94a3b8',
+                    cursor: 'pointer',
+                    fontSize: '0.8rem',
+                    fontWeight: 'bold',
+                    transition: '0.3s'
+                  }}
+                >
+                  {st === 'planes' ? 'PLANES DE SERVICIO' : 'CRM & PROPUESTAS'}
+                </button>
+              ))}
+            </div>
+
+            {licenciasSubTab === 'crm' ? renderCrmContent() : (
+              <>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '30px', alignItems: 'center' }}>
               <div>
@@ -1169,7 +1917,9 @@ const MasterDashboard = () => {
                   </div>
                 </div>
               )}
-           </div>
+              </>
+            )}
+          </div>
         );
       case 'Empresas':
         return (

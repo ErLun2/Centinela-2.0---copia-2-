@@ -1315,7 +1315,10 @@ const CompanyDashboard = () => {
     const unsubEvents = db.subscribeToAllEventsGroup((allEvents) => {
       // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro y marcador de 'Hoy'
       const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
-      
+      const normalizedEvents = allEvents.map(e => {
+        const eventDateStr = e.fecha || (e.fechaRegistro ? e.fechaRegistro.split('T')[0] : new Date().toISOString().split('T')[0]);
+        const fechaReg = e.fechaRegistro || e.fecha || new Date().toISOString();
+        
         // REGLA DE ORO: Normalizar la hora en el origen de datos para que todo el panel (Historial, Resumen, Modal) se vea perfecto
         // Extraemos solo el horario HH:mm:ss forzado a Argentina
         let cleanHora = '--:--:--';
