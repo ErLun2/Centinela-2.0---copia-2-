@@ -100,6 +100,9 @@ const MasterDashboard = () => {
   const [globalEmailSubject, setGlobalEmailSubject] = useState('Propuesta Comercial - {empresa}');
   const [globalEmailMessage, setGlobalEmailMessage] = useState('Hola {contacto},\n\nEs un placer presentarte nuestra propuesta comercial para la gestión integral de tu operación de seguridad física. Adjunto encontrarás los detalles del plan recomendado.\n\nQuedamos a tu entera disposición para resolver cualquier duda.');
   const [globalEmailImage, setGlobalEmailImage] = useState('https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=800&auto=format&fit=crop&q=60');
+  const [globalEmailPlan, setGlobalEmailPlan] = useState('profesional');
+  const [globalEmailGuardias, setGlobalEmailGuardias] = useState(10);
+  const [globalEmailPanicUsers, setGlobalEmailPanicUsers] = useState(10);
   const [searchCrmQuery, setSearchCrmQuery] = useState('');
   const [filterCrmStatus, setFilterCrmStatus] = useState('all');
   const [selectedCrmIds, setSelectedCrmIds] = useState([]);
@@ -822,6 +825,9 @@ const MasterDashboard = () => {
           if (templateConfig.subject) setGlobalEmailSubject(templateConfig.subject);
           if (templateConfig.message) setGlobalEmailMessage(templateConfig.message);
           if (templateConfig.image_url) setGlobalEmailImage(templateConfig.image_url);
+          if (templateConfig.plan_id) setGlobalEmailPlan(templateConfig.plan_id);
+          if (templateConfig.guardias) setGlobalEmailGuardias(Number(templateConfig.guardias) || 10);
+          if (templateConfig.panic_users) setGlobalEmailPanicUsers(Number(templateConfig.panic_users) || 10);
         }
       } catch (e) {
         console.log("No se pudo cargar la configuración global de la plantilla, usando valores predeterminados.");
@@ -839,7 +845,10 @@ const MasterDashboard = () => {
       await db.guardarConfiguracion('crm_propuestas_template', {
         subject: globalEmailSubject,
         message: globalEmailMessage,
-        image_url: globalEmailImage
+        image_url: globalEmailImage,
+        plan_id: globalEmailPlan,
+        guardias: globalEmailGuardias,
+        panic_users: globalEmailPanicUsers
       });
       alert("Configuración de plantilla global guardada exitosamente.");
     } catch (err) {
@@ -1026,9 +1035,9 @@ const MasterDashboard = () => {
       const empresa = row.empresa || values[0] || '';
       const contacto = row.contacto || values[1] || '';
       const email = row.email || values[2] || '';
-      const plan_id = (row.plan_id || values[3] || 'profesional').toLowerCase().trim();
-      const guardias = parseInt(row.guardias || values[4] || '10') || 10;
-      const panic_users = parseInt(row.panic_users || values[5] || '10') || 10;
+      const plan_id = (row.plan_id || values[3] || globalEmailPlan).toLowerCase().trim();
+      const guardias = parseInt(row.guardias || values[4] || String(globalEmailGuardias)) || globalEmailGuardias;
+      const panic_users = parseInt(row.panic_users || values[5] || String(globalEmailPanicUsers)) || globalEmailPanicUsers;
       const mensaje = row.mensaje || values[6] || '';
       const enlace = row.enlace || values[7] || '';
       const imagen_url = row.imagen_url || values[8] || '';
@@ -1038,7 +1047,7 @@ const MasterDashboard = () => {
           empresa,
           contacto,
           email,
-          plan_id: ['basico', 'profesional', 'enterprise', 'demo'].includes(plan_id) ? plan_id : 'profesional',
+          plan_id: ['basico', 'profesional', 'enterprise', 'demo'].includes(plan_id) ? plan_id : globalEmailPlan,
           guardias,
           panic_users,
           mensaje,
@@ -1173,6 +1182,39 @@ const MasterDashboard = () => {
                   placeholder="URL de imagen..."
                 />
               </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '15px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>Plan Sugerido</label>
+                  <select 
+                    className="input-full" 
+                    value={globalEmailPlan} 
+                    onChange={e => setGlobalEmailPlan(e.target.value)} 
+                    style={{ marginTop: 0, background: 'rgba(255,255,255,0.05)', color: 'white', border: '1px solid rgba(255,255,255,0.1)', padding: '10px', borderRadius: '8px', fontSize: '0.8rem', height: '40px', outline: 'none' }}
+                  >
+                    {Object.values(localPlanes).map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>Cant. Guardias</label>
+                  <input 
+                    type="number" 
+                    className="input-full" 
+                    style={{ marginTop: 0 }} 
+                    value={globalEmailGuardias} 
+                    onChange={e => setGlobalEmailGuardias(Number(e.target.value) || 0)} 
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', color: '#cbd5e1', marginBottom: '6px', display: 'block' }}>Usuarios Pánico</label>
+                  <input 
+                    type="number" 
+                    className="input-full" 
+                    style={{ marginTop: 0 }} 
+                    value={globalEmailPanicUsers} 
+                    onChange={e => setGlobalEmailPanicUsers(Number(e.target.value) || 0)} 
+                  />
+                </div>
+              </div>
               <button 
                 onClick={handleSaveGlobalTemplate}
                 className="primary" 
@@ -1184,7 +1226,7 @@ const MasterDashboard = () => {
               </button>
             </div>
 
-            <div style={{ background: '#070c1a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', maxHeight: '330px', overflowY: 'auto' }} className="custom-scrollbar">
+            <div style={{ background: '#070c1a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', maxHeight: '360px', overflowY: 'auto' }} className="custom-scrollbar">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '10px', marginBottom: '15px' }}>
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#ef4444' }} />
                 <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#f59e0b' }} />
@@ -1201,10 +1243,21 @@ const MasterDashboard = () => {
                   <div style={{ fontSize: '0.7rem', color: '#cbd5e1', lineHeight: '1.4', whiteSpace: 'pre-wrap', marginBottom: '15px' }}>
                     Hola [Contacto],{"\n\n"}{globalEmailMessage}
                   </div>
-                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px' }}>
-                    <span style={{ float: 'right', fontSize: '0.8rem', fontWeight: 'bold', color: '#38bdf8' }}>$[Precio]</span>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 'bold' }}>PLAN RECOMENDADO</div>
-                  </div>
+                  {(() => {
+                    const planKey = (globalEmailPlan || 'Basico').toUpperCase();
+                    const planInfo = PLANES[planKey] || PLANES.BASICO;
+                    return (
+                      <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '8px', padding: '10px' }}>
+                        <span style={{ float: 'right', fontSize: '0.8rem', fontWeight: 'bold', color: planInfo.color || '#38bdf8' }}>
+                          ${planInfo.precio}/mes
+                        </span>
+                        <div style={{ fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase' }}>PLAN {planInfo.nombre}</div>
+                        <div style={{ fontSize: '0.65rem', color: '#94a3b8', marginTop: '4px' }}>
+                          Guardias: {globalEmailGuardias} | Pánico: {globalEmailPanicUsers}
+                        </div>
+                      </div>
+                    );
+                  })()}
                   <div style={{ textAlign: 'center', marginTop: '15px' }}>
                     <div style={{ display: 'inline-block', padding: '6px 15px', background: '#00d2ff', color: '#070c1a', fontWeight: 'bold', borderRadius: '6px', fontSize: '0.65rem' }}>Ver y Aceptar Propuesta</div>
                   </div>
@@ -1273,7 +1326,7 @@ const MasterDashboard = () => {
               onClick={() => {
                 setEditingPropuesta(null);
                 setProposalCrmData({
-                  empresa: '', contacto: '', email: '', plan_id: 'profesional', guardias: 10, panic_users: 10, mensaje: '', enlace: '', imagen_url: ''
+                  empresa: '', contacto: '', email: '', plan_id: globalEmailPlan, guardias: globalEmailGuardias, panic_users: globalEmailPanicUsers, mensaje: '', enlace: '', imagen_url: ''
                 });
                 setShowProposalCrmModal(true);
               }}

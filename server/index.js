@@ -388,6 +388,31 @@ pool.connect()
         `);
         try { await client.query('ALTER TABLE sistema_config ALTER COLUMN updated_at TYPE TIMESTAMPTZ USING updated_at::TIMESTAMPTZ'); } catch(e){}
         
+        // CORRECCIÓN DINÁMICA DE COLUMNAS PARA SISTEMA_CONFIG (REGLA DE ORO)
+        try {
+            const colsResult = await client.query(`
+                SELECT column_name 
+                FROM information_schema.columns 
+                WHERE table_name = 'sistema_config'
+            `);
+            const colNames = colsResult.rows.map(r => r.column_name);
+            console.log("🐘 [DB] Columnas detectadas en 'sistema_config':", colNames);
+            
+            for (const col of colNames) {
+                const lower = col.toLowerCase();
+                if ((lower === 'clave' || lower === 'id' || lower === 'key') && col !== 'key') {
+                    console.log(`🐘 [DB] Renombrando columna '${col}' a 'key' en 'sistema_config'...`);
+                    await client.query(`ALTER TABLE sistema_config RENAME COLUMN "${col}" TO key`);
+                }
+                if ((lower === 'valor' || lower === 'value') && col !== 'value') {
+                    console.log(`🐘 [DB] Renombrando columna '${col}' a 'value' en 'sistema_config'...`);
+                    await client.query(`ALTER TABLE sistema_config RENAME COLUMN "${col}" TO value`);
+                }
+            }
+        } catch (colErr) {
+            console.error("⚠️ [DB] Error al verificar/corregir columnas de sistema_config:", colErr.message);
+        }
+        
         // 8. Pagos
         await client.query(`
             CREATE TABLE IF NOT EXISTS payments (
@@ -930,6 +955,20 @@ app.post('/api/config/:key', async (req, res) => {
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ success: false, error: err.message });
+    }
+});
+
+app.get('/api/debug-db-config', async (req, res) => {
+    try {
+        const { rows: cols } = await pool.query(`
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'sistema_config'
+        `);
+        const { rows: data } = await pool.query(`SELECT * FROM sistema_config LIMIT 10`);
+        res.json({ columns: cols, data });
+    } catch(err) {
+        res.status(500).json({ error: err.message });
     }
 });
 
