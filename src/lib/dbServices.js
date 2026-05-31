@@ -413,3 +413,6 @@ export const obtenerPropuestas = async () => await apiRequest('/propuestas');
 export const guardarPropuesta = async (data) => await apiRequest('/propuestas', 'POST', data);
 export const eliminarPropuesta = async (id) => await apiRequest(`/propuestas/${id}`, 'DELETE');
 export const enviarPropuestaCRM = async (data) => await apiRequest('/send-proposal-crm', 'POST', data);
+export const obtenerConfiguracion = async (key) => await apiRequest(`/config/${key}`);
+export const guardarConfiguracion = async (key, data) => await apiRequest(`/config/${key}`, 'POST', data);
+

@@ -3,7 +3,7 @@ import {
   History, Users, Building2, ShieldAlert, BarChart, Settings, LogOut,
   Menu, X, Bell, Search, Plus, Loader2, CheckCircle2, CreditCard,
   AlertTriangle, Power, PowerOff, Settings2, Globe, MapPin,
-  TrendingUp, DollarSign, Activity, HelpCircle, User, Shield, Zap, Package, Trash2,
+  TrendingUp, DollarSign, Activity, HelpCircle, User, Shield, Zap, Package, Trash2, Save,
   BadgeCheck, Eye, EyeOff, Download, Headphones, KeyRound, Wifi
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -110,6 +110,7 @@ const MasterDashboard = () => {
   });
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [csvPreviewData, setCsvPreviewData] = useState([]);
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
 
   const { logout, user } = useAuth();
 
@@ -814,10 +815,38 @@ const MasterDashboard = () => {
     try {
       const data = await db.obtenerPropuestas();
       setPropuestas(data || []);
+      
+      try {
+        const templateConfig = await db.obtenerConfiguracion('crm_propuestas_template');
+        if (templateConfig) {
+          if (templateConfig.subject) setGlobalEmailSubject(templateConfig.subject);
+          if (templateConfig.message) setGlobalEmailMessage(templateConfig.message);
+          if (templateConfig.image_url) setGlobalEmailImage(templateConfig.image_url);
+        }
+      } catch (e) {
+        console.log("No se pudo cargar la configuración global de la plantilla, usando valores predeterminados.");
+      }
     } catch (err) {
       console.error("Error cargando propuestas:", err);
     } finally {
       setLoadingPropuestas(false);
+    }
+  };
+
+  const handleSaveGlobalTemplate = async () => {
+    setIsSavingConfig(true);
+    try {
+      await db.guardarConfiguracion('crm_propuestas_template', {
+        subject: globalEmailSubject,
+        message: globalEmailMessage,
+        image_url: globalEmailImage
+      });
+      alert("Configuración de plantilla global guardada exitosamente.");
+    } catch (err) {
+      console.error(err);
+      alert("Error al guardar la plantilla global: " + err.message);
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -1144,6 +1173,15 @@ const MasterDashboard = () => {
                   placeholder="URL de imagen..."
                 />
               </div>
+              <button 
+                onClick={handleSaveGlobalTemplate}
+                className="primary" 
+                style={{ alignSelf: 'flex-start', marginTop: '10px', padding: '8px 20px', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '6px' }}
+                disabled={isSavingConfig}
+              >
+                {isSavingConfig ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                Guardar Plantilla Global
+              </button>
             </div>
 
             <div style={{ background: '#070c1a', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)', padding: '20px', maxHeight: '330px', overflowY: 'auto' }} className="custom-scrollbar">
