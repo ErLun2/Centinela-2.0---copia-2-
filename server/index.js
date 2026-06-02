@@ -64,18 +64,34 @@ const toPGDate = (val) => {
 };
 
 const getLocalISO = () => {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, -1);
+  const d = new Date();
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  return formatter.format(d).replace(' ', 'T') + '-03:00';
 };
 
 const sanitizeTime = (val) => {
     // REGLA DE ORO: No importa qué formato llegue, devolvemos un TIMESTAMP válido para Postgres en UTC-3
     const str = String(val || '').trim();
     
-    // 1. Si ya es un formato ISO correcto (YYYY-MM-DD...), lo dejamos pasar (quitando la Z si existe)
+    // 1. Si ya es un formato ISO correcto (YYYY-MM-DD...)
     if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
-        return str.replace('Z', '').replace('z', '');
+        if (str.toLowerCase().includes('z')) {
+            return str;
+        }
+        const timePart = str.substring(10);
+        if (!timePart.includes('+') && !timePart.includes('-')) {
+            return str + '-03:00';
+        }
+        return str;
     }
 
     // 2. Si es solo la hora o contiene am/pm (común en errores de móviles)
@@ -102,11 +118,18 @@ const sanitizeTime = (val) => {
             
             // Obtener fecha de hoy en Argentina para completar el TIMESTAMP
             const today = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(now);
-            return `${today}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}`;
+            return `${today}T${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}:${String(ss).padStart(2, '0')}-03:00`;
         } catch (e) {
             // Fallback total a la hora actual de Argentina
             const arToday = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
-            return `${arToday}T${new Date().toLocaleTimeString('en-GB')}`;
+            const arTime = new Intl.DateTimeFormat('sv-SE', {
+                timeZone: 'America/Argentina/Buenos_Aires',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: false
+            }).format(new Date());
+            return `${arToday}T${arTime}-03:00`;
         }
     }
 

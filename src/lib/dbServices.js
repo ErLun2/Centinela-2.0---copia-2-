@@ -111,9 +111,18 @@ const subscribeToResource = (endpoint, callback, interval = 30000) => {
 // ========================
 // Helper para obtener fecha ISO en hora local (Argentina) para evitar desfase de 3hs en los reportes
 const getLocalISO = () => {
-  const now = new Date();
-  const offset = now.getTimezoneOffset() * 60000;
-  return new Date(now.getTime() - offset).toISOString().slice(0, -1);
+  const d = new Date();
+  const formatter = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'America/Argentina/Buenos_Aires',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false
+  });
+  return formatter.format(d).replace(' ', 'T') + '-03:00';
 };
 
 export const crearEmpresa = async (empresaId, data) => {
