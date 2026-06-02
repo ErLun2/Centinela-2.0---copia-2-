@@ -599,8 +599,17 @@ pool.connect()
                 estado VARCHAR(50) DEFAULT 'Borrador',
                 created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
                 sent_at TIMESTAMPTZ
-            )
         `);
+        // Trackers dynamically added to avoid breaking existing DBs (Regla de Oro)
+        const colsPropuestas = [
+            ['opens_count', 'INT DEFAULT 0'],
+            ['clicks_count', 'INT DEFAULT 0'],
+            ['last_open', 'TIMESTAMPTZ'],
+            ['last_click', 'TIMESTAMPTZ']
+        ];
+        for (const [col, type] of colsPropuestas) {
+            try { await client.query(`ALTER TABLE propuestas ADD COLUMN IF NOT EXISTS "${col}" ${type}`); } catch(e){}
+        }
         try {
             await client.query('ALTER TABLE propuestas ALTER COLUMN guardias TYPE BIGINT');
             await client.query('ALTER TABLE propuestas ALTER COLUMN panic_users TYPE BIGINT');
@@ -1200,6 +1209,56 @@ app.delete('/api/propuestas/:id', async (req, res) => {
     }
 });
 
+// NUEVOS ENDPOINTS DE SEGUIMIENTO (TRACKING)
+app.get('/api/propuestas/track-open/:id', async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { rows } = await pool.query('SELECT empresa, email FROM propuestas WHERE id = $1', [id]);
+        if (rows.length > 0) {
+            const { empresa, email } = rows[0];
+            await pool.query(
+                `UPDATE propuestas SET opens_count = COALESCE(opens_count, 0) + 1, last_open = CURRENT_TIMESTAMP WHERE id = $1`,
+                [id]
+            );
+            await pool.query('INSERT INTO audit (tipo, descripcion) VALUES ($1, $2)', ['PROPOSAL_OPENED', `Email de propuesta abierto por ${empresa} (${email})`]);
+        }
+    } catch (err) {
+        console.error("Error en track-open:", err);
+    }
+    
+    const pixel = Buffer.from(
+        'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+        'base64'
+    );
+    res.writeHead(200, {
+        'Content-Type': 'image/gif',
+        'Content-Length': pixel.length,
+        'Cache-Control': 'no-store, no-cache, must-revalidate, private'
+    });
+    res.end(pixel);
+});
+
+app.get('/api/propuestas/track-click/:id', async (req, res) => {
+    const { id } = req.params;
+    let redirectUrl = 'https://centinela-security.com';
+    try {
+        const { rows } = await pool.query('SELECT empresa, email, enlace FROM propuestas WHERE id = $1', [id]);
+        if (rows.length > 0) {
+            const { empresa, email, enlace } = rows[0];
+            await pool.query(
+                `UPDATE propuestas SET clicks_count = COALESCE(clicks_count, 0) + 1, last_click = CURRENT_TIMESTAMP WHERE id = $1`,
+                [id]
+            );
+            await pool.query('INSERT INTO audit (tipo, descripcion) VALUES ($1, $2)', ['PROPOSAL_CLICKED', `Propuesta visualizada (clic en botón) por ${empresa} (${email})`]);
+            if (enlace) {
+                redirectUrl = enlace;
+            }
+        }
+    } catch (err) {
+        console.error("Error en track-click:", err);
+    }
+    res.redirect(redirectUrl);
+});
 app.post('/api/send-proposal-crm', async (req, res) => {
     const { id, empresa, contacto, email, plan_id, guardias, panic_users, mensaje, enlace, imagen_url, subject } = req.body;
     try {
@@ -1208,6 +1267,15 @@ app.post('/api/send-proposal-crm', async (req, res) => {
         
         const headerImage = imagen_url || 'https://images.unsplash.com/photo-1557597774-9d273605dfa9?w=800&auto=format&fit=crop&q=60';
         const actionLink = enlace || 'https://centinela-security.com';
+
+        let protocol = req.protocol;
+        if (req.headers['x-forwarded-proto']) {
+            protocol = req.headers['x-forwarded-proto'];
+        }
+        const backendUrl = `${protocol}://${req.get('host')}`;
+        
+        const trackedActionLink = id ? `${backendUrl}/api/propuestas/track-click/${id}` : actionLink;
+        const trackingPixel = id ? `<img src="${backendUrl}/api/propuestas/track-open/${id}" width="1" height="1" style="display:none;" />` : '';
 
         const emailHtml = `
         <!DOCTYPE html>
@@ -1362,7 +1430,7 @@ app.post('/api/send-proposal-crm', async (req, res) => {
                     </div>
 
                     <div class="btn-container">
-                        <a class="btn" href="${actionLink}" target="_blank">Ver y Aceptar Propuesta</a>
+                        <a class="btn" href="${trackedActionLink}" target="_blank">Ver y Aceptar Propuesta</a>
                     </div>
                 </div>
                 <div class="footer">
@@ -1370,6 +1438,7 @@ app.post('/api/send-proposal-crm', async (req, res) => {
                     © 2026 Centinela Security. Todos los derechos reservados.<br>
                     <a href="https://centinela-security.com" style="color: #00d2ff; text-decoration: none;">Visitar Sitio Web</a>
                 </div>
+                ${trackingPixel}
             </div>
         </body>
         </html>

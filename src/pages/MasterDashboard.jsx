@@ -4,7 +4,7 @@ import {
   Menu, X, Bell, Search, Plus, Loader2, CheckCircle2, CreditCard,
   AlertTriangle, Power, PowerOff, Settings2, Globe, MapPin,
   TrendingUp, DollarSign, Activity, HelpCircle, User, Shield, Zap, Package, Trash2, Save,
-  BadgeCheck, Eye, EyeOff, Download, Headphones, KeyRound, Wifi
+  BadgeCheck, Eye, EyeOff, Download, Headphones, KeyRound, Wifi, MousePointerClick
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -1109,7 +1109,7 @@ const MasterDashboard = () => {
     return (
       <div className="fade-in">
         {/* METRICS ROW */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '25px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '20px', marginBottom: '25px' }}>
           <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
               <span>TOTAL LEADS</span>
@@ -1119,27 +1119,37 @@ const MasterDashboard = () => {
           </div>
           <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
-              <span>PROPUESTAS ENVIADAS</span>
+              <span>ENVIADAS</span>
               <Bell size={18} color="#f59e0b" />
             </div>
             <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>{propuestas.filter(p => p.estado === 'Enviado').length}</div>
           </div>
           <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
-              <span>ACEPTADAS</span>
-              <CheckCircle2 size={18} color="#10b981" />
+              <span>LEADS ABIERTAS</span>
+              <Eye size={18} color="#10b981" />
             </div>
-            <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>{propuestas.filter(p => p.estado === 'Aceptado').length}</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>{propuestas.filter(p => (p.opens_count || 0) > 0).length}</div>
           </div>
           <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
-              <span>TASA DE CONVERSIÓN</span>
-              <TrendingUp size={18} color="#38bdf8" />
+              <span>CLICS EN BOTÓN</span>
+              <MousePointerClick size={18} color="#00d2ff" />
             </div>
-            <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>
-              {propuestas.length > 0 
-                ? `${Math.round((propuestas.filter(p => p.estado === 'Aceptado').length / propuestas.length) * 100)}%` 
-                : '0%'}
+            <div style={{ fontSize: '1.6rem', fontWeight: '900' }}>{propuestas.filter(p => (p.clicks_count || 0) > 0).length}</div>
+          </div>
+          <div className="glass" style={{ padding: '20px', borderRadius: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', color: '#94a3b8', fontSize: '0.8rem', marginBottom: '8px' }}>
+              <span>ACEPTADAS</span>
+              <CheckCircle2 size={18} color="#10b981" />
+            </div>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px' }}>
+              <span style={{ fontSize: '1.6rem', fontWeight: '900' }}>{propuestas.filter(p => p.estado === 'Aceptado').length}</span>
+              <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 'bold' }}>
+                ({propuestas.length > 0 
+                  ? `${Math.round((propuestas.filter(p => p.estado === 'Aceptado').length / propuestas.length) * 100)}%` 
+                  : '0%'} conv.)
+              </span>
             </div>
           </div>
         </div>
@@ -1368,6 +1378,7 @@ const MasterDashboard = () => {
                   <th style={{ padding: '15px' }}>PLAN PROPUESTO</th>
                   <th style={{ padding: '15px' }}>GUARDIAS / PÁNICO</th>
                   <th style={{ padding: '15px' }}>ESTADO</th>
+                  <th style={{ padding: '15px' }}>SEGUIMIENTO</th>
                   <th style={{ padding: '15px' }}>ÚLTIMO ENVÍO</th>
                   <th style={{ padding: '15px', textAlign: 'right' }}>ACCIONES</th>
                 </tr>
@@ -1424,6 +1435,28 @@ const MasterDashboard = () => {
                           }}>
                             {prop.estado}
                           </span>
+                        </td>
+                        <td style={{ padding: '15px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.75rem' }}>
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (prop.opens_count || 0) > 0 ? '#10b981' : '#94a3b8' }}>
+                              <Eye size={12} />
+                              {(prop.opens_count || 0) > 0 ? `Abierto (${prop.opens_count})` : 'Sin abrir'}
+                            </span>
+                            {prop.last_open && (
+                              <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                {new Date(prop.last_open).toLocaleDateString() + ' ' + new Date(prop.last_open).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                            )}
+                            <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: (prop.clicks_count || 0) > 0 ? '#00d2ff' : '#94a3b8', marginTop: '4px' }}>
+                              <MousePointerClick size={12} />
+                              {(prop.clicks_count || 0) > 0 ? `Clics (${prop.clicks_count})` : 'Sin clics'}
+                            </span>
+                            {prop.last_click && (
+                              <span style={{ fontSize: '0.65rem', color: '#64748b' }}>
+                                {new Date(prop.last_click).toLocaleDateString() + ' ' + new Date(prop.last_click).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td style={{ padding: '15px', color: '#94a3b8', fontSize: '0.75rem' }}>
                           {prop.sent_at ? new Date(prop.sent_at).toLocaleDateString() + ' ' + new Date(prop.sent_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : 'Nunca'}
