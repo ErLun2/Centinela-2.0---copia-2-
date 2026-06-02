@@ -997,8 +997,13 @@ app.get('/api/debug-db-config', async (req, res) => {
             FROM information_schema.columns 
             WHERE table_name = 'sistema_config'
         `);
+        const { rows: payCols } = await pool.query(`
+            SELECT column_name, data_type 
+            FROM information_schema.columns 
+            WHERE table_name = 'payments'
+        `);
         const { rows: data } = await pool.query(`SELECT * FROM sistema_config LIMIT 10`);
-        res.json({ columns: cols, data });
+        res.json({ columns: cols, payments_columns: payCols, data });
     } catch(err) {
         res.status(500).json({ error: err.message });
     }
