@@ -1388,7 +1388,19 @@ app.get('/api/payments', async (req, res) => {
 app.post('/api/payments/:id', async (req, res) => {
     try {
         const id = req.params.id;
-        const data = req.body;
+        const rawData = req.body;
+        const data = {};
+        
+        for (const k of Object.keys(rawData)) {
+            let dbKey = k;
+            if (k === 'empresaId' || k === 'companyId') dbKey = 'empresa_id';
+            else if (k === 'planId' || k === 'plan') dbKey = 'plan_id';
+            else if (k === 'estado' || k === 'status') dbKey = 'estado';
+            else if (k === 'metodo' || k === 'metodoPago') dbKey = 'metodo';
+            
+            data[dbKey] = rawData[k];
+        }
+        
         const fields = Object.keys(data).filter(k => k !== 'id');
         const setClause = fields.map((f, i) => `"${f}" = $${i + 2}`).join(', ');
         await pool.query(`INSERT INTO payments (id, ${fields.map(f => `"${f}"`).join(', ')}) VALUES ($1, ${fields.map((_, i) => `$${i + 2}`).join(', ')}) ON CONFLICT (id) DO UPDATE SET ${setClause}`, [id, ...fields.map(f => data[f])]);
@@ -1402,23 +1414,35 @@ app.get('/api/payments/history', async (req, res) => {
         let sql = 'SELECT * FROM payments';
         let params = [];
         if (companyId) {
-            sql += ' WHERE "companyId" = $1';
+            sql += ' WHERE "empresa_id" = $1';
             params.push(companyId);
         }
         sql += ' ORDER BY created_at DESC';
         const { rows } = await pool.query(sql, params);
-        res.json(rows);
+        res.json(rows.map(r => ({
+            ...r,
+            empresaId: r.empresa_id,
+            planId: r.plan_id
+        })));
     } catch (err) { res.json([]); }
 });
 
 app.post('/api/payments/webhook', async (req, res) => {
-    // Registro manual de pago desde el panel
-    const data = req.body;
+    const rawData = req.body;
     const id = `PAY-${Date.now()}`;
     try {
+        const empId = rawData.empresaId || rawData.companyId;
+        const planId = rawData.planId || rawData.plan;
+        const status = rawData.estado || rawData.status || 'approved';
+        const method = rawData.metodo || rawData.metodoPago || 'Manual/Transferencia';
+        const receipt = rawData.comprobante || null;
+        const opNumber = rawData.numero_operacion || null;
+        const dateVal = rawData.fecha || new Date().toISOString();
+
         await pool.query(
-            'INSERT INTO payments (id, "companyId", monto, status, plan, "metodoPago") VALUES ($1, $2, $3, $4, $5, $6)',
-            [id, data.companyId, data.monto, 'approved', data.plan, 'Manual/Transferencia']
+            `INSERT INTO payments (id, empresa_id, plan_id, monto, estado, metodo, comprobante, numero_operacion, fecha) 
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [id, empId, planId, rawData.monto, status, method, receipt, opNumber, dateVal]
         );
         res.json({ success: true, id });
     } catch (err) { res.status(500).json({ error: err.message }); }

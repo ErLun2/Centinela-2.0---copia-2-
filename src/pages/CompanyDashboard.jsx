@@ -163,13 +163,16 @@ const getARDateStr = (dateInput) => {
   
   // Si ya es un string YYYY-MM-DD (format de la App), devolverlo directamente
   // Esto evita que new Date() lo tome como UTC y lo mueva al día anterior en Argentina
-  if (typeof dateInput === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateInput.split('T')[0])) {
-    return dateInput.split('T')[0];
+  if (typeof dateInput === 'string') {
+    const firstPart = dateInput.split(/[T\s]/)[0];
+    if (/^\d{4}-\d{2}-\d{2}$/.test(firstPart)) {
+      return firstPart;
+    }
   }
 
   try {
     const date = new Date(dateInput);
-    if (isNaN(date.getTime())) return String(dateInput).split('T')[0];
+    if (isNaN(date.getTime())) return String(dateInput).split(/[T\s]/)[0];
 
     // Usar Intl para obtener el string YYYY-MM-DD en la zona horaria de Argentina
     return new Intl.DateTimeFormat('fr-CA', {
@@ -179,7 +182,7 @@ const getARDateStr = (dateInput) => {
       day: '2-digit'
     }).format(date);
   } catch (e) {
-    return String(dateInput).split('T')[0];
+    return String(dateInput).split(/[T\s]/)[0];
   }
 };
 
@@ -1316,7 +1319,7 @@ const CompanyDashboard = () => {
       // NORMALIZACIÓN ESTRATÉGICA: Asegurar que todos los eventos tengan fechaRegistro y marcador de 'Hoy'
       const todayStr = new Intl.DateTimeFormat('fr-CA', { timeZone: 'America/Argentina/Buenos_Aires' }).format(new Date());
       const normalizedEvents = allEvents.map(e => {
-        const eventDateStr = e.fecha || (e.fechaRegistro ? e.fechaRegistro.split('T')[0] : new Date().toISOString().split('T')[0]);
+        const eventDateStr = getARDateStr(e.fecha || e.fechaRegistro || new Date());
         const fechaReg = e.fechaRegistro || e.fecha || new Date().toISOString();
         
         // REGLA DE ORO: Normalizar la hora en el origen de datos para que todo el panel (Historial, Resumen, Modal) se vea perfecto
